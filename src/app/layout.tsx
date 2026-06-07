@@ -17,10 +17,6 @@ export const metadata: Metadata = {
   title: "RapVault — Private Lyrics Notebook",
   description:
     "A private cloud notepad for rap lyrics, hooks, punchlines, and unfinished verses.",
-  icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
-  },
 };
 
 export default function RootLayout({
