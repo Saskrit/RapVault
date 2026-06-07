@@ -22,7 +22,6 @@ import {
   VaultMobileNav,
   type MobileTab,
 } from "@/components/vault-mobile-nav";
-import { GENRES } from "@/lib/constants";
 import { buildTxtExport, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
 import type { Folder, Song } from "@/types";
@@ -431,50 +430,6 @@ export function VaultApp() {
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:grid-cols-4">
-            <select
-              value={activeSong.status}
-              onChange={(e) => scheduleSave({ status: e.target.value })}
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent"
-            >
-              <option value="draft">Draft</option>
-              <option value="finished">Finished</option>
-            </select>
-            <select
-              value={activeSong.genre}
-              onChange={(e) => scheduleSave({ genre: e.target.value })}
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent"
-            >
-              <option value="">Genre</option>
-              {GENRES.map((genre) => (
-                <option key={genre} value={genre}>
-                  {genre}
-                </option>
-              ))}
-            </select>
-            <select
-              value={activeSong.folderId ?? ""}
-              onChange={(e) =>
-                scheduleSave({ folderId: e.target.value || null })
-              }
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent"
-            >
-              <option value="">No folder</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              value={activeSong.moodTags}
-              onChange={(e) => scheduleSave({ moodTags: e.target.value })}
-              placeholder="Mood tags"
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent min-[420px]:col-span-2 xl:col-span-1"
-            />
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
