@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
@@ -165,7 +166,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
-      <VaultHeader centerLabel={song.title}>
+      <VaultHeader>
         <Link
           href="/vault"
           className={`${iconBtn} flex w-auto items-center gap-1.5 px-3 text-sm font-medium`}
@@ -176,76 +177,24 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         </Link>
       </VaultHeader>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-border px-4 py-3 lg:px-8 lg:py-4">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <input
-              type="text"
-              value={song.title}
-              onChange={(e) => scheduleSave({ title: e.target.value })}
-              spellCheck={spellCheck}
-              className="min-w-0 w-full bg-transparent text-xl font-bold outline-none placeholder:text-muted sm:flex-1 lg:text-2xl"
-              placeholder="Song title"
-            />
-            <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={toggleSpellCheck}
-                className={`${iconBtn} ${
-                  spellCheck
-                    ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                    : ""
-                }`}
-                aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
-                title={spellCheck ? "Spell check on" : "Spell check off"}
-              >
-                <SpellCheck className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-                className={iconBtn}
-                aria-label="Toggle favorite"
-              >
-                <Star
-                  className={`h-4 w-4 ${
-                    song.isFavorite
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-muted"
-                  }`}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={handleExportTxt}
-                className={`${iconBtn} w-auto gap-1.5 px-3`}
-              >
-                <Download className="h-4 w-4 shrink-0" />
-                <span className="text-sm">TXT</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleExportPdf}
-                className={`${iconBtn} w-auto gap-1.5 px-3`}
-              >
-                <Download className="h-4 w-4 shrink-0" />
-                <span className="text-sm">PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
-                aria-label="Delete song"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+      <div className="shrink-0 border-b border-border bg-card/50 px-3 py-2 lg:px-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <input
+            type="text"
+            value={song.title}
+            onChange={(e) => scheduleSave({ title: e.target.value })}
+            spellCheck={spellCheck}
+            className="min-w-0 flex-1 basis-40 bg-transparent text-base font-bold outline-none placeholder:text-muted sm:text-lg lg:min-w-[12rem] lg:text-xl"
+            placeholder="Song title"
+          />
 
-          <div className="mx-auto mt-3 flex w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted sm:text-xs">
             <span>{stats.words} words</span>
+            <span className="text-border">·</span>
             <span>{stats.lines} lines</span>
+            <span className="text-border">·</span>
             <span>~{formatDuration(stats.estimatedSeconds)}</span>
+            <span className="text-border">·</span>
             <span
               className={
                 saveState === "error"
@@ -263,16 +212,70 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                   ? "Saved"
                   : saveState === "error"
                     ? "Save failed"
-                    : ""}
+                    : "Ready"}
             </span>
           </div>
-        </div>
 
-        <textarea
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={toggleSpellCheck}
+              className={`${iconBtn} ${
+                spellCheck
+                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                  : ""
+              }`}
+              aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
+              title={spellCheck ? "Spell check on" : "Spell check off"}
+            >
+              <SpellCheck className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
+              className={iconBtn}
+              aria-label="Toggle favorite"
+            >
+              <Star
+                className={`h-4 w-4 ${
+                  song.isFavorite
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-muted"
+                }`}
+              />
+            </button>
+            <button
+              type="button"
+              onClick={handleExportTxt}
+              className={`${iconBtn} hidden w-auto gap-1.5 px-3 sm:flex`}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              <span className="text-sm">TXT</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className={`${iconBtn} hidden w-auto gap-1.5 px-3 sm:flex`}
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              <span className="text-sm">PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+              aria-label="Delete song"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <LyricRichEditor
           value={song.content}
-          onChange={(e) => scheduleSave({ content: e.target.value })}
-          placeholder="Drop your bars here..."
-          className="mx-auto min-h-0 w-full max-w-4xl flex-1 resize-none bg-editor px-4 py-4 font-mono text-base leading-relaxed text-foreground outline-none placeholder:text-muted lg:px-8 lg:py-5"
+          onChange={(content) => scheduleSave({ content })}
           spellCheck={spellCheck}
         />
       </main>

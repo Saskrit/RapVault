@@ -1,3 +1,5 @@
+import { stripRichText } from "@/lib/rich-text";
+
 export type LyricStats = {
   words: number;
   lines: number;
@@ -7,7 +9,7 @@ export type LyricStats = {
 const WORDS_PER_MINUTE = 150;
 
 export function calculateLyricStats(content: string): LyricStats {
-  const trimmed = content.trim();
+  const trimmed = stripRichText(content);
   if (!trimmed) {
     return { words: 0, lines: 0, estimatedSeconds: 0 };
   }

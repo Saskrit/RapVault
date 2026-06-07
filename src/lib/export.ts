@@ -1,3 +1,5 @@
+import { stripRichText } from "@/lib/rich-text";
+
 export type ExportSong = {
   title: string;
   content: string;
@@ -24,7 +26,7 @@ function buildMetaLines(song: ExportSong) {
 
 export function buildTxtExport(song: ExportSong) {
   const header = [song.title, ...buildMetaLines(song), "", "---", ""].join("\n");
-  return `${header}${song.content}`;
+  return `${header}${stripRichText(song.content)}`;
 }
 
 export function downloadTxt(filename: string, content: string) {
@@ -81,7 +83,8 @@ export async function downloadPdf(filename: string, song: ExportSong) {
 
   doc.setTextColor(0);
   doc.setFontSize(11);
-  const contentLines = doc.splitTextToSize(song.content || "", maxWidth);
+  const plainContent = stripRichText(song.content || "");
+  const contentLines = doc.splitTextToSize(plainContent, maxWidth);
 
   for (const line of contentLines) {
     ensureSpace(lineHeight);

@@ -3,6 +3,7 @@
 import { FolderInput, PanelLeftClose, Plus, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { MoveSongToFolderModal } from "@/components/move-song-to-folder-modal";
 import { AddSongsToFolderModal } from "@/components/add-songs-to-folder-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { NewFolderModal } from "@/components/new-folder-modal";
@@ -12,6 +13,7 @@ import {
   VaultMobileNav,
   type MobileTab,
 } from "@/components/vault-mobile-nav";
+import { contentSnippet } from "@/lib/rich-text";
 import type { Folder, Song } from "@/types";
 
 export function VaultSongsView() {
@@ -24,6 +26,7 @@ export function VaultSongsView() {
   const [loading, setLoading] = useState(true);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [showAddSongsModal, setShowAddSongsModal] = useState(false);
+  const [songToMove, setSongToMove] = useState<Song | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -143,7 +146,7 @@ export function VaultSongsView() {
     }
   }
 
-  async function handleSongsAddedToFolder() {
+  async function handleSongMoved() {
     await fetchFolders();
     await fetchSongs();
   }
@@ -232,26 +235,46 @@ export function VaultSongsView() {
             </div>
           ) : (
             songs.map((song) => (
-              <button
+              <div
                 key={song.id}
-                type="button"
-                onClick={() => openSong(song)}
-                className="w-full border-b border-border px-4 py-4 text-left transition active:bg-card hover:bg-card/80"
+                className="flex items-stretch border-b border-border transition hover:bg-card/80"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="truncate font-medium">{song.title}</span>
-                  {song.isFavorite && (
-                    <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />
-                  )}
-                </div>
-                <p className="mt-1 truncate text-sm text-muted">
-                  {song.content.slice(0, 80) || "Empty draft"}
-                </p>
-                <p className="mt-1.5 text-xs text-muted">
-                  {song.status === "draft" ? "Draft" : "Finished"} ·{" "}
-                  {new Date(song.updatedAt).toLocaleDateString()}
-                </p>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openSong(song)}
+                  className="min-w-0 flex-1 px-4 py-4 text-left active:bg-card"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="truncate font-medium">{song.title}</span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {song.folder && (
+                        <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent sm:text-xs sm:normal-case sm:tracking-normal">
+                          {song.folder.name}
+                        </span>
+                      )}
+                      {song.isFavorite && (
+                        <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-muted">
+                    {contentSnippet(song.content)}
+                  </p>
+                  <p className="mt-1.5 text-xs text-muted">
+                    {song.status === "draft" ? "Draft" : "Finished"} ·{" "}
+                    {new Date(song.updatedAt).toLocaleDateString()}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSongToMove(song)}
+                  className="flex w-12 shrink-0 items-center justify-center border-l border-border text-muted transition hover:bg-card hover:text-accent active:bg-card sm:w-14"
+                  aria-label={`Add "${song.title}" to folder`}
+                  title="Add to folder"
+                >
+                  <FolderInput className="h-4 w-4" />
+                </button>
+              </div>
             ))
           )}
         </div>
@@ -351,9 +374,17 @@ export function VaultSongsView() {
           onClose={() => setShowAddSongsModal(false)}
           folderId={selectedFolder.id}
           folderName={selectedFolder.name}
-          onAdded={handleSongsAddedToFolder}
+          onAdded={handleSongMoved}
         />
       )}
+
+      <MoveSongToFolderModal
+        open={songToMove !== null}
+        onClose={() => setSongToMove(null)}
+        song={songToMove}
+        folders={folders}
+        onMoved={handleSongMoved}
+      />
 
       <ConfirmModal
         open={folderToDelete !== null}
