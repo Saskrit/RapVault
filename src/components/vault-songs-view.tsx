@@ -1,8 +1,10 @@
 "use client";
 
-import { PanelLeftClose, Plus, Star, X } from "lucide-react";
+import { FolderInput, PanelLeftClose, Plus, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { AddSongsToFolderModal } from "@/components/add-songs-to-folder-modal";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { NewFolderModal } from "@/components/new-folder-modal";
 import { VaultFoldersPanel } from "@/components/vault-folders-panel";
 import { VaultHeader } from "@/components/vault-header";
@@ -21,6 +23,9 @@ export function VaultSongsView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [showAddSongsModal, setShowAddSongsModal] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+  const [deletingFolder, setDeletingFolder] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [folderDrawerOpen, setFolderDrawerOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -113,6 +118,40 @@ export function VaultSongsView() {
     await fetchFolders();
   }
 
+  function requestDeleteFolder(id: string) {
+    const folder = folders.find((f) => f.id === id);
+    if (folder) setFolderToDelete(folder);
+  }
+
+  async function confirmDeleteFolder() {
+    if (!folderToDelete) return;
+    setDeletingFolder(true);
+    try {
+      const res = await fetch(`/api/folders/${folderToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        if (selectedFolderId === folderToDelete.id) {
+          setSelectedFolderId(null);
+        }
+        setFolderToDelete(null);
+        await fetchFolders();
+        await fetchSongs();
+      }
+    } finally {
+      setDeletingFolder(false);
+    }
+  }
+
+  async function handleSongsAddedToFolder() {
+    await fetchFolders();
+    await fetchSongs();
+  }
+
+  const selectedFolder = selectedFolderId
+    ? folders.find((f) => f.id === selectedFolderId)
+    : null;
+
   const folderLabel = showFavorites
     ? "Favorites"
     : selectedFolderId
@@ -137,6 +176,7 @@ export function VaultSongsView() {
       setShowFavorites(false);
       setSelectedFolderId(id);
     },
+    onDeleteFolder: requestDeleteFolder,
     onNewFolder: () => setShowNewFolderModal(true),
     onNewSong: handleNewSong,
     onNavigate: () => setFolderDrawerOpen(false),
@@ -157,14 +197,26 @@ export function VaultSongsView() {
               {songs.length} song{songs.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleNewSong}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-white lg:hidden"
-            aria-label="New song"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {selectedFolder && (
+              <button
+                type="button"
+                onClick={() => setShowAddSongsModal(true)}
+                className="flex h-11 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-accent hover:text-accent"
+              >
+                <FolderInput className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Add songs</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleNewSong}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-white lg:hidden"
+              aria-label="New song"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {songs.length === 0 ? (
@@ -291,6 +343,27 @@ export function VaultSongsView() {
         open={showNewFolderModal}
         onClose={() => setShowNewFolderModal(false)}
         onCreate={createFolder}
+      />
+
+      {selectedFolder && (
+        <AddSongsToFolderModal
+          open={showAddSongsModal}
+          onClose={() => setShowAddSongsModal(false)}
+          folderId={selectedFolder.id}
+          folderName={selectedFolder.name}
+          onAdded={handleSongsAddedToFolder}
+        />
+      )}
+
+      <ConfirmModal
+        open={folderToDelete !== null}
+        onClose={() => !deletingFolder && setFolderToDelete(null)}
+        onConfirm={confirmDeleteFolder}
+        title="Delete folder?"
+        description={`"${folderToDelete?.name ?? "This folder"}" will be removed. Songs inside it will stay in your library under All Songs.`}
+        confirmLabel="Delete folder"
+        destructive
+        loading={deletingFolder}
       />
     </div>
   );

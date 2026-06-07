@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
-import { buildTxtExport, downloadTxt } from "@/lib/export";
+import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
 import type { Song } from "@/types";
 
@@ -112,9 +112,9 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     }
   }
 
-  function handleExport() {
-    if (!song) return;
-    const txt = buildTxtExport({
+  function exportPayload() {
+    if (!song) return null;
+    return {
       title: song.title,
       content: song.content,
       genre: song.genre,
@@ -122,8 +122,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       status: song.status,
       createdAt: song.createdAt,
       updatedAt: song.updatedAt,
-    });
-    downloadTxt(song.title, txt);
+    };
+  }
+
+  function handleExportTxt() {
+    const payload = exportPayload();
+    if (!payload) return;
+    downloadTxt(payload.title, buildTxtExport(payload));
+  }
+
+  async function handleExportPdf() {
+    const payload = exportPayload();
+    if (!payload) return;
+    await downloadPdf(payload.title, payload);
   }
 
   const stats = song
@@ -180,7 +191,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               <button
                 type="button"
                 onClick={toggleSpellCheck}
-                className={`${iconBtn} ${spellCheck ? "border-accent/50 text-accent" : ""}`}
+                className={`${iconBtn} ${
+                  spellCheck
+                    ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                    : ""
+                }`}
                 aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
                 title={spellCheck ? "Spell check on" : "Spell check off"}
               >
@@ -202,11 +217,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               </button>
               <button
                 type="button"
-                onClick={handleExport}
+                onClick={handleExportTxt}
                 className={`${iconBtn} w-auto gap-1.5 px-3`}
               >
                 <Download className="h-4 w-4 shrink-0" />
                 <span className="text-sm">TXT</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                className={`${iconBtn} w-auto gap-1.5 px-3`}
+              >
+                <Download className="h-4 w-4 shrink-0" />
+                <span className="text-sm">PDF</span>
               </button>
               <button
                 type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { LogOut, Search, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -25,6 +26,16 @@ export function VaultHeader({
   children,
 }: VaultHeaderProps) {
   const showSearch = onSearchChange !== undefined;
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.email) setUserEmail(data.user.email);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-xl pt-[max(0.625rem,env(safe-area-inset-top))]">
@@ -90,6 +101,14 @@ export function VaultHeader({
             >
               <Search className="h-4 w-4" />
             </button>
+          )}
+          {userEmail && (
+            <span
+              className="max-w-[7rem] truncate text-xs text-muted sm:max-w-[10rem] lg:max-w-[14rem] lg:text-sm"
+              title={userEmail}
+            >
+              {userEmail}
+            </span>
           )}
           <ThemeToggle />
           <button

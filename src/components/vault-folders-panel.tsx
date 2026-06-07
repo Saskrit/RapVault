@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderPlus, Plus, Star } from "lucide-react";
+import { FolderPlus, Plus, Star, Trash2 } from "lucide-react";
 import type { Folder } from "@/types";
 
 type VaultFoldersPanelProps = {
@@ -10,6 +10,7 @@ type VaultFoldersPanelProps = {
   onSelectAll: () => void;
   onSelectFavorites: () => void;
   onSelectFolder: (id: string) => void;
+  onDeleteFolder: (id: string) => void;
   onNewFolder: () => void;
   onNewSong: () => void;
   onNavigate?: () => void;
@@ -22,6 +23,7 @@ export function VaultFoldersPanel({
   onSelectAll,
   onSelectFavorites,
   onSelectFolder,
+  onDeleteFolder,
   onNewFolder,
   onNewSong,
   onNavigate,
@@ -66,19 +68,39 @@ export function VaultFoldersPanel({
           Folders
         </p>
         {folders.map((folder) => (
-          <button
+          <div
             key={folder.id}
-            type="button"
-            onClick={wrap(() => onSelectFolder(folder.id))}
-            className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm transition active:scale-[0.98] ${
+            className={`group mb-1 flex items-center gap-1 rounded-xl transition ${
               selectedFolderId === folder.id
-                ? "bg-accent/20 text-accent"
-                : "text-foreground hover:bg-card"
+                ? "bg-accent/20"
+                : "hover:bg-card"
             }`}
           >
-            <span className="truncate">{folder.name}</span>
-            <span className="ml-2 text-xs text-muted">{folder._count.songs}</span>
-          </button>
+            <button
+              type="button"
+              onClick={wrap(() => onSelectFolder(folder.id))}
+              className={`min-w-0 flex-1 rounded-xl px-3 py-3 text-left text-sm transition active:scale-[0.98] ${
+                selectedFolderId === folder.id
+                  ? "text-accent"
+                  : "text-foreground"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="truncate">{folder.name}</span>
+                <span className="ml-2 shrink-0 text-xs text-muted">
+                  {folder._count.songs}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeleteFolder(folder.id)}
+              className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted opacity-100 transition hover:bg-red-500/10 hover:text-red-400 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
+              aria-label={`Delete ${folder.name}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         ))}
         <button
           type="button"
