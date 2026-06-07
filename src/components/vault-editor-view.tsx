@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, SpellCheck, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,8 +24,22 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [spellCheck, setSpellCheck] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Partial<Song> | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("rapvault-spellcheck");
+    if (saved === "false") setSpellCheck(false);
+  }, []);
+
+  function toggleSpellCheck() {
+    setSpellCheck((prev) => {
+      const next = !prev;
+      localStorage.setItem("rapvault-spellcheck", String(next));
+      return next;
+    });
+  }
 
   useEffect(() => {
     async function load() {
@@ -158,10 +172,20 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               type="text"
               value={song.title}
               onChange={(e) => scheduleSave({ title: e.target.value })}
+              spellCheck={spellCheck}
               className="min-w-0 w-full bg-transparent text-xl font-bold outline-none placeholder:text-muted sm:flex-1 lg:text-2xl"
               placeholder="Song title"
             />
             <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={toggleSpellCheck}
+                className={`${iconBtn} ${spellCheck ? "border-accent/50 text-accent" : ""}`}
+                aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
+                title={spellCheck ? "Spell check on" : "Spell check off"}
+              >
+                <SpellCheck className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
@@ -226,7 +250,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
           onChange={(e) => scheduleSave({ content: e.target.value })}
           placeholder="Drop your bars here..."
           className="mx-auto min-h-0 w-full max-w-4xl flex-1 resize-none bg-editor px-4 py-4 font-mono text-base leading-relaxed text-foreground outline-none placeholder:text-muted lg:px-8 lg:py-5"
-          spellCheck
+          spellCheck={spellCheck}
         />
       </main>
 
