@@ -52,7 +52,7 @@ cp .env.example .env
 | `AUTH_SECRET` | Random string, 32+ chars |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `NEXT_PUBLIC_APP_URL` | Production URL (optional on Vercel) |
+| `GOOGLE_REDIRECT_URI` | Optional fixed callback URL (only if auto-detect fails) |
 
 Generate an auth secret:
 
@@ -75,10 +75,13 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Create an **OAuth 2.0 Client ID** (Web application)
-3. Add **Authorized redirect URIs**:
-   - `http://localhost:3000/api/auth/google/callback`
-   - `https://your-app.vercel.app/api/auth/google/callback`
-4. Copy the Client ID and Client Secret into `.env` and Vercel env vars
+3. Add **Authorized redirect URIs** — each must match **exactly** (copy/paste, no trailing slash):
+   - `http://localhost:3000/api/auth/google/callback` (local dev)
+   - `https://YOUR-VERCEL-DOMAIN.vercel.app/api/auth/google/callback` (production)
+   - Add a custom domain URI too if you use one
+4. Local dev: open `http://localhost:3000/api/auth/google/redirect-uri` to see the URI your app sends
+5. Copy Client ID and Client Secret into `.env` and Vercel env vars
+6. Remove `NEXT_PUBLIC_APP_URL` from Vercel if set — it can cause `redirect_uri_mismatch`
 
 ## Deploy on Vercel
 
@@ -93,7 +96,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `AUTH_SECRET` | Output of `node scripts/generate-secret.mjs` |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `NEXT_PUBLIC_APP_URL` | Your Vercel production URL |
+| `GOOGLE_REDIRECT_URI` | Only if auto-detect fails — full callback URL |
 
 4. Deploy — migrations run automatically during the build
 

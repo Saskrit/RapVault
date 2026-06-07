@@ -25,17 +25,38 @@ function getGoogleClientSecret() {
   return secret;
 }
 
+/** Use the host the user actually opened — fixes redirect_uri_mismatch on Vercel/custom domains. */
 export function getAppOrigin(request: Request) {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI.replace(
+      /\/api\/auth\/google\/callback\/?$/,
+      "",
+    );
   }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+
+  if (forwardedHost) {
+    const proto = forwardedProto?.split(",")[0]?.trim() || "https";
+    return `${proto}://${forwardedHost.split(",")[0].trim()}`;
   }
+
+  const host = request.headers.get("host");
+  if (host) {
+    const proto =
+      request.headers.get("x-forwarded-proto") ||
+      (host.includes("localhost") ? "http" : "https");
+    return `${proto}://${host}`;
+  }
+
   return new URL(request.url).origin;
 }
 
 export function getGoogleRedirectUri(request: Request) {
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI.replace(/\/$/, "");
+  }
   return `${getAppOrigin(request)}/api/auth/google/callback`;
 }
 
@@ -44,9 +65,10 @@ export function createOAuthState() {
 }
 
 export function buildGoogleAuthUrl(request: Request, state: string) {
+  const redirectUri = getGoogleRedirectUri(request);
   const params = new URLSearchParams({
     client_id: getGoogleClientId(),
-    redirect_uri: getGoogleRedirectUri(request),
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
     state,
@@ -60,6 +82,8 @@ export async function exchangeGoogleCode(
   request: Request,
   code: string,
 ): Promise<GoogleUserInfo> {
+  const redirectUri = getGoogleRedirectUri(request);
+
   const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -67,7 +91,7 @@ export async function exchangeGoogleCode(
       code,
       client_id: getGoogleClientId(),
       client_secret: getGoogleClientSecret(),
-      redirect_uri: getGoogleRedirectUri(request),
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
   });
