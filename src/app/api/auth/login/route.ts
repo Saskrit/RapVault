@@ -17,7 +17,14 @@ export async function POST(request: Request) {
       where: { email: email.toLowerCase().trim() },
     });
 
-    if (!user || !(await verifyPassword(password, user.password))) {
+    if (!user?.password) {
+      return NextResponse.json(
+        { error: "This account uses Google sign-in. Continue with Google instead." },
+        { status: 401 },
+      );
+    }
+
+    if (!(await verifyPassword(password, user.password))) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 },

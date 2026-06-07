@@ -4,7 +4,7 @@ A private cloud notebook for rap lyrics — hooks, punchlines, freestyles, and u
 
 ## Features
 
-- **Authentication** — Register, login, and secure sessions
+- **Authentication** — Email/password or Google sign-in
 - **Lyrics editor** — Create, edit, and delete songs with auto-save
 - **Folders** — Finished Songs, Work In Progress, Freestyles, Hooks, Punchlines, Ideas (+ custom folders)
 - **Organization** — Title, genre, mood tags, draft/finished status, created & modified dates
@@ -50,6 +50,9 @@ cp .env.example .env
 | `DATABASE_URL` | Pooled Postgres URL (app runtime) |
 | `DIRECT_DATABASE_URL` | Direct Postgres URL (migrations) |
 | `AUTH_SECRET` | Random string, 32+ chars |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_APP_URL` | Production URL (optional on Vercel) |
 
 Generate an auth secret:
 
@@ -68,6 +71,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Google OAuth setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create an **OAuth 2.0 Client ID** (Web application)
+3. Add **Authorized redirect URIs**:
+   - `http://localhost:3000/api/auth/google/callback`
+   - `https://your-app.vercel.app/api/auth/google/callback`
+4. Copy the Client ID and Client Secret into `.env` and Vercel env vars
+
 ## Deploy on Vercel
 
 1. Import the repo at [vercel.com/new](https://vercel.com/new)
@@ -79,6 +91,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DATABASE_URL` | Neon pooled connection string |
 | `DIRECT_DATABASE_URL` | Neon direct connection string |
 | `AUTH_SECRET` | Output of `node scripts/generate-secret.mjs` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_APP_URL` | Your Vercel production URL |
 
 4. Deploy — migrations run automatically during the build
 

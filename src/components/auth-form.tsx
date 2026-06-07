@@ -1,9 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { Logo } from "@/components/logo";
+
+const GOOGLE_ERRORS: Record<string, string> = {
+  google_config: "Google sign-in is not configured yet.",
+  google_denied: "Google sign-in was cancelled.",
+  google_state: "Sign-in expired. Please try again.",
+  google_failed: "Google sign-in failed. Please try again.",
+};
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -11,11 +19,19 @@ type AuthFormProps = {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const googleError = searchParams.get("error");
+    if (googleError && GOOGLE_ERRORS[googleError]) {
+      setError(GOOGLE_ERRORS[googleError]);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -58,6 +74,19 @@ export function AuthForm({ mode }: AuthFormProps) {
             ? "Sign in to access your lyrics."
             : "Start writing and never lose a bar."}
         </p>
+      </div>
+
+      <GoogleSignInButton
+        label={mode === "login" ? "Sign in with Google" : "Sign up with Google"}
+      />
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase tracking-wider">
+          <span className="bg-card px-3 text-muted">or</span>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
