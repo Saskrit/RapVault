@@ -4,6 +4,8 @@ import {
   Download,
   FolderPlus,
   LogOut,
+  PanelLeft,
+  PanelLeftClose,
   Plus,
   Search,
   Star,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { Logo } from "@/components/logo";
 import { NewFolderModal } from "@/components/new-folder-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -32,6 +35,9 @@ export function VaultApp() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [loading, setLoading] = useState(true);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Partial<Song> | null>(null);
 
@@ -57,6 +63,19 @@ export function VaultApp() {
     }
     return [];
   }, [selectedFolderId, showFavorites, searchQuery]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("rapvault-sidebar");
+    if (saved === "closed") setSidebarOpen(false);
+  }, []);
+
+  function toggleSidebar() {
+    setSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("rapvault-sidebar", next ? "open" : "closed");
+      return next;
+    });
+  }
 
   useEffect(() => {
     async function init() {
@@ -142,16 +161,22 @@ export function VaultApp() {
     }
   }
 
-  async function handleDeleteSong() {
-    if (!activeSong || !confirm("Delete this song permanently?")) return;
-    const res = await fetch(`/api/songs/${activeSong.id}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
-      const remaining = songs.filter((s) => s.id !== activeSong.id);
-      setSongs(remaining);
-      setActiveSong(remaining[0] ?? null);
-      await fetchFolders();
+  async function confirmDeleteSong() {
+    if (!activeSong) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/songs/${activeSong.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const remaining = songs.filter((s) => s.id !== activeSong.id);
+        setSongs(remaining);
+        setActiveSong(remaining[0] ?? null);
+        await fetchFolders();
+        setShowDeleteModal(false);
+      }
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -202,7 +227,20 @@ export function VaultApp() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center gap-4 border-b border-border px-4 py-3">
+      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="rounded-lg border border-border p-2 text-muted transition hover:border-accent hover:text-accent"
+          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {sidebarOpen ? (
+            <PanelLeftClose className="h-4 w-4" />
+          ) : (
+            <PanelLeft className="h-4 w-4" />
+          )}
+        </button>
         <Logo size={36} href={null} priority />
 
         <div className="relative mx-auto w-full max-w-md flex-1">
@@ -230,8 +268,12 @@ export function VaultApp() {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-56 flex-col border-r border-border bg-sidebar lg:w-64">
-          <div className="border-b border-border p-3">
+        <aside
+          className={`flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-300 ease-in-out ${
+            sidebarOpen ? "w-56 lg:w-64" : "w-0 border-r-0"
+          }`}
+        >
+          <div className="min-w-56 border-b border-border p-3 lg:min-w-64">
             <button
               type="button"
               onClick={() => {
@@ -263,7 +305,7 @@ export function VaultApp() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="min-w-56 flex-1 overflow-y-auto p-3 lg:min-w-64">
             <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted">
               Folders
             </p>
@@ -297,7 +339,7 @@ export function VaultApp() {
             </button>
           </div>
 
-          <div className="border-t border-border p-3">
+          <div className="min-w-56 border-t border-border p-3 lg:min-w-64">
             <button
               type="button"
               onClick={handleNewSong}
@@ -390,7 +432,7 @@ export function VaultApp() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleDeleteSong}
+                      onClick={() => setShowDeleteModal(true)}
                       className="rounded-lg border border-border p-2 text-muted transition hover:border-red-500/50 hover:text-red-400"
                       title="Delete song"
                     >
@@ -516,6 +558,17 @@ export function VaultApp() {
         open={showNewFolderModal}
         onClose={() => setShowNewFolderModal(false)}
         onCreate={createFolder}
+      />
+
+      <ConfirmModal
+        open={showDeleteModal}
+        onClose={() => !deleting && setShowDeleteModal(false)}
+        onConfirm={confirmDeleteSong}
+        title="Delete song?"
+        description={`"${activeSong?.title ?? "This song"}" will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
       />
     </div>
   );
