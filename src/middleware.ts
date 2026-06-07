@@ -26,10 +26,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (
-    (pathname === "/login" || pathname === "/register") &&
-    authed
-  ) {
+  const authPages = [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+  ];
+
+  if (authPages.some((p) => pathname === p || pathname.startsWith(`${p}/`)) && authed) {
     return NextResponse.redirect(new URL("/vault", request.url));
   }
 
@@ -37,5 +41,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/vault/:path*", "/login", "/register"],
+  matcher: [
+    "/vault/:path*",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+  ],
 };

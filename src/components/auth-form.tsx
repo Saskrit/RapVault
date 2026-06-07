@@ -31,7 +31,12 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (googleError && GOOGLE_ERRORS[googleError]) {
       setError(GOOGLE_ERRORS[googleError]);
     }
+    if (searchParams.get("reset") === "success") {
+      setError("");
+    }
   }, [searchParams]);
+
+  const resetSuccess = searchParams.get("reset") === "success";
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -116,7 +121,17 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-muted">Password</label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-sm text-muted">Password</label>
+            {mode === "login" && (
+              <Link
+                href="/forgot-password"
+                className="text-xs text-accent hover:underline"
+              >
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <input
             type="password"
             required
@@ -127,6 +142,12 @@ export function AuthForm({ mode }: AuthFormProps) {
             placeholder="Min 6 characters"
           />
         </div>
+
+        {resetSuccess && (
+          <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-400">
+            Password updated. You can sign in now.
+          </p>
+        )}
 
         {error && (
           <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">

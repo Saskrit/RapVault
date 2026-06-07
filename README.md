@@ -4,7 +4,7 @@ A private cloud notebook for rap lyrics — hooks, punchlines, freestyles, and u
 
 ## Features
 
-- **Authentication** — Email/password or Google sign-in
+- **Authentication** — Email/password, Google sign-in, forgot password
 - **Lyrics editor** — Create, edit, and delete songs with auto-save
 - **Folders** — Finished Songs, Work In Progress, Freestyles, Hooks, Punchlines, Ideas (+ custom folders)
 - **Organization** — Title, genre, mood tags, draft/finished status, created & modified dates

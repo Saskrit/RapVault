@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?
-  googleId  String?  @unique
-  name      String?
-  createdAt DateTime @default(now())
-  folders   Folder[]
-  songs     Song[]
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String?
+  googleId          String?   @unique
+  name              String?
+  resetToken        String?   @unique
+  resetTokenExpires DateTime?
+  createdAt         DateTime  @default(now())
+  folders           Folder[]
+  songs             Song[]
 }
 
 model Folder {
