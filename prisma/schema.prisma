@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  folders   Folder[]
+  songs     Song[]
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int      @default(0)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songs     Song[]
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Song {
+  id         String   @id @default(cuid())
+  title      String   @default("Untitled")
+  content    String   @default("")
+  genre      String   @default("")
+  moodTags   String   @default("")
+  status     String   @default("draft")
+  isFavorite Boolean  @default(false)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId   String?
+  folder     Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([folderId])
+}
