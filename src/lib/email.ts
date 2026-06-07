@@ -14,22 +14,41 @@ function getSmtpConfig() {
   };
 }
 
-export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+type ResetEmailOptions = {
+  googleOnly?: boolean;
+};
+
+export async function sendPasswordResetEmail(
+  to: string,
+  resetUrl: string,
+  options: ResetEmailOptions = {},
+) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
   if (!from) throw new Error("EMAIL_FROM or SMTP_USER must be set");
 
   const transporter = nodemailer.createTransport(getSmtpConfig());
 
+  const intro = options.googleOnly
+    ? "You signed up with Google. Use the link below to set a password so you can also sign in with email, or keep using Google sign-in."
+    : "You requested a password reset for your RapVault account.";
+
+  const googleNote = options.googleOnly
+    ? "\n\nYou can still sign in with Google anytime."
+    : "";
+
   await transporter.sendMail({
     from: `RapVault <${from}>`,
     to,
-    subject: "Reset your RapVault password",
-    text: `Reset your RapVault password using this link (expires in 1 hour):\n\n${resetUrl}\n\nIf you didn't request this, you can ignore this email.`,
+    subject: options.googleOnly
+      ? "Set a password for your RapVault account"
+      : "Reset your RapVault password",
+    text: `${intro}\n\n${resetUrl}\n\nThis link expires in 1 hour.${googleNote}\n\nIf you didn't request this, ignore this email.`,
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color: #8b5cf6;">Reset your password</h2>
-        <p>You requested a password reset for your RapVault account.</p>
-        <p><a href="${resetUrl}" style="display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none;">Reset password</a></p>
+        <h2 style="color: #8b5cf6;">${options.googleOnly ? "Set a password" : "Reset your password"}</h2>
+        <p>${intro}</p>
+        <p><a href="${resetUrl}" style="display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none;">${options.googleOnly ? "Set password" : "Reset password"}</a></p>
+        ${options.googleOnly ? '<p style="color: #71717a; font-size: 14px;">You can still sign in with Google anytime.</p>' : ""}
         <p style="color: #71717a; font-size: 14px;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
       </div>
     `,

@@ -60,7 +60,10 @@ export function ResetPasswordForm() {
         <h1 className="mt-3 text-2xl font-bold text-foreground">
           Set new password
         </h1>
-        <p className="mt-2 text-sm text-muted">Choose a new password for your vault.</p>
+        <p className="mt-2 text-sm text-muted">
+          Choose a password for your vault. Google sign-in will still work if your
+          account was linked to Google.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

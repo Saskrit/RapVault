@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({ where: { email: normalized } });
 
-    if (user?.password) {
+    if (user) {
       const token = randomBytes(32).toString("hex");
       const resetTokenExpires = new Date(Date.now() + RESET_EXPIRY_MS);
 
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
       });
 
       const resetUrl = `${getAppOrigin(request)}/reset-password?token=${token}`;
-      await sendPasswordResetEmail(user.email, resetUrl);
+      const googleOnly = Boolean(user.googleId && !user.password);
+
+      await sendPasswordResetEmail(user.email, resetUrl, { googleOnly });
     }
 
     return NextResponse.json({
