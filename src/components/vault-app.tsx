@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/logo";
 import { NewFolderModal } from "@/components/new-folder-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GENRES } from "@/lib/constants";
@@ -18,13 +19,9 @@ import { buildTxtExport, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
 import type { Folder, Song } from "@/types";
 
-type VaultAppProps = {
-  user: { email: string; name: string | null };
-};
-
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-export function VaultApp({ user }: VaultAppProps) {
+export function VaultApp() {
   const router = useRouter();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
@@ -206,14 +203,7 @@ export function VaultApp({ user }: VaultAppProps) {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       <header className="flex items-center gap-4 border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold uppercase tracking-[0.15em] text-accent">
-            RapVault
-          </span>
-          <span className="hidden text-xs text-muted sm:inline">
-            {user.name || user.email}
-          </span>
-        </div>
+        <Logo size={36} href={null} priority />
 
         <div className="relative mx-auto w-full max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />

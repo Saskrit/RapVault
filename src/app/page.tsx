@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Logo } from "@/components/logo";
 import { getSession } from "@/lib/auth";
 
 export default async function HomePage() {
@@ -9,12 +10,9 @@ export default async function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
       <div className="max-w-2xl text-center">
-        <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-accent">
-          Private lyrics vault
-        </p>
-        <h1 className="mb-4 text-5xl font-bold tracking-tight text-foreground">
-          RapVault
-        </h1>
+        <div className="mb-6 flex justify-center">
+          <Logo size={120} priority />
+        </div>
         <p className="mb-10 text-lg text-muted">
           Write hooks, punchlines, and unfinished verses. Auto-save keeps every
           bar safe. Organize by folder, search your catalog, and export when

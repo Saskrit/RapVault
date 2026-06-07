@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { Logo } from "@/components/logo";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -46,9 +47,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-xl">
       <div className="mb-8 text-center">
-        <Link href="/" className="text-sm font-medium uppercase tracking-[0.2em] text-accent">
-          RapVault
-        </Link>
+        <div className="flex justify-center">
+          <Logo size={56} priority />
+        </div>
         <h1 className="mt-3 text-2xl font-bold text-foreground">
           {mode === "login" ? "Welcome back" : "Create your vault"}
         </h1>

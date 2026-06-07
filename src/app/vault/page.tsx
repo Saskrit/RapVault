@@ -6,5 +6,5 @@ export default async function VaultPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  return <VaultApp user={user} />;
+  return <VaultApp />;
 }
