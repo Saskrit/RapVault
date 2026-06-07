@@ -27,12 +27,12 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Modal open={open} onClose={onClose} title={title} description={description}>
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={onClose}
           disabled={loading}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted transition hover:border-foreground/30 hover:text-foreground disabled:opacity-50"
+          className="w-full rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted transition hover:border-foreground/30 hover:text-foreground disabled:opacity-50 sm:w-auto sm:py-2"
         >
           {cancelLabel}
         </button>
@@ -40,7 +40,7 @@ export function ConfirmModal({
           type="button"
           onClick={onConfirm}
           disabled={loading}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50 ${
+          className={`w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-50 sm:w-auto sm:py-2 ${
             destructive
               ? "bg-red-600 hover:bg-red-500"
               : "bg-accent hover:bg-violet-500"

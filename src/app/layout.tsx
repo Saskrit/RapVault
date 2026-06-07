@@ -17,6 +17,27 @@ export const metadata: Metadata = {
   title: "RapVault — Private Lyrics Notebook",
   description:
     "A private cloud notepad for rap lyrics, hooks, punchlines, and unfinished verses.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "RapVault",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#7c3aed" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d1d1e" },
+  ],
 };
 
 export default function RootLayout({

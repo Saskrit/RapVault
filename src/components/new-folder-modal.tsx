@@ -62,7 +62,7 @@ export function NewFolderModal({ open, onClose, onCreate }: NewFolderModalProps)
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Summer 2026, Collab Ideas"
-            className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-accent"
+            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
             maxLength={60}
           />
         </div>
@@ -73,19 +73,19 @@ export function NewFolderModal({ open, onClose, onCreate }: NewFolderModalProps)
           </p>
         )}
 
-        <div className="flex justify-end gap-3 pt-1">
+        <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted transition hover:border-foreground/30 hover:text-foreground disabled:opacity-50"
+            className="min-h-11 rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted transition hover:border-foreground/30 hover:text-foreground disabled:opacity-50 sm:py-2"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50 sm:py-2"
           >
             <FolderPlus className="h-4 w-4" />
             {loading ? "Creating..." : "Create folder"}

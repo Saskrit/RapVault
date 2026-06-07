@@ -49,7 +49,7 @@ const FEATURES = [
 
 export function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-accent/20 blur-[120px]" />
         <div className="absolute -right-32 top-1/3 h-80 w-80 rounded-full bg-violet-600/10 blur-[100px]" />
@@ -63,20 +63,20 @@ export function LandingPage() {
         />
       </div>
 
-      <header className="relative z-10 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <header className="relative z-10 border-b border-border/60 bg-background/70 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <Logo size={40} href="/" priority />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             <Link
               href="/login"
-              className="hidden rounded-lg px-4 py-2 text-sm font-medium text-muted transition hover:text-foreground sm:inline-block"
+              className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:text-foreground sm:inline-flex md:px-4"
             >
               Sign in
             </Link>
             <Link
               href="/register"
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
+              className="inline-flex min-h-10 items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] sm:px-4"
             >
               Get started
             </Link>
@@ -85,35 +85,35 @@ export function LandingPage() {
       </header>
 
       <main className="relative z-10">
-        <section className="mx-auto max-w-6xl px-6 pb-20 pt-16 md:pt-24">
-          <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-10">
+        <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-16 md:pt-24">
+          <div className="grid items-center gap-10 sm:gap-14 lg:grid-cols-2 lg:gap-10">
             <div>
               <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium uppercase tracking-widest text-accent">
                 <Cloud className="h-3.5 w-3.5" />
                 Private lyrics cloud
               </p>
-              <h1 className="text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl lg:text-6xl">
+              <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
                 Your bars.
                 <br />
                 <span className="bg-gradient-to-r from-accent to-accent-muted bg-clip-text text-transparent">
                   Locked in the vault.
                 </span>
               </h1>
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
                 RapVault is a private notebook built for hooks, punchlines,
                 freestyles, and unfinished verses. Write late, organize fast, and
                 never lose a line.
               </p>
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
                 <Link
                   href="/register"
-                  className="rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
                 >
                   Start writing free
                 </Link>
                 <Link
                   href="/login"
-                  className="rounded-xl border border-border bg-card/50 px-7 py-3.5 text-sm font-semibold transition hover:border-accent hover:text-accent"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card/50 px-7 py-3.5 text-sm font-semibold transition hover:border-accent hover:text-accent active:scale-[0.98] sm:w-auto"
                 >
                   Sign in
                 </Link>
@@ -143,7 +143,7 @@ export function LandingPage() {
                   <div className="h-3 w-3 rounded-full bg-green-500/80" />
                   <span className="ml-2 text-xs text-muted">Midnight Freestyle — Draft</span>
                 </div>
-                <div className="grid grid-cols-[140px_1fr] md:grid-cols-[160px_1fr]">
+                <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[140px_1fr] md:grid-cols-[160px_1fr]">
                   <div className="border-r border-border bg-sidebar p-3 text-xs">
                     <p className="mb-2 font-medium text-accent">Folders</p>
                     <p className="text-muted">Work In Progress</p>
@@ -170,10 +170,10 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="border-t border-border/60 bg-card/30 py-20">
-          <div className="mx-auto max-w-6xl px-6">
+        <section className="border-t border-border/60 bg-card/30 py-14 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mb-12 max-w-2xl">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                 Built for the writing session
               </h2>
               <p className="mt-3 text-muted">
@@ -200,9 +200,9 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="py-20">
-          <div className="mx-auto max-w-3xl px-6 text-center">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+        <section className="py-14 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
               Ready to fill the vault?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted">
@@ -211,7 +211,7 @@ export function LandingPage() {
             </p>
             <Link
               href="/register"
-              className="mt-8 inline-flex rounded-xl bg-accent px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500"
+              className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:mt-8"
             >
               Create your vault
             </Link>
@@ -219,8 +219,8 @@ export function LandingPage() {
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-border/60 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-muted sm:flex-row">
+      <footer className="relative z-10 border-t border-border/60 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted sm:flex-row sm:px-6">
           <div className="flex items-center gap-2">
             <Logo size={28} href="/" />
             <span>© {new Date().getFullYear()} RapVault</span>

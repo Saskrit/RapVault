@@ -52,7 +52,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-xl">
+    <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
       <div className="mb-8 text-center">
         <div className="flex justify-center">
           <Logo size={56} priority />
@@ -75,7 +75,7 @@ export function ResetPasswordForm() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-accent"
+            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
             placeholder="Min 6 characters"
           />
         </div>
@@ -88,7 +88,7 @@ export function ResetPasswordForm() {
             minLength={6}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground outline-none focus:border-accent"
+            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
             placeholder="Repeat password"
           />
         </div>
@@ -102,7 +102,7 @@ export function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading || !token}
-          className="w-full rounded-lg bg-accent py-2.5 font-semibold text-white transition hover:bg-violet-500 disabled:opacity-60"
+          className="w-full min-h-11 rounded-xl bg-accent py-3 font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
         >
           {loading ? "Updating..." : "Update password"}
         </button>

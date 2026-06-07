@@ -1,12 +1,13 @@
 import { Suspense } from "react";
+import { PageShell } from "@/components/page-shell";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 
 export default function ResetPasswordPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+    <PageShell>
       <Suspense>
         <ResetPasswordForm />
       </Suspense>
-    </main>
+    </PageShell>
   );
 }

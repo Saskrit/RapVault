@@ -1,9 +1,10 @@
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
+import { PageShell } from "@/components/page-shell";
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+    <PageShell>
       <ForgotPasswordForm />
-    </main>
+    </PageShell>
   );
 }
