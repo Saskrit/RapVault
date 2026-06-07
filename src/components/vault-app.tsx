@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NewFolderModal } from "@/components/new-folder-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GENRES } from "@/lib/constants";
 import { buildTxtExport, downloadTxt } from "@/lib/export";
@@ -33,6 +34,7 @@ export function VaultApp({ user }: VaultAppProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [loading, setLoading] = useState(true);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Partial<Song> | null>(null);
 
@@ -156,15 +158,17 @@ export function VaultApp({ user }: VaultAppProps) {
     }
   }
 
-  async function handleNewFolder() {
-    const name = prompt("Folder name:");
-    if (!name?.trim()) return;
+  async function createFolder(name: string) {
     const res = await fetch("/api/folders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    if (res.ok) await fetchFolders();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Failed to create folder");
+    }
+    await fetchFolders();
   }
 
   async function handleLogout() {
@@ -295,7 +299,7 @@ export function VaultApp({ user }: VaultAppProps) {
             ))}
             <button
               type="button"
-              onClick={handleNewFolder}
+              onClick={() => setShowNewFolderModal(true)}
               className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-card hover:text-foreground"
             >
               <FolderPlus className="h-4 w-4" />
@@ -517,6 +521,12 @@ export function VaultApp({ user }: VaultAppProps) {
           )}
         </main>
       </div>
+
+      <NewFolderModal
+        open={showNewFolderModal}
+        onClose={() => setShowNewFolderModal(false)}
+        onCreate={createFolder}
+      />
     </div>
   );
 }
