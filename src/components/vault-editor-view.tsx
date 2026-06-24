@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, Download, SpellCheck, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Music2, SpellCheck, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
@@ -26,12 +27,21 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [spellCheck, setSpellCheck] = useState(true);
+  const [beatsOpen, setBeatsOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Partial<Song> | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("rapvault-spellcheck");
     if (saved === "false") setSpellCheck(false);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setBeatsOpen(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
 
   function toggleSpellCheck() {
@@ -69,7 +79,15 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         });
         if (!res.ok) throw new Error("Save failed");
         const data = await res.json();
-        setSong(data.song);
+        setSong((prev) => {
+          if (!prev) return data.song;
+          // Keep live editor text if the user kept typing while the save was in flight.
+          return {
+            ...data.song,
+            content: prev.content,
+            title: prev.title,
+          };
+        });
         setSaveState("saved");
         setTimeout(() => setSaveState("idle"), 2000);
       } catch {
@@ -219,6 +237,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             <button
               type="button"
+              onClick={() => setBeatsOpen((open) => !open)}
+              className={`${iconBtn} lg:hidden ${
+                beatsOpen
+                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                  : ""
+              }`}
+              aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
+              title={beatsOpen ? "Hide beats" : "Show beats"}
+            >
+              <Music2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
               onClick={toggleSpellCheck}
               className={`${iconBtn} ${
                 spellCheck
@@ -272,12 +303,25 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         </div>
       </div>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <LyricRichEditor
-          value={song.content}
-          onChange={(content) => scheduleSave({ content })}
-          spellCheck={spellCheck}
-        />
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <LyricRichEditor
+            key={song.id}
+            value={song.content}
+            onChange={(content) => scheduleSave({ content })}
+            spellCheck={spellCheck}
+          />
+        </div>
+
+        <aside
+          className={`${
+            beatsOpen ? "flex" : "hidden"
+          } min-h-0 shrink-0 flex-col border-t border-border lg:flex lg:h-auto lg:w-[min(100%,26rem)] lg:border-t-0 lg:border-l xl:w-[28rem] ${
+            beatsOpen ? "h-[min(45dvh,28rem)]" : ""
+          }`}
+        >
+          <BeatPlayerPanel songId={song.id} onClose={() => setBeatsOpen(false)} />
+        </aside>
       </main>
 
       <ConfirmModal

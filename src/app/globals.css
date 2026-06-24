@@ -175,6 +175,16 @@ textarea {
   text-underline-offset: 2px;
 }
 
+.lyric-editor {
+  white-space: pre-wrap;
+  caret-color: var(--foreground);
+}
+
+.lyric-editor p,
+.lyric-editor div {
+  margin: 0;
+}
+
 .lyric-editor:empty::before {
   content: attr(data-placeholder);
   color: var(--muted);

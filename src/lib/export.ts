@@ -84,12 +84,20 @@ export async function downloadPdf(filename: string, song: ExportSong) {
   doc.setTextColor(0);
   doc.setFontSize(11);
   const plainContent = stripRichText(song.content || "");
-  const contentLines = doc.splitTextToSize(plainContent, maxWidth);
 
-  for (const line of contentLines) {
-    ensureSpace(lineHeight);
-    doc.text(line, margin, y);
-    y += lineHeight;
+  for (const rawLine of plainContent.split("\n")) {
+    if (rawLine === "") {
+      ensureSpace(lineHeight);
+      y += lineHeight;
+      continue;
+    }
+
+    const wrapped = doc.splitTextToSize(rawLine, maxWidth);
+    for (const line of wrapped) {
+      ensureSpace(lineHeight);
+      doc.text(line, margin, y);
+      y += lineHeight;
+    }
   }
 
   doc.save(`${safeFilename(filename)}.pdf`);
