@@ -2,12 +2,13 @@
 
 import {
   Cloud,
+  Columns2,
+  FileText,
   FolderOpen,
-  Moon,
-  Search,
+  Mic,
+  Music2,
   Shield,
   Sparkles,
-  Star,
   Timer,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,9 +17,32 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const FEATURES = [
   {
+    icon: Music2,
+    title: "Beat player",
+    description:
+      "Paste a YouTube beat and play it while you write. Saved to each song on every device.",
+  },
+  {
+    icon: Columns2,
+    title: "Resizable split",
+    description:
+      "Drag the divider — lyrics on the left, beat on the right, exactly how you like it.",
+  },
+  {
     icon: Timer,
     title: "Auto-save",
     description: "Every bar saves as you type. No lost verses at 3 AM.",
+  },
+  {
+    icon: Sparkles,
+    title: "Rap writing tools",
+    description:
+      "One-tap Verse, Hook, and Bridge labels plus syllable counts and rhyme highlighting.",
+  },
+  {
+    icon: Mic,
+    title: "Voice memos",
+    description: "Record or upload a quick memo per song before you type the final bars.",
   },
   {
     icon: FolderOpen,
@@ -26,19 +50,9 @@ const FEATURES = [
     description: "Hooks, freestyles, punchlines — keep your catalog organized.",
   },
   {
-    icon: Search,
-    title: "Search",
-    description: "Find any song by title, lyrics, tags, or genre instantly.",
-  },
-  {
-    icon: Star,
-    title: "Favorites",
-    description: "Star your hardest tracks and pull them up in one tap.",
-  },
-  {
-    icon: Sparkles,
-    title: "Word stats",
-    description: "Words, lines, and estimated rap time — know your song length.",
+    icon: FileText,
+    title: "TXT & PDF export",
+    description: "Download clean lyrics from desktop or phone whenever you need them.",
   },
   {
     icon: Shield,
@@ -101,8 +115,8 @@ export function LandingPage() {
               </h1>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
                 RapVault is a private notebook built for hooks, punchlines,
-                freestyles, and unfinished verses. Write late, organize fast, and
-                never lose a line.
+                freestyles, and unfinished verses. Write to beats, organize fast,
+                and never lose a line.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
                 <Link
@@ -120,8 +134,8 @@ export function LandingPage() {
               </div>
               <div className="mt-10 flex flex-wrap gap-6 text-sm text-muted">
                 <span className="flex items-center gap-2">
-                  <Moon className="h-4 w-4 text-accent" />
-                  Dark mode
+                  <Music2 className="h-4 w-4 text-accent" />
+                  Write to beats
                 </span>
                 <span className="flex items-center gap-2">
                   <Timer className="h-4 w-4 text-accent" />
@@ -143,22 +157,29 @@ export function LandingPage() {
                   <div className="h-3 w-3 rounded-full bg-green-500/80" />
                   <span className="ml-2 text-xs text-muted">Midnight Freestyle — Draft</span>
                 </div>
-                <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[140px_1fr] md:grid-cols-[160px_1fr]">
-                  <div className="border-r border-border bg-sidebar p-3 text-xs">
-                    <p className="mb-2 font-medium text-accent">Folders</p>
-                    <p className="text-muted">Work In Progress</p>
-                    <p className="mt-1 text-muted">Hooks</p>
-                    <p className="mt-1 text-muted">Punchlines</p>
-                  </div>
-                  <div className="bg-editor p-5 font-mono text-sm leading-relaxed">
-                    <p className="text-muted">// verse 1</p>
+                <div className="grid grid-cols-[minmax(0,1fr)_120px] sm:grid-cols-[minmax(0,1fr)_160px]">
+                  <div className="border-r border-border bg-editor p-4 font-mono text-sm leading-relaxed sm:p-5">
+                    <p className="text-accent/80">[Verse 1]</p>
                     <p className="mt-2 text-foreground">
                       Started with a vision, pen hit the pad
                     </p>
                     <p className="text-foreground">
                       Lines in the vault, never lookin&apos; back...
                     </p>
+                    <p className="mt-3 text-accent/80">[Hook]</p>
+                    <p className="mt-1 text-foreground">Locked in, never fold</p>
                     <p className="mt-4 text-accent/60">|</p>
+                  </div>
+                  <div className="flex flex-col bg-sidebar">
+                    <div className="border-b border-border px-2 py-1.5 text-[10px] font-medium text-muted">
+                      Beat
+                    </div>
+                    <div className="flex flex-1 flex-col items-center justify-center gap-1 bg-black/90 p-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600">
+                        <Music2 className="h-4 w-4 text-white" />
+                      </div>
+                      <p className="text-center text-[9px] text-muted">YouTube beat</p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted">
@@ -181,7 +202,7 @@ export function LandingPage() {
                 catalog clean — without the clutter.
               </p>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {FEATURES.map((feature) => (
                 <div
                   key={feature.title}

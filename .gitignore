@@ -23,6 +23,7 @@
 # database
 *.db
 *.db-journal
+/data/uploads
 
 # misc
 .DS_Store

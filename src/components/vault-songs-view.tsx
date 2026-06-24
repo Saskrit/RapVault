@@ -108,6 +108,18 @@ export function VaultSongsView() {
     router.push(`/vault/write/${song.id}`);
   }
 
+  async function toggleFavorite(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFavorite: !song.isFavorite }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSongs((prev) => prev.map((item) => (item.id === song.id ? data.song : item)));
+    }
+  }
+
   async function createFolder(name: string) {
     const res = await fetch("/api/folders", {
       method: "POST",
@@ -264,6 +276,19 @@ export function VaultSongsView() {
                     {song.status === "draft" ? "Draft" : "Finished"} ·{" "}
                     {new Date(song.updatedAt).toLocaleDateString()}
                   </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(song)}
+                  className="flex w-12 shrink-0 items-center justify-center border-l border-border text-muted transition hover:bg-card hover:text-amber-400 active:bg-card sm:w-14"
+                  aria-label={song.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  title={song.isFavorite ? "Unfavorite" : "Favorite"}
+                >
+                  <Star
+                    className={`h-4 w-4 ${
+                      song.isFavorite ? "fill-amber-400 text-amber-400" : ""
+                    }`}
+                  />
                 </button>
                 <button
                   type="button"

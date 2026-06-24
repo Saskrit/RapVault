@@ -2,17 +2,22 @@
 
 import {
   Bold,
-  Heading1,
-  Heading2,
   Italic,
   Link,
   List,
   ListOrdered,
   Quote,
   Strikethrough,
+  Sparkles,
+  Type,
 } from "lucide-react";
-import { useEffect, useRef, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
-import { contentToHtml } from "@/lib/rich-text";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import {
+  RAP_STRUCTURE_LABELS,
+  RHYME_GROUP_COLORS,
+  analyzeLyricLines,
+} from "@/lib/lyric-tools";
+import { contentToHtml, stripRichText } from "@/lib/rich-text";
 
 type LyricRichEditorProps = {
   value: string;
@@ -21,7 +26,10 @@ type LyricRichEditorProps = {
 };
 
 const toolBtn =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-muted transition hover:border-border hover:bg-background hover:text-foreground active:scale-95";
+  "flex h-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-muted transition hover:border-border hover:bg-background hover:text-foreground active:scale-95";
+
+const structureBtn =
+  "shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95";
 
 function saveSelection(container: HTMLElement) {
   const sel = window.getSelection();
@@ -114,12 +122,18 @@ export function LyricRichEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const lastHtml = useRef("");
   const emittedValue = useRef<string | null>(null);
+  const [showSyllables, setShowSyllables] = useState(false);
+  const [showRhymes, setShowRhymes] = useState(false);
+
+  const lineAnalysis = useMemo(() => {
+    if (!showSyllables && !showRhymes) return [];
+    return analyzeLyricLines(stripRichText(value));
+  }, [value, showSyllables, showRhymes]);
 
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
 
-    // Skip re-sync when this update came from the editor itself (keeps cursor in place).
     if (value === emittedValue.current) return;
 
     const html = contentToHtml(value);
@@ -158,6 +172,13 @@ export function LyricRichEditor({
     const url = window.prompt("Link URL", "https://");
     if (!url) return;
     runCommand("createLink", url);
+  }
+
+  function insertStructure(label: string) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    insertPlainText(editor, `${label}\n`);
+    syncContent();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -218,35 +239,89 @@ export function LyricRichEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-border px-3 py-1.5 lg:px-6">
-        <button type="button" className={toolBtn} title="Bold" aria-label="Bold" onClick={() => runCommand("bold")}>
-          <Bold className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Italic" aria-label="Italic" onClick={() => runCommand("italic")}>
-          <Italic className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Strikethrough" aria-label="Strikethrough" onClick={() => runCommand("strikeThrough")}>
-          <Strikethrough className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Heading 1" aria-label="Heading 1" onClick={() => runCommand("formatBlock", "h1")}>
-          <Heading1 className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Heading 2" aria-label="Heading 2" onClick={() => runCommand("formatBlock", "h2")}>
-          <Heading2 className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Bullet list" aria-label="Bullet list" onClick={() => runCommand("insertUnorderedList")}>
-          <List className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Numbered list" aria-label="Numbered list" onClick={() => runCommand("insertOrderedList")}>
-          <ListOrdered className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Quote" aria-label="Quote" onClick={() => runCommand("formatBlock", "blockquote")}>
-          <Quote className="h-4 w-4" />
-        </button>
-        <button type="button" className={toolBtn} title="Link" aria-label="Link" onClick={insertLink}>
-          <Link className="h-4 w-4" />
-        </button>
+      <div className="shrink-0 border-b border-border">
+        <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 lg:px-6">
+          <button type="button" className={`${toolBtn} w-9`} title="Bold" aria-label="Bold" onClick={() => runCommand("bold")}>
+            <Bold className="h-4 w-4" />
+          </button>
+          <button type="button" className={`${toolBtn} w-9`} title="Italic" aria-label="Italic" onClick={() => runCommand("italic")}>
+            <Italic className="h-4 w-4" />
+          </button>
+          <button type="button" className={`${toolBtn} w-9`} title="Strikethrough" aria-label="Strikethrough" onClick={() => runCommand("strikeThrough")}>
+            <Strikethrough className="h-4 w-4" />
+          </button>
+          <button type="button" className={`${toolBtn} w-9`} title="Bullet list" aria-label="Bullet list" onClick={() => runCommand("insertUnorderedList")}>
+            <List className="h-4 w-4" />
+          </button>
+          <button type="button" className={`${toolBtn} w-9`} title="Numbered list" aria-label="Numbered list" onClick={() => runCommand("insertOrderedList")}>
+            <ListOrdered className="h-4 w-4" />
+          </button>
+          <button type="button" className={`${toolBtn} w-9`} title="Quote" aria-label="Quote" onClick={() => runCommand("formatBlock", "blockquote")}>
+            <Quote className="h-4 w-4" />
+          </button>
+          <button type="button" className={`${toolBtn} w-9`} title="Link" aria-label="Link" onClick={insertLink}>
+            <Link className="h-4 w-4" />
+          </button>
+
+          <span className="mx-1 hidden h-6 w-px bg-border sm:block" />
+
+          <button
+            type="button"
+            onClick={() => setShowSyllables((on) => !on)}
+            className={`${toolBtn} gap-1.5 px-2.5 text-xs font-medium ${showSyllables ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
+            title="Toggle syllable count"
+          >
+            <Type className="h-4 w-4" />
+            <span className="hidden sm:inline">Syllables</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRhymes((on) => !on)}
+            className={`${toolBtn} gap-1.5 px-2.5 text-xs font-medium ${showRhymes ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
+            title="Toggle rhyme highlighting"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Rhymes</span>
+          </button>
+        </div>
+
+        <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 lg:px-6">
+          {RAP_STRUCTURE_LABELS.map((label) => (
+            <button
+              key={label}
+              type="button"
+              className={structureBtn}
+              onClick={() => insertStructure(label)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {(showSyllables || showRhymes) && lineAnalysis.length > 0 && (
+        <div className="max-h-36 shrink-0 overflow-y-auto border-b border-border bg-sidebar/80 px-3 py-2 text-xs lg:px-6">
+          {lineAnalysis.map((item) => (
+            <div key={`${item.line}-${item.syllables}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-0.5">
+              <span className="min-w-0 flex-1 truncate text-foreground/90">{item.line}</span>
+              {showSyllables && (
+                <span className="shrink-0 text-muted">{item.syllables} syl</span>
+              )}
+              {showRhymes && item.endWord && (
+                <span
+                  className={`shrink-0 font-medium ${
+                    item.rhymeGroup >= 0
+                      ? RHYME_GROUP_COLORS[item.rhymeGroup % RHYME_GROUP_COLORS.length]
+                      : "text-muted"
+                  }`}
+                >
+                  {item.endWord}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div
         ref={editorRef}

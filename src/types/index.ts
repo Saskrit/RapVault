@@ -13,6 +13,8 @@ export type Song = {
   moodTags: string;
   status: string;
   isFavorite: boolean;
+  beatUrl: string;
+  voiceMemoPath: string;
   folderId: string | null;
   folder: { id: string; name: string } | null;
   createdAt: string;

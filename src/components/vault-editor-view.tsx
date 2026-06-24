@@ -8,6 +8,7 @@ import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { ResizableSplit } from "@/components/resizable-split";
+import { VoiceMemoPanel } from "@/components/voice-memo-panel";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
@@ -39,11 +40,17 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
-    const sync = () => setBeatsOpen(media.matches);
+    const sync = () => {
+      if (media.matches) setBeatsOpen(true);
+    };
     sync();
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    if (song?.beatUrl) setBeatsOpen(true);
+  }, [song?.beatUrl]);
 
   function toggleSpellCheck() {
     setSpellCheck((prev) => {
@@ -87,6 +94,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             ...data.song,
             content: prev.content,
             title: prev.title,
+            beatUrl: prev.beatUrl,
           };
         });
         setSaveState("saved");
@@ -279,18 +287,22 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             <button
               type="button"
               onClick={handleExportTxt}
-              className={`${iconBtn} hidden w-auto gap-1.5 px-3 sm:flex`}
+              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+              title="Export TXT"
+              aria-label="Export TXT"
             >
               <Download className="h-4 w-4 shrink-0" />
-              <span className="text-sm">TXT</span>
+              <span className="hidden text-sm sm:inline">TXT</span>
             </button>
             <button
               type="button"
               onClick={handleExportPdf}
-              className={`${iconBtn} hidden w-auto gap-1.5 px-3 sm:flex`}
+              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+              title="Export PDF"
+              aria-label="Export PDF"
             >
               <Download className="h-4 w-4 shrink-0" />
-              <span className="text-sm">PDF</span>
+              <span className="hidden text-sm sm:inline">PDF</span>
             </button>
             <button
               type="button"
@@ -303,6 +315,14 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
           </div>
         </div>
       </div>
+
+      <VoiceMemoPanel
+        songId={song.id}
+        hasVoiceMemo={Boolean(song.voiceMemoPath)}
+        onUpdated={(voiceMemoPath) =>
+          setSong((prev) => (prev ? { ...prev, voiceMemoPath } : prev))
+        }
+      />
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         <ResizableSplit
@@ -318,7 +338,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             />
           }
           secondary={
-            <BeatPlayerPanel songId={song.id} onClose={() => setBeatsOpen(false)} />
+            <BeatPlayerPanel
+              beatUrl={song.beatUrl}
+              onBeatUrlChange={(beatUrl) => scheduleSave({ beatUrl })}
+              onClose={() => setBeatsOpen(false)}
+            />
           }
         />
       </main>

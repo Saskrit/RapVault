@@ -51,6 +51,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         ? { isFavorite: body.isFavorite }
         : {}),
       ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
+      ...(body.beatUrl !== undefined ? { beatUrl: body.beatUrl } : {}),
+      ...(body.voiceMemoPath !== undefined ? { voiceMemoPath: body.voiceMemoPath } : {}),
     },
     include: { folder: { select: { id: true, name: true } } },
   });

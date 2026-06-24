@@ -1,7 +1,7 @@
 "use client";
 
 import { ExternalLink, Music2, Play, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   parseYouTubeVideoId,
   youTubeEmbedUrl,
@@ -9,53 +9,42 @@ import {
 } from "@/lib/youtube";
 
 type BeatPlayerPanelProps = {
-  songId: string;
+  beatUrl: string;
+  onBeatUrlChange: (beatUrl: string) => void;
   onClose?: () => void;
 };
 
-function storageKey(songId: string) {
-  return `rapvault-beat-video-${songId}`;
-}
-
-export function BeatPlayerPanel({ songId, onClose }: BeatPlayerPanelProps) {
-  const [urlInput, setUrlInput] = useState("");
-  const [videoId, setVideoId] = useState<string | null>(null);
+export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlayerPanelProps) {
+  const [urlInput, setUrlInput] = useState(beatUrl);
+  const [videoId, setVideoId] = useState<string | null>(() => parseYouTubeVideoId(beatUrl));
   const [error, setError] = useState("");
 
-  const loadBeat = useCallback(
-    (input?: string) => {
-      const value = (input ?? urlInput).trim();
-      const id = parseYouTubeVideoId(value);
-
-      if (!id) {
-        setError("Paste a valid YouTube link (youtube.com/watch, youtu.be, etc.)");
-        return;
-      }
-
-      setError("");
-      setVideoId(id);
-      setUrlInput(youTubeWatchUrl(id));
-      localStorage.setItem(storageKey(songId), id);
-    },
-    [songId, urlInput],
-  );
-
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey(songId));
-    if (saved && parseYouTubeVideoId(saved)) {
-      setVideoId(saved);
-      setUrlInput(youTubeWatchUrl(saved));
-    } else {
-      setVideoId(null);
-      setUrlInput("");
+    setUrlInput(beatUrl);
+    setVideoId(parseYouTubeVideoId(beatUrl));
+  }, [beatUrl]);
+
+  function loadBeat(input?: string) {
+    const value = (input ?? urlInput).trim();
+    const id = parseYouTubeVideoId(value);
+
+    if (!id) {
+      setError("Paste a valid YouTube link (youtube.com/watch, youtu.be, etc.)");
+      return;
     }
-  }, [songId]);
+
+    const watchUrl = youTubeWatchUrl(id);
+    setError("");
+    setVideoId(id);
+    setUrlInput(watchUrl);
+    onBeatUrlChange(watchUrl);
+  }
 
   function clearBeat() {
     setVideoId(null);
     setUrlInput("");
     setError("");
-    localStorage.removeItem(storageKey(songId));
+    onBeatUrlChange("");
   }
 
   const parsedId = parseYouTubeVideoId(urlInput);
@@ -142,7 +131,7 @@ export function BeatPlayerPanel({ songId, onClose }: BeatPlayerPanelProps) {
               />
             </div>
             <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
-              <p className="truncate text-xs text-muted">Now playing</p>
+              <p className="truncate text-xs text-muted">Synced to this song</p>
               <a
                 href={youTubeWatchUrl(videoId)}
                 target="_blank"
@@ -158,7 +147,7 @@ export function BeatPlayerPanel({ songId, onClose }: BeatPlayerPanelProps) {
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
             <Music2 className="h-10 w-10 text-border" />
             <p className="text-sm text-muted">
-              Paste a YouTube beat link above to play it while you write.
+              Paste a YouTube beat link above. It saves to this song on all your devices.
             </p>
           </div>
         )}
