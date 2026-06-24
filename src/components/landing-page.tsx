@@ -5,8 +5,8 @@ import {
   Columns2,
   FileText,
   FolderOpen,
-  Mic,
   Music2,
+  Search,
   Shield,
   Sparkles,
   Timer,
@@ -40,9 +40,9 @@ const FEATURES = [
       "One-tap Verse, Hook, and Bridge labels plus syllable counts and rhyme highlighting.",
   },
   {
-    icon: Mic,
-    title: "Voice memos",
-    description: "Record or upload a quick memo per song before you type the final bars.",
+    icon: Search,
+    title: "Search",
+    description: "Find any song by title, lyrics, tags, or genre instantly.",
   },
   {
     icon: FolderOpen,

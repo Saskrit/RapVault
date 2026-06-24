@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Music2, Play, Trash2, X } from "lucide-react";
+import { ExternalLink, Music2, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   parseYouTubeVideoId,
@@ -29,7 +29,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
     const id = parseYouTubeVideoId(value);
 
     if (!id) {
-      setError("Paste a valid YouTube link (youtube.com/watch, youtu.be, etc.)");
+      if (value) setError("Paste a valid YouTube link (youtube.com/watch, youtu.be, etc.)");
       return;
     }
 
@@ -46,8 +46,6 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
     setError("");
     onBeatUrlChange("");
   }
-
-  const parsedId = parseYouTubeVideoId(urlInput);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar">
@@ -66,54 +64,43 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
         )}
       </div>
 
-      <div className="shrink-0 space-y-2 border-b border-border p-3">
+      <div className="shrink-0 space-y-1.5 border-b border-border p-3">
         <label htmlFor="beat-url" className="text-[11px] font-medium uppercase tracking-wide text-muted">
           Paste beat link
         </label>
-        <input
-          id="beat-url"
-          type="url"
-          value={urlInput}
-          onChange={(e) => {
-            setUrlInput(e.target.value);
-            if (error) setError("");
-          }}
-          onKeyDown={(e) => e.key === "Enter" && loadBeat()}
-          onPaste={(e) => {
-            const pasted = e.clipboardData.getData("text");
-            if (parseYouTubeVideoId(pasted)) {
-              e.preventDefault();
-              setUrlInput(pasted.trim());
-              loadBeat(pasted.trim());
-            }
-          }}
-          placeholder="https://youtube.com/watch?v=..."
-          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
-        />
-
         <div className="flex gap-2">
+          <input
+            id="beat-url"
+            type="url"
+            value={urlInput}
+            onChange={(e) => {
+              setUrlInput(e.target.value);
+              if (error) setError("");
+            }}
+            onKeyDown={(e) => e.key === "Enter" && loadBeat()}
+            onBlur={() => loadBeat()}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text");
+              if (parseYouTubeVideoId(pasted)) {
+                e.preventDefault();
+                setUrlInput(pasted.trim());
+                loadBeat(pasted.trim());
+              }
+            }}
+            placeholder="https://youtube.com/watch?v=..."
+            className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+          />
           <button
             type="button"
-            onClick={() => loadBeat()}
-            disabled={!parsedId}
-            className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={clearBeat}
+            disabled={!urlInput && !videoId}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Clear beat"
+            title="Clear beat"
           >
-            <Play className="h-4 w-4" />
-            Play beat
+            <Trash2 className="h-4 w-4" />
           </button>
-          {videoId && (
-            <button
-              type="button"
-              onClick={clearBeat}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-red-500/50 hover:text-red-400"
-              aria-label="Clear beat"
-              title="Clear beat"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
         </div>
-
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
 

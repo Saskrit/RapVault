@@ -8,7 +8,6 @@ import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { ResizableSplit } from "@/components/resizable-split";
-import { VoiceMemoPanel } from "@/components/voice-memo-panel";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
@@ -315,14 +314,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
           </div>
         </div>
       </div>
-
-      <VoiceMemoPanel
-        songId={song.id}
-        hasVoiceMemo={Boolean(song.voiceMemoPath)}
-        onUpdated={(voiceMemoPath) =>
-          setSong((prev) => (prev ? { ...prev, voiceMemoPath } : prev))
-        }
-      />
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <ResizableSplit
