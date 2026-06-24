@@ -316,8 +316,8 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         <aside
           className={`${
             beatsOpen ? "flex" : "hidden"
-          } min-h-0 shrink-0 flex-col border-t border-border lg:flex lg:h-auto lg:w-[min(100%,50%)] lg:max-w-2xl lg:border-t-0 lg:border-l xl:max-w-3xl ${
-            beatsOpen ? "h-[min(55dvh,32rem)]" : ""
+          } min-h-0 shrink-0 flex-col border-t border-border lg:flex lg:h-auto lg:w-[min(100%,24rem)] lg:border-t-0 lg:border-l xl:w-[26rem] ${
+            beatsOpen ? "h-[min(50dvh,24rem)]" : ""
           }`}
         >
           <BeatPlayerPanel songId={song.id} onClose={() => setBeatsOpen(false)} />

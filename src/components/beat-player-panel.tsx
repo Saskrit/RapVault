@@ -1,23 +1,12 @@
 "use client";
 
+import { ExternalLink, Music2, Play, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ExternalLink,
-  Home,
-  Music2,
-  RefreshCw,
-  Search,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  YOUTUBE_HOME,
-  YOUTUBE_WINDOW_NAME,
-  navigateYouTubeWindow,
-  positionYouTubeWindow,
-  resolveYouTubeUrl,
-  youtubeWindowFeatures,
-  screenRectForElement,
-} from "@/lib/youtube-window";
+  parseYouTubeVideoId,
+  youTubeEmbedUrl,
+  youTubeWatchUrl,
+} from "@/lib/youtube";
 
 type BeatPlayerPanelProps = {
   songId: string;
@@ -25,219 +14,154 @@ type BeatPlayerPanelProps = {
 };
 
 function storageKey(songId: string) {
-  return `rapvault-youtube-url-${songId}`;
+  return `rapvault-beat-video-${songId}`;
 }
 
 export function BeatPlayerPanel({ songId, onClose }: BeatPlayerPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const youtubeWin = useRef<Window | null>(null);
-  const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const [blocked, setBlocked] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  const syncOpenState = useCallback(() => {
-    const open = Boolean(youtubeWin.current && !youtubeWin.current.closed);
-    setIsOpen(open);
-    if (!open) youtubeWin.current = null;
-    return open;
-  }, []);
+  const loadBeat = useCallback(
+    (input?: string) => {
+      const value = (input ?? urlInput).trim();
+      const id = parseYouTubeVideoId(value);
 
-  const alignWindow = useCallback(() => {
-    const panel = panelRef.current;
-    const win = youtubeWin.current;
-    if (!panel || !win || win.closed) return;
-    positionYouTubeWindow(win, panel);
-  }, []);
-
-  const openYouTube = useCallback(
-    (targetUrl?: string) => {
-      const panel = panelRef.current;
-      if (!panel) return;
-
-      const url = resolveYouTubeUrl(targetUrl ?? query);
-      setQuery(url === YOUTUBE_HOME ? "" : url);
-      localStorage.setItem(storageKey(songId), url);
-
-      if (youtubeWin.current && !youtubeWin.current.closed) {
-        navigateYouTubeWindow(youtubeWin.current, url);
-        setIsOpen(true);
-        setBlocked(false);
-        alignWindow();
+      if (!id) {
+        setError("Paste a valid YouTube link (youtube.com/watch, youtu.be, etc.)");
         return;
       }
 
-      const { left, top, width, height } = screenRectForElement(panel);
-      const features = youtubeWindowFeatures(left, top, width, height);
-      const win = window.open(url, YOUTUBE_WINDOW_NAME, features);
-
-      if (!win) {
-        setBlocked(true);
-        setIsOpen(false);
-        return;
-      }
-
-      youtubeWin.current = win;
-      setBlocked(false);
-      setIsOpen(true);
-      win.focus();
+      setError("");
+      setVideoId(id);
+      setUrlInput(youTubeWatchUrl(id));
+      localStorage.setItem(storageKey(songId), id);
     },
-    [alignWindow, query, songId],
+    [songId, urlInput],
   );
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey(songId));
-    if (saved) setQuery(saved === YOUTUBE_HOME ? "" : saved);
+    if (saved && parseYouTubeVideoId(saved)) {
+      setVideoId(saved);
+      setUrlInput(youTubeWatchUrl(saved));
+    } else {
+      setVideoId(null);
+      setUrlInput("");
+    }
   }, [songId]);
 
-  useEffect(() => {
-    const onResize = () => alignWindow();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
-    const interval = window.setInterval(() => {
-      syncOpenState();
-      alignWindow();
-    }, 400);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onResize, true);
-      window.clearInterval(interval);
-    };
-  }, [alignWindow, syncOpenState]);
-
-  function searchYouTube() {
-    openYouTube(query);
+  function clearBeat() {
+    setVideoId(null);
+    setUrlInput("");
+    setError("");
+    localStorage.removeItem(storageKey(songId));
   }
 
-  function focusYouTube() {
-    if (youtubeWin.current && !youtubeWin.current.closed) {
-      youtubeWin.current.focus();
-      alignWindow();
-    } else {
-      openYouTube();
-    }
-  }
-
-  function closeYouTube() {
-    youtubeWin.current?.close();
-    youtubeWin.current = null;
-    setIsOpen(false);
-  }
+  const parsedId = parseYouTubeVideoId(urlInput);
 
   return (
-    <div ref={panelRef} className="flex h-full min-h-0 flex-col bg-sidebar">
+    <div className="flex h-full min-h-0 flex-col bg-sidebar">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
         <Music2 className="h-4 w-4 shrink-0 text-accent" />
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">YouTube</h2>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Beat player</h2>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground lg:hidden"
-            aria-label="Hide YouTube panel"
+            aria-label="Hide beat player"
           >
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 p-5 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ff0000] shadow-lg">
-          <svg className="h-9 w-9 text-white" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              fill="currentColor"
-              d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"
-            />
-          </svg>
-        </div>
+      <div className="shrink-0 space-y-2 border-b border-border p-3">
+        <label htmlFor="beat-url" className="text-[11px] font-medium uppercase tracking-wide text-muted">
+          Paste beat link
+        </label>
+        <input
+          id="beat-url"
+          type="url"
+          value={urlInput}
+          onChange={(e) => {
+            setUrlInput(e.target.value);
+            if (error) setError("");
+          }}
+          onKeyDown={(e) => e.key === "Enter" && loadBeat()}
+          onPaste={(e) => {
+            const pasted = e.clipboardData.getData("text");
+            if (parseYouTubeVideoId(pasted)) {
+              e.preventDefault();
+              setUrlInput(pasted.trim());
+              loadBeat(pasted.trim());
+            }
+          }}
+          placeholder="https://youtube.com/watch?v=..."
+          className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+        />
 
-        <div className="space-y-2">
-          <h3 className="text-base font-semibold">Real YouTube beside your lyrics</h3>
-          <p className="max-w-xs text-sm text-muted">
-            Full youtube.com with your Google account, playlists, and subscriptions.
-            Opens in a window aligned to this panel.
-          </p>
-        </div>
-
-        <div className="w-full max-w-sm space-y-2">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && searchYouTube()}
-              placeholder="Search beats or paste YouTube link..."
-              className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent"
-            />
-            <button
-              type="button"
-              onClick={searchYouTube}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-white transition hover:opacity-90"
-              aria-label="Search YouTube"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </div>
-
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => openYouTube()}
-            className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl bg-[#ff0000] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+            onClick={() => loadBeat()}
+            disabled={!parsedId}
+            className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {isOpen ? "Focus YouTube window" : "Open YouTube"}
+            <Play className="h-4 w-4" />
+            Play beat
           </button>
+          {videoId && (
+            <button
+              type="button"
+              onClick={clearBeat}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-red-500/50 hover:text-red-400"
+              aria-label="Clear beat"
+              title="Clear beat"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        {isOpen && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="rounded-full bg-green-500/15 px-3 py-1 text-xs font-medium text-green-400">
-              YouTube is open
-            </span>
-            <button
-              type="button"
-              onClick={() => openYouTube(YOUTUBE_HOME)}
-              className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs text-muted transition hover:text-foreground"
-            >
-              <Home className="h-3.5 w-3.5" />
-              Home
-            </button>
-            <button
-              type="button"
-              onClick={focusYouTube}
-              className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs text-muted transition hover:text-foreground"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Align
-            </button>
-            <button
-              type="button"
-              onClick={closeYouTube}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted transition hover:text-red-400"
-            >
-              Close
-            </button>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        {videoId ? (
+          <>
+            <div className="relative w-full shrink-0 bg-black pt-[56.25%]">
+              <iframe
+                key={videoId}
+                src={youTubeEmbedUrl(videoId)}
+                title="Beat player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full border-0"
+              />
+            </div>
+            <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
+              <p className="truncate text-xs text-muted">Now playing</p>
+              <a
+                href={youTubeWatchUrl(videoId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex shrink-0 items-center gap-1 text-xs text-muted transition hover:text-accent"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open on YouTube
+              </a>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <Music2 className="h-10 w-10 text-border" />
+            <p className="text-sm text-muted">
+              Paste a YouTube beat link above to play it while you write.
+            </p>
           </div>
         )}
-
-        {blocked && (
-          <div className="max-w-sm space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-            <p>Your browser blocked the YouTube window. Allow popups for RapVault, then try again.</p>
-            <a
-              href={resolveYouTubeUrl(query)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open YouTube in a new tab
-            </a>
-          </div>
-        )}
-
-        <p className="max-w-xs text-[11px] text-muted">
-          YouTube does not allow their site inside other pages. This opens the real youtube.com
-          window snapped to the right side while you write.
-        </p>
       </div>
     </div>
   );
