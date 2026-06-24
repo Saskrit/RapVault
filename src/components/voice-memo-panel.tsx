@@ -2,7 +2,7 @@
 
 import { Mic, Square, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { voiceMemoApiPath } from "@/lib/voice-memo";
+import { voiceMemoApiPath } from "@/lib/voice-memo-shared";
 
 type VoiceMemoPanelProps = {
   songId: string;

@@ -6,8 +6,8 @@ import {
   absoluteVoiceMemoPath,
   deleteVoiceMemoFile,
   saveVoiceMemoFile,
-  voiceMemoApiPath,
 } from "@/lib/voice-memo";
+import { voiceMemoApiPath } from "@/lib/voice-memo-shared";
 
 type RouteContext = { params: Promise<{ id: string }> };
 

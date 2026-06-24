@@ -1,3 +1,4 @@
+import "server-only";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -13,10 +14,6 @@ const ALLOWED_TYPES = new Set([
   "audio/x-wav",
   "audio/mp3",
 ]);
-
-export function voiceMemoApiPath(songId: string) {
-  return `/api/songs/${songId}/voice-memo`;
-}
 
 export async function saveVoiceMemoFile(songId: string, file: File) {
   if (file.size > MAX_BYTES) {
