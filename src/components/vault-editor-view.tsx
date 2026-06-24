@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
+import { ResizableSplit } from "@/components/resizable-split";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
@@ -303,25 +304,23 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         </div>
       </div>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <LyricRichEditor
-            key={song.id}
-            value={song.content}
-            onChange={(content) => scheduleSave({ content })}
-            spellCheck={spellCheck}
-          />
-        </div>
-
-        <aside
-          className={`${
-            beatsOpen ? "flex" : "hidden"
-          } min-h-0 shrink-0 flex-col border-t border-border lg:flex lg:h-auto lg:w-[min(100%,24rem)] lg:border-t-0 lg:border-l xl:w-[26rem] ${
-            beatsOpen ? "h-[min(50dvh,24rem)]" : ""
-          }`}
-        >
-          <BeatPlayerPanel songId={song.id} onClose={() => setBeatsOpen(false)} />
-        </aside>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <ResizableSplit
+          secondaryVisible={beatsOpen}
+          storageKey="rapvault-editor-split"
+          defaultSecondarySize={360}
+          primary={
+            <LyricRichEditor
+              key={song.id}
+              value={song.content}
+              onChange={(content) => scheduleSave({ content })}
+              spellCheck={spellCheck}
+            />
+          }
+          secondary={
+            <BeatPlayerPanel songId={song.id} onClose={() => setBeatsOpen(false)} />
+          }
+        />
       </main>
 
       <ConfirmModal
