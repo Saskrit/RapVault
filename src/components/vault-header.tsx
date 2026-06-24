@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { LogOut, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
@@ -103,12 +104,13 @@ export function VaultHeader({
             </button>
           )}
           {userEmail && (
-            <span
-              className="max-w-[7rem] truncate text-xs text-muted sm:max-w-[10rem] lg:max-w-[14rem] lg:text-sm"
-              title={userEmail}
+            <Link
+              href="/vault/settings"
+              className="max-w-[7rem] truncate text-xs text-muted transition hover:text-accent sm:max-w-[10rem] lg:max-w-[14rem] lg:text-sm"
+              title={`${userEmail} — Profile & settings`}
             >
               {userEmail}
-            </span>
+            </Link>
           )}
           <ThemeToggle />
           <button

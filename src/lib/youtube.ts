@@ -28,16 +28,6 @@ export function youTubeEmbedUrl(videoId: string) {
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params}`;
 }
 
-export function youTubeSearchEmbedUrl(query: string) {
-  const params = new URLSearchParams({
-    listType: "search",
-    list: query.trim(),
-    rel: "0",
-    modestbranding: "1",
-  });
-  return `https://www.youtube-nocookie.com/embed?${params}`;
-}
-
 export function youTubeWatchUrl(videoId: string) {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }

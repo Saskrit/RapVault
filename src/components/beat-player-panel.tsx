@@ -1,227 +1,241 @@
 "use client";
 
-import { ExternalLink, Music2, Play, Search, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
+  Globe,
+  Music2,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
-  parseYouTubeVideoId,
-  youTubeEmbedUrl,
-  youTubeSearchEmbedUrl,
-  youTubeSearchUrl,
-  youTubeWatchUrl,
-} from "@/lib/youtube";
+  BEAT_BROWSER_HOME,
+  type BeatBrowserSite,
+  beatBrowserSiteLabel,
+  beatBrowserStorageKey,
+  resolveBeatBrowserUrl,
+} from "@/lib/beat-browser";
 
 type BeatPlayerPanelProps = {
   songId: string;
   onClose?: () => void;
 };
 
-type BeatMode = "video" | "search";
-
-type RecentBeat = {
-  label: string;
-  embedUrl: string;
-  mode: BeatMode;
+type NavState = {
+  history: string[];
+  index: number;
+  url: string;
 };
 
-const RECENT_KEY = "rapvault-beat-recent";
-const MAX_RECENT = 6;
-
-function beatStorageKey(songId: string) {
-  return `rapvault-beat-${songId}`;
-}
-
-function loadRecent(): RecentBeat[] {
-  try {
-    const raw = localStorage.getItem(RECENT_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as RecentBeat[];
-    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecent(entry: RecentBeat) {
-  const existing = loadRecent().filter((item) => item.embedUrl !== entry.embedUrl);
-  localStorage.setItem(RECENT_KEY, JSON.stringify([entry, ...existing].slice(0, MAX_RECENT)));
+function loadNavState(songId: string, site: BeatBrowserSite): NavState {
+  const home = localStorage.getItem(beatBrowserStorageKey(songId, site)) || BEAT_BROWSER_HOME[site];
+  return { history: [home], index: 0, url: home };
 }
 
 export function BeatPlayerPanel({ songId, onClose }: BeatPlayerPanelProps) {
-  const [urlInput, setUrlInput] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
-  const [mode, setMode] = useState<BeatMode>("video");
-  const [recent, setRecent] = useState<RecentBeat[]>([]);
+  const [site, setSite] = useState<BeatBrowserSite>("youtube");
+  const [addressInput, setAddressInput] = useState(BEAT_BROWSER_HOME.youtube);
+  const [nav, setNav] = useState<NavState>({
+    history: [BEAT_BROWSER_HOME.youtube],
+    index: 0,
+    url: BEAT_BROWSER_HOME.youtube,
+  });
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const applyBeat = useCallback(
-    (nextEmbedUrl: string, nextMode: BeatMode, label: string) => {
-      setEmbedUrl(nextEmbedUrl);
-      setMode(nextMode);
-      localStorage.setItem(beatStorageKey(songId), JSON.stringify({ embedUrl: nextEmbedUrl, mode: nextMode }));
-      const entry = { label, embedUrl: nextEmbedUrl, mode: nextMode };
-      saveRecent(entry);
-      setRecent(loadRecent());
+  const applyNav = useCallback(
+    (next: NavState) => {
+      setNav(next);
+      setAddressInput(next.url);
+      localStorage.setItem(beatBrowserStorageKey(songId, site), next.url);
     },
-    [songId],
+    [songId, site],
+  );
+
+  const go = useCallback(
+    (raw?: string) => {
+      const target = resolveBeatBrowserUrl(raw ?? addressInput, site);
+      setNav((prev) => {
+        const base = prev.history.slice(0, prev.index + 1);
+        if (base[base.length - 1] === target) {
+          localStorage.setItem(beatBrowserStorageKey(songId, site), target);
+          setAddressInput(target);
+          return { ...prev, url: target };
+        }
+        const history = [...base, target];
+        const next = { history, index: history.length - 1, url: target };
+        localStorage.setItem(beatBrowserStorageKey(songId, site), target);
+        setAddressInput(target);
+        return next;
+      });
+    },
+    [addressInput, site, songId],
+  );
+
+  const switchSite = useCallback(
+    (nextSite: BeatBrowserSite) => {
+      setSite(nextSite);
+      const next = loadNavState(songId, nextSite);
+      applyNav(next);
+      setReloadKey(0);
+    },
+    [applyNav, songId],
   );
 
   useEffect(() => {
-    setRecent(loadRecent());
-    try {
-      const saved = localStorage.getItem(beatStorageKey(songId));
-      if (!saved) return;
-      const parsed = JSON.parse(saved) as { embedUrl?: string; mode?: BeatMode };
-      if (parsed.embedUrl) {
-        setEmbedUrl(parsed.embedUrl);
-        setMode(parsed.mode === "search" ? "search" : "video");
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [songId]);
+    setSite("youtube");
+    applyNav(loadNavState(songId, "youtube"));
+    setReloadKey(0);
+  }, [songId, applyNav]);
 
-  function loadFromUrl() {
-    const videoId = parseYouTubeVideoId(urlInput);
-    if (!videoId) return;
-    applyBeat(youTubeEmbedUrl(videoId), "video", `YouTube · ${videoId}`);
-    setUrlInput(youTubeWatchUrl(videoId));
+  function goBack() {
+    if (nav.index <= 0) return;
+    const nextIndex = nav.index - 1;
+    applyNav({
+      history: nav.history,
+      index: nextIndex,
+      url: nav.history[nextIndex]!,
+    });
   }
 
-  function loadFromSearch() {
-    const query = searchInput.trim();
-    if (!query) return;
-    applyBeat(youTubeSearchEmbedUrl(query), "search", `Search · ${query}`);
+  function goForward() {
+    if (nav.index >= nav.history.length - 1) return;
+    const nextIndex = nav.index + 1;
+    applyNav({
+      history: nav.history,
+      index: nextIndex,
+      url: nav.history[nextIndex]!,
+    });
   }
 
-  function openExternalSearch() {
-    const query = searchInput.trim() || "type beat instrumental";
-    window.open(youTubeSearchUrl(query), "_blank", "noopener,noreferrer");
+  function reload() {
+    setReloadKey((key) => key + 1);
   }
 
-  const videoId = parseYouTubeVideoId(urlInput);
+  const frameSrc =
+    reloadKey > 0
+      ? `${nav.url}${nav.url.includes("?") ? "&" : "?"}_=${reloadKey}`
+      : nav.url;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
         <Music2 className="h-4 w-4 shrink-0 text-accent" />
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Beat player</h2>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Beat browser</h2>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground lg:hidden"
-            aria-label="Hide beat player"
+            aria-label="Hide beat browser"
           >
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <div className="shrink-0 space-y-3 border-b border-border p-3">
-        <div className="space-y-1.5">
-          <label htmlFor="beat-url" className="text-[11px] font-medium uppercase tracking-wide text-muted">
-            YouTube link
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="beat-url"
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadFromUrl()}
-              placeholder="Paste youtube.com/watch?v=..."
-              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-accent"
-            />
-            <button
-              type="button"
-              onClick={loadFromUrl}
-              disabled={!videoId}
-              className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Play className="h-4 w-4" />
-              <span className="hidden sm:inline">Load</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="beat-search" className="text-[11px] font-medium uppercase tracking-wide text-muted">
-            Search beats
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="beat-search"
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadFromSearch()}
-              placeholder="trap beat, drill type beat..."
-              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-accent"
-            />
-            <button
-              type="button"
-              onClick={loadFromSearch}
-              disabled={!searchInput.trim()}
-              className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Play</span>
-            </button>
-          </div>
+      <div className="flex shrink-0 gap-1 border-b border-border p-2">
+        {(["youtube", "google"] as const).map((tab) => (
           <button
+            key={tab}
             type="button"
-            onClick={openExternalSearch}
-            className="flex items-center gap-1 text-xs text-muted transition hover:text-accent"
+            onClick={() => switchSite(tab)}
+            className={`min-h-9 flex-1 rounded-lg px-3 text-xs font-semibold transition sm:text-sm ${
+              site === tab
+                ? "bg-accent text-white"
+                : "bg-background text-muted hover:text-foreground"
+            }`}
           >
-            <ExternalLink className="h-3 w-3" />
-            Browse more on YouTube
+            {beatBrowserSiteLabel(tab)}
           </button>
-        </div>
+        ))}
       </div>
 
-      <div className="relative min-h-0 flex-1 bg-black">
-        {embedUrl ? (
-          <iframe
-            key={embedUrl}
-            src={embedUrl}
-            title={mode === "search" ? "YouTube beat search" : "YouTube beat player"}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            className="absolute inset-0 h-full w-full border-0"
+      <div className="flex shrink-0 items-center gap-1 border-b border-border p-2">
+        <button
+          type="button"
+          onClick={goBack}
+          disabled={nav.index <= 0}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground disabled:opacity-30"
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={goForward}
+          disabled={nav.index >= nav.history.length - 1}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground disabled:opacity-30"
+          aria-label="Forward"
+        >
+          <ArrowRight className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={reload}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground"
+          aria-label="Reload"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+
+        <div className="flex min-w-0 flex-1 items-center gap-1 rounded-lg border border-border bg-background px-2">
+          <Globe className="h-3.5 w-3.5 shrink-0 text-muted" />
+          <input
+            type="text"
+            value={addressInput}
+            onChange={(e) => setAddressInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") go(addressInput);
+            }}
+            placeholder={
+              site === "youtube"
+                ? "Search or paste YouTube link..."
+                : "Search Google or paste a link..."
+            }
+            className="min-w-0 flex-1 bg-transparent py-2 text-xs outline-none sm:text-sm"
           />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted">
-            <Music2 className="h-8 w-8 text-border" />
-            <p>Paste a YouTube beat link or search to start listening while you write.</p>
-          </div>
-        )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => go(addressInput)}
+          className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-accent px-2.5 text-xs font-semibold text-white transition hover:opacity-90 sm:px-3 sm:text-sm"
+        >
+          <Search className="h-4 w-4" />
+          <span className="hidden sm:inline">Go</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => window.open(nav.url, "_blank", "noopener,noreferrer")}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground"
+          aria-label="Open in new tab"
+          title="Open in new tab"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </button>
       </div>
 
-      {recent.length > 0 && (
-        <div className="shrink-0 border-t border-border p-3">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted">Recent</p>
-          <ul className="space-y-1">
-            {recent.map((item) => (
-              <li key={item.embedUrl}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmbedUrl(item.embedUrl);
-                    setMode(item.mode);
-                    localStorage.setItem(
-                      beatStorageKey(songId),
-                      JSON.stringify({ embedUrl: item.embedUrl, mode: item.mode }),
-                    );
-                  }}
-                  className="w-full truncate rounded-lg px-2 py-1.5 text-left text-xs text-muted transition hover:bg-background hover:text-foreground"
-                >
-                  {item.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <p className="shrink-0 border-b border-border px-3 py-1.5 text-[10px] text-muted sm:text-xs">
+        {site === "youtube"
+          ? "Browse and play beats here. Paste any YouTube link or search."
+          : "Search the web here. Google links open in a compatible search view."}
+      </p>
+
+      <div className="relative min-h-0 flex-1 bg-background">
+        <iframe
+          key={`${site}-${frameSrc}`}
+          src={frameSrc}
+          title={`${beatBrowserSiteLabel(site)} browser`}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full border-0"
+        />
+      </div>
     </div>
   );
 }

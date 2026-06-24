@@ -8,6 +8,8 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 
 export const OAUTH_STATE_COOKIE = "rapvault_oauth_state";
+export const OAUTH_INTENT_COOKIE = "rapvault_oauth_intent";
+export const OAUTH_LINK_USER_COOKIE = "rapvault_oauth_link_user";
 
 export type GoogleUserInfo = {
   sub: string;
