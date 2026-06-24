@@ -81,16 +81,20 @@ export function ResizableSplit({
   }, [isDragging, isVertical, minPrimary, minSecondary, storageKey]);
 
   if (!secondaryVisible) {
-    return <div className="flex min-h-0 min-w-0 flex-1 flex-col">{primary}</div>;
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {primary}
+      </div>
+    );
   }
 
   return (
     <div
       ref={containerRef}
-      className={`flex min-h-0 min-w-0 flex-1 ${isVertical ? "flex-col" : "flex-row"}`}
+      className={`flex min-h-0 min-w-0 flex-1 overflow-hidden ${isVertical ? "flex-col" : "flex-row"}`}
     >
       <div
-        className="min-h-0 min-w-0 flex-1"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         style={isVertical ? { minHeight: minPrimary } : { minWidth: minPrimary }}
       >
         {primary}

@@ -178,6 +178,10 @@ textarea {
 .lyric-editor {
   white-space: pre-wrap;
   caret-color: var(--foreground);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .lyric-editor p,

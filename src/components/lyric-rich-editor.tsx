@@ -238,7 +238,7 @@ export function LyricRichEditor({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border">
         <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 lg:px-6">
           <button type="button" className={`${toolBtn} w-9`} title="Bold" aria-label="Bold" onClick={() => runCommand("bold")}>
@@ -337,7 +337,7 @@ export function LyricRichEditor({
         onDragOver={(event) => event.preventDefault()}
         spellCheck={spellCheck}
         data-placeholder="Drop your bars here..."
-        className="lyric-markdown lyric-editor min-h-0 flex-1 overflow-y-auto bg-editor px-4 py-4 text-base leading-relaxed outline-none lg:px-8 lg:py-5"
+        className="lyric-markdown lyric-editor h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 text-base leading-relaxed outline-none lg:px-8 lg:py-5"
       />
     </div>
   );
