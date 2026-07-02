@@ -35,3 +35,17 @@ export function youTubeWatchUrl(videoId: string) {
 export function youTubeSearchUrl(query: string) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query.trim())}`;
 }
+
+/** mm:ss or h:mm:ss for YouTube-style timestamps */
+export function formatVideoTime(totalSeconds: number) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return "0:00";
+  const seconds = Math.floor(totalSeconds);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  const padded = String(remaining).padStart(2, "0");
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${padded}`;
+  }
+  return `${minutes}:${padded}`;
+}

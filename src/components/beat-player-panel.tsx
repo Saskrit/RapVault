@@ -1,10 +1,11 @@
 "use client";
 
 import { ExternalLink, Music2, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { loadYouTubeIframeApi } from "@/lib/youtube-iframe-api";
 import {
+  formatVideoTime,
   parseYouTubeVideoId,
-  youTubeEmbedUrl,
   youTubeWatchUrl,
 } from "@/lib/youtube";
 
@@ -18,11 +19,89 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
   const [urlInput, setUrlInput] = useState(beatUrl);
   const [videoId, setVideoId] = useState<string | null>(() => parseYouTubeVideoId(beatUrl));
   const [error, setError] = useState("");
+  const [duration, setDuration] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const playerHostRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YT.Player | null>(null);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setUrlInput(beatUrl);
     setVideoId(parseYouTubeVideoId(beatUrl));
   }, [beatUrl]);
+
+  useEffect(() => {
+    if (!videoId || !playerHostRef.current) return;
+
+    let cancelled = false;
+
+    function stopTick() {
+      if (tickRef.current) {
+        clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+    }
+
+    function startTick(player: YT.Player) {
+      stopTick();
+      tickRef.current = setInterval(() => {
+        setCurrentTime(player.getCurrentTime());
+      }, 500);
+    }
+
+    const id = videoId;
+
+    async function initPlayer() {
+      setDuration(null);
+      setCurrentTime(0);
+      playerRef.current?.destroy();
+      playerRef.current = null;
+
+      await loadYouTubeIframeApi();
+      if (cancelled || !playerHostRef.current || !window.YT?.Player) return;
+
+      playerRef.current = new window.YT.Player(playerHostRef.current, {
+        videoId: id,
+        width: "100%",
+        height: "100%",
+        playerVars: {
+          rel: 0,
+          modestbranding: 1,
+          enablejsapi: 1,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: (event) => {
+            if (cancelled) return;
+            const total = event.target.getDuration();
+            if (total > 0) setDuration(total);
+          },
+          onStateChange: (event) => {
+            if (cancelled) return;
+            const { PlayerState } = window.YT!;
+            if (event.data === PlayerState.PLAYING) {
+              startTick(event.target);
+            } else if (
+              event.data === PlayerState.PAUSED ||
+              event.data === PlayerState.ENDED
+            ) {
+              stopTick();
+              setCurrentTime(event.target.getCurrentTime());
+            }
+          },
+        },
+      });
+    }
+
+    initPlayer();
+
+    return () => {
+      cancelled = true;
+      stopTick();
+      playerRef.current?.destroy();
+      playerRef.current = null;
+    };
+  }, [videoId]);
 
   function loadBeat(input?: string) {
     const value = (input ?? urlInput).trim();
@@ -44,8 +123,13 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
     setVideoId(null);
     setUrlInput("");
     setError("");
+    setDuration(null);
+    setCurrentTime(0);
     onBeatUrlChange("");
   }
+
+  const progress =
+    duration && duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar">
@@ -108,14 +192,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
         {videoId ? (
           <>
             <div className="relative w-full shrink-0 bg-black pt-[56.25%]">
-              <iframe
-                key={videoId}
-                src={youTubeEmbedUrl(videoId)}
-                title="Beat player"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute inset-0 h-full w-full border-0"
-              />
+              <div ref={playerHostRef} className="absolute inset-0 h-full w-full" />
             </div>
             <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
               <p className="truncate text-xs text-muted">Synced to this song</p>
@@ -128,6 +205,39 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
                 <ExternalLink className="h-3.5 w-3.5" />
                 Open on YouTube
               </a>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 border-t border-border px-3 py-4">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                Beat length
+              </p>
+              {duration !== null ? (
+                <>
+                  <p className="text-xl font-semibold tabular-nums tracking-tight">
+                    0:00 → {formatVideoTime(duration)}
+                  </p>
+                  <div className="space-y-1.5">
+                    <div
+                      className="h-1.5 overflow-hidden rounded-full bg-border"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={duration}
+                      aria-valuenow={currentTime}
+                      aria-label="Beat playback position"
+                    >
+                      <div
+                        className="h-full rounded-full bg-accent transition-[width] duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs tabular-nums text-muted">
+                      <span>{formatVideoTime(currentTime)}</span>
+                      <span>{formatVideoTime(duration)}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted">Loading duration…</p>
+              )}
             </div>
           </>
         ) : (
