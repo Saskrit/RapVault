@@ -1,4 +1,5 @@
 import { Logo, BrandWordmark } from "@/components/logo";
+import { SiteCredit } from "@/components/site-credit";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 
@@ -25,10 +26,11 @@ export function PageShell({ children, showNav = true }: PageShellProps) {
         <div className="w-full max-w-md">{children}</div>
       </main>
       {showNav && (
-        <footer className="shrink-0 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-muted">
+        <footer className="shrink-0 space-y-3 border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-muted">
           <Link href="/" className="transition hover:text-foreground">
             ← Back to home
           </Link>
+          <SiteCredit />
         </footer>
       )}
     </div>

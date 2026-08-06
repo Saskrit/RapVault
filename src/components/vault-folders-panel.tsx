@@ -138,7 +138,7 @@ export function VaultFoldersPanel({
           <button
             type="button"
             onClick={onNewFolder}
-            className={`${navBtn} text-muted hover:bg-background hover:text-foreground`}
+            className={`${navBtn} border border-teal-500/30 bg-teal-500/10 text-teal-600 transition hover:border-teal-500/50 hover:bg-teal-500/15 dark:text-teal-400`}
           >
             <FolderPlus className="h-4 w-4 shrink-0" />
             New folder

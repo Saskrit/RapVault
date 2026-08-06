@@ -1,8 +1,18 @@
 "use client";
 
-import { FolderInput, PanelLeftClose, Plus, RotateCcw, Star, Trash2, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderInput,
+  PanelLeftClose,
+  Plus,
+  RotateCcw,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MoveSongToFolderModal } from "@/components/move-song-to-folder-modal";
 import { AddSongsToFolderModal } from "@/components/add-songs-to-folder-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -14,7 +24,12 @@ import {
   type MobileTab,
 } from "@/components/vault-mobile-nav";
 import { contentSnippet } from "@/lib/rich-text";
+import { Logo, BrandWordmark } from "@/components/logo";
 import type { Folder, Song } from "@/types";
+
+const PAGE_SIZE_OPTIONS = [10, 15, 20, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZE_KEY = "rapvault-page-size";
 
 export function VaultSongsView() {
   const router = useRouter();
@@ -36,6 +51,8 @@ export function VaultSongsView() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [folderDrawerOpen, setFolderDrawerOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
 
   const fetchFolders = useCallback(async () => {
     const res = await fetch("/api/folders");
@@ -74,7 +91,31 @@ export function VaultSongsView() {
   useEffect(() => {
     const saved = localStorage.getItem("rapvault-sidebar");
     if (saved === "closed") setSidebarOpen(false);
+
+    const savedSize = Number(localStorage.getItem(PAGE_SIZE_KEY));
+    if (PAGE_SIZE_OPTIONS.includes(savedSize as (typeof PAGE_SIZE_OPTIONS)[number])) {
+      setPageSize(savedSize);
+    }
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedFolderId, showFavorites, showTrash, searchQuery, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(songs.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageSongs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return songs.slice(start, start + pageSize);
+  }, [songs, currentPage, pageSize]);
+
+  const rangeStart = songs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, songs.length);
+
+  function changePageSize(next: number) {
+    setPageSize(next);
+    localStorage.setItem(PAGE_SIZE_KEY, String(next));
+  }
 
   useEffect(() => {
     if (folderDrawerOpen) {
@@ -147,6 +188,15 @@ export function VaultSongsView() {
     if (res.ok) {
       setSongs((prev) => prev.filter((item) => item.id !== song.id));
       setTrashCount((count) => Math.max(0, count - 1));
+      await fetchFolders();
+    }
+  }
+
+  async function moveSongToBin(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setSongs((prev) => prev.filter((item) => item.id !== song.id));
+      setTrashCount((count) => count + 1);
       await fetchFolders();
     }
   }
@@ -331,101 +381,171 @@ export function VaultSongsView() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {songs.map((song) => (
+              {pageSongs.map((song) => (
                 <div
                   key={song.id}
-                  className="group flex items-stretch overflow-hidden rounded-2xl border border-border bg-card transition hover:border-foreground/15"
+                  className="group flex items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 transition hover:border-foreground/15 sm:gap-3 sm:px-3"
                 >
                   <button
                     type="button"
                     onClick={() => openSong(song)}
                     disabled={showTrash}
-                    className="min-w-0 flex-1 px-4 py-3.5 text-left transition active:bg-background disabled:cursor-default sm:px-5 sm:py-4"
+                    className="min-w-0 flex-1 rounded-xl px-2 py-2 text-left transition active:bg-background disabled:cursor-default sm:px-3 sm:py-2.5"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="truncate text-[15px] font-semibold tracking-tight text-foreground">
+                      <span className="truncate text-sm font-semibold tracking-tight text-foreground">
                         {song.title || "Untitled"}
                       </span>
                       <div className="flex shrink-0 items-center gap-1.5">
                         {song.folder && (
-                          <span className="rounded-lg border border-border bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px]">
+                          <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
                             {song.folder.name}
                           </span>
                         )}
                         {song.isFavorite && !showTrash && (
-                          <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />
+                          <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
                         )}
                       </div>
                     </div>
-                    <p className="mt-1.5 line-clamp-1 text-sm text-muted">
+                    <p className="mt-1 line-clamp-1 text-xs text-muted sm:text-sm">
                       {contentSnippet(song.content) || "No lyrics yet"}
                     </p>
-                    <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+                    <p className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-muted">
                       {showTrash
                         ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
                         : `${song.status === "draft" ? "Draft" : "Finished"} · ${new Date(song.updatedAt).toLocaleDateString()}`}
                     </p>
                   </button>
-                  {showTrash ? (
-                    <div className="flex shrink-0 border-l border-border">
-                      <button
-                        type="button"
-                        onClick={() => restoreSong(song)}
-                        className="flex w-12 items-center justify-center text-muted transition hover:bg-background hover:text-accent sm:w-14"
-                        aria-label={`Restore "${song.title}"`}
-                        title="Restore"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSongToPurge(song)}
-                        className="flex w-12 items-center justify-center border-l border-border text-muted transition hover:bg-background hover:text-red-400 sm:w-14"
-                        aria-label={`Delete "${song.title}" forever`}
-                        title="Delete forever"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex shrink-0 border-l border-border">
-                      <button
-                        type="button"
-                        onClick={() => toggleFavorite(song)}
-                        className="flex w-12 items-center justify-center text-muted transition hover:bg-background hover:text-amber-400 sm:w-14"
-                        aria-label={song.isFavorite ? "Remove from favorites" : "Add to favorites"}
-                        title={song.isFavorite ? "Unfavorite" : "Favorite"}
-                      >
-                        <Star
-                          className={`h-4 w-4 ${
-                            song.isFavorite ? "fill-amber-400 text-amber-400" : ""
-                          }`}
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSongToMove(song)}
-                        className="flex w-12 items-center justify-center border-l border-border text-muted transition hover:bg-background hover:text-accent sm:w-14"
-                        aria-label={`Add "${song.title}" to folder`}
-                        title="Add to folder"
-                      >
-                        <FolderInput className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border bg-background/80 p-0.5">
+                    {showTrash ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => restoreSong(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                          aria-label={`Restore "${song.title}"`}
+                          title="Restore"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSongToPurge(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-red-400"
+                          aria-label={`Delete "${song.title}" forever`}
+                          title="Delete forever"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => toggleFavorite(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-amber-400"
+                          aria-label={song.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                          title={song.isFavorite ? "Unfavorite" : "Favorite"}
+                        >
+                          <Star
+                            className={`h-3.5 w-3.5 ${
+                              song.isFavorite ? "fill-amber-400 text-amber-400" : ""
+                            }`}
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSongToMove(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                          aria-label={`Add "${song.title}" to folder`}
+                          title="Add to folder"
+                        >
+                          <FolderInput className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveSongToBin(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-red-400"
+                          aria-label={`Move "${song.title}" to recycle bin`}
+                          title="Move to recycle bin"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {songs.length > 0 && (
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-3 py-3 sm:px-5">
+            <p className="text-xs text-muted sm:text-sm">
+              Showing{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {rangeStart}–{rangeEnd}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium tabular-nums text-foreground">{songs.length}</span>
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted sm:text-sm">
+                <span className="hidden sm:inline">Per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => changePageSize(Number(e.target.value))}
+                  className="h-9 rounded-xl border border-border bg-background px-2.5 text-sm text-foreground outline-none focus:border-accent"
+                  aria-label="Songs per page"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="min-w-[4.5rem] text-center text-xs tabular-nums text-muted sm:text-sm">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 bg-background text-muted">
-        <div className="h-8 w-8 animate-pulse rounded-xl border border-border bg-card" />
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-background text-muted">
+        <div className="flex flex-col items-center gap-3">
+          <Logo size={56} href={null} priority />
+          <BrandWordmark height={24} href={null} priority />
+        </div>
         <p className="text-sm">Loading your vault...</p>
       </div>
     );

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Logo, BrandWordmark } from "@/components/logo";
+import { SiteCredit } from "@/components/site-credit";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const FEATURES = [
@@ -266,28 +267,31 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       </main>
 
       <footer className="relative z-10 border-t border-border/60 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted sm:flex-row sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <Logo size={28} href="/" />
-            <BrandWordmark height={16} href="/" />
-            <span className="text-muted">© {new Date().getFullYear()}</span>
-          </div>
-          <div className="flex gap-6">
-            {isLoggedIn ? (
-              <Link href="/vault" className="transition hover:text-foreground">
-                My Vault
-              </Link>
-            ) : (
-              <>
-                <Link href="/login" className="transition hover:text-foreground">
-                  Sign in
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 sm:px-6">
+          <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
+            <div className="flex items-center gap-2.5">
+              <Logo size={28} href="/" />
+              <BrandWordmark height={16} href="/" />
+              <span className="text-sm text-muted">© {new Date().getFullYear()}</span>
+            </div>
+            <div className="flex gap-6 text-sm text-muted">
+              {isLoggedIn ? (
+                <Link href="/vault" className="transition hover:text-foreground">
+                  My Vault
                 </Link>
-                <Link href="/register" className="transition hover:text-foreground">
-                  Register
-                </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link href="/login" className="transition hover:text-foreground">
+                    Sign in
+                  </Link>
+                  <Link href="/register" className="transition hover:text-foreground">
+                    Register
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
+          <SiteCredit />
         </div>
       </footer>
     </div>
