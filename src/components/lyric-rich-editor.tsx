@@ -36,6 +36,10 @@ const toolBtn =
 const structureBtn =
   "shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95";
 
+const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28] as const;
+const DEFAULT_FONT_SIZE = 16;
+const FONT_SIZE_KEY = "rapvault-lyric-font-size";
+
 function saveSelection(container: HTMLElement) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -132,11 +136,27 @@ export function LyricRichEditor({
   const [showSyllables, setShowSyllables] = useState(false);
   const [showRhymes, setShowRhymes] = useState(false);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
+  const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
 
   useEffect(() => {
     const saved = localStorage.getItem("rapvault-rap-tools");
     if (saved === "true") setRapToolsOpen(true);
+
+    const savedSize = Number(localStorage.getItem(FONT_SIZE_KEY));
+    if (FONT_SIZES.includes(savedSize as (typeof FONT_SIZES)[number])) {
+      setFontSize(savedSize);
+    }
   }, []);
+
+  function changeFontSize(direction: -1 | 1) {
+    setFontSize((current) => {
+      const index = FONT_SIZES.indexOf(current as (typeof FONT_SIZES)[number]);
+      const nextIndex = Math.max(0, Math.min(FONT_SIZES.length - 1, (index === -1 ? 1 : index) + direction));
+      const next = FONT_SIZES[nextIndex]!;
+      localStorage.setItem(FONT_SIZE_KEY, String(next));
+      return next;
+    });
+  }
 
   function toggleRapTools() {
     setRapToolsOpen((open) => {
@@ -301,6 +321,32 @@ export function LyricRichEditor({
             </button>
           )}
 
+          <div className="ml-0.5 flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
+            <button
+              type="button"
+              className={`${toolBtn} h-8 w-8 disabled:opacity-40`}
+              title="Decrease font size"
+              aria-label="Decrease font size"
+              onClick={() => changeFontSize(-1)}
+              disabled={fontSize <= FONT_SIZES[0]!}
+            >
+              <span className="text-[11px] font-semibold leading-none">A−</span>
+            </button>
+            <span className="min-w-[2rem] text-center text-[11px] font-medium tabular-nums text-muted">
+              {fontSize}
+            </span>
+            <button
+              type="button"
+              className={`${toolBtn} h-8 w-8 disabled:opacity-40`}
+              title="Increase font size"
+              aria-label="Increase font size"
+              onClick={() => changeFontSize(1)}
+              disabled={fontSize >= FONT_SIZES[FONT_SIZES.length - 1]!}
+            >
+              <span className="text-sm font-semibold leading-none">A+</span>
+            </button>
+          </div>
+
           {toolbarStats && (
             <div className="mx-auto flex min-w-0 flex-1 justify-center px-2">
               {toolbarStats}
@@ -396,7 +442,8 @@ export function LyricRichEditor({
         onDragOver={(event) => event.preventDefault()}
         spellCheck={spellCheck}
         data-placeholder="Drop your bars here..."
-        className="lyric-markdown lyric-editor h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 text-base leading-relaxed outline-none lg:px-8 lg:py-5"
+        style={{ fontSize: `${fontSize}px` }}
+        className="lyric-markdown lyric-editor h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 leading-relaxed outline-none lg:px-8 lg:py-5"
       />
     </div>
   );
