@@ -12,7 +12,7 @@ import {
   Timer,
 } from "lucide-react";
 import Link from "next/link";
-import { Logo } from "@/components/logo";
+import { Logo, BrandWordmark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const FEATURES = [
@@ -79,7 +79,10 @@ export function LandingPage() {
 
       <header className="relative z-10 border-b border-border/60 bg-background/70 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <Logo size={40} href="/" priority />
+          <div className="flex items-center gap-2.5">
+            <Logo size={40} href="/" priority />
+            <BrandWordmark height={20} priority />
+          </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             <Link
@@ -242,9 +245,10 @@ export function LandingPage() {
 
       <footer className="relative z-10 border-t border-border/60 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted sm:flex-row sm:px-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Logo size={28} href="/" />
-            <span>© {new Date().getFullYear()} RapVault</span>
+            <BrandWordmark height={16} />
+            <span className="text-muted">© {new Date().getFullYear()}</span>
           </div>
           <div className="flex gap-6">
             <Link href="/login" className="transition hover:text-foreground">

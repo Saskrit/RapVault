@@ -1,4 +1,4 @@
-import { Logo } from "@/components/logo";
+import { Logo, BrandWordmark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 
@@ -13,7 +13,10 @@ export function PageShell({ children, showNav = true }: PageShellProps) {
       {showNav && (
         <header className="shrink-0 border-b border-border bg-card/80 px-4 py-3 backdrop-blur-xl pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
           <div className="mx-auto flex w-full max-w-lg items-center justify-between">
-            <Logo size={36} href="/" priority />
+            <div className="flex items-center gap-2.5">
+              <Logo size={36} href="/" priority />
+              <BrandWordmark height={18} priority />
+            </div>
             <ThemeToggle />
           </div>
         </header>

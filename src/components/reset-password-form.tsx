@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Logo } from "@/components/logo";
+import { Logo, BrandWordmark } from "@/components/logo";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -54,10 +54,11 @@ export function ResetPasswordForm() {
   return (
     <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
       <div className="mb-8 text-center">
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-3">
           <Logo size={56} priority />
+          <BrandWordmark height={22} priority />
         </div>
-        <h1 className="mt-3 text-2xl font-bold text-foreground">
+        <h1 className="mt-5 text-2xl font-bold text-foreground">
           Set new password
         </h1>
         <p className="mt-2 text-sm text-muted">

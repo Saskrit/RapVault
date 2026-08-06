@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { LogOut, Search, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/logo";
+import { Logo, BrandWordmark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type VaultHeaderProps = {
@@ -72,13 +72,8 @@ export function VaultHeader({
         {children}
 
         <div className="flex min-w-0 items-center gap-2.5">
-          <Logo size={30} href={null} priority />
-          <div className="hidden min-w-0 sm:block">
-            <p className="text-sm font-semibold tracking-tight text-foreground">RapVault</p>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-              Your vault
-            </p>
-          </div>
+          <Logo size={34} href={null} priority />
+          <BrandWordmark height={18} className="hidden sm:inline-flex" priority />
         </div>
 
         {showSearch && (
