@@ -55,10 +55,19 @@ export async function POST(request: Request) {
     }
 
     const hashed = await hashPassword(password);
+    const { allocateUniqueUsername } = await import("@/lib/allocate-username");
+    const { suggestUsernameFromEmail } = await import("@/lib/username");
+    const username = await allocateUniqueUsername(
+      suggestUsernameFromEmail(email),
+    );
+    const displayName = email.split("@")[0] || "Artist";
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashed,
+        username,
+        displayName,
       },
     });
 
@@ -66,11 +75,16 @@ export async function POST(request: Request) {
     await createSession({
       id: user.id,
       email: user.email,
-      name: user.name,
+      name: user.displayName,
     });
 
     return NextResponse.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.displayName,
+        username: user.username,
+      },
     });
   } catch {
     return NextResponse.json(

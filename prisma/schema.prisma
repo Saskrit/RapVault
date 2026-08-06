@@ -13,12 +13,20 @@ model User {
   password          String?
   googleId          String?   @unique
   name              String?
+  displayName       String?
+  username          String?   @unique
+  bio               String    @default("")
+  profilePublic     Boolean   @default(true)
   recoveryEmail     String?   @unique
   resetToken        String?   @unique
   resetTokenExpires DateTime?
   createdAt         DateTime  @default(now())
   folders           Folder[]
   songs             Song[]
+  songViews         SongView[]
+  songReactions     SongReaction[]
+  conversations     ConversationParticipant[]
+  messages          Message[]
 }
 
 model Folder {
@@ -41,6 +49,8 @@ model Song {
   moodTags      String    @default("")
   status        String    @default("draft")
   isFavorite    Boolean   @default(false)
+  isPublic      Boolean   @default(false)
+  viewCount     Int       @default(0)
   beatUrl       String    @default("")
   voiceMemoPath String    @default("")
   userId        String
@@ -50,8 +60,71 @@ model Song {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
+  views         SongView[]
+  reactions     SongReaction[]
 
   @@index([userId])
   @@index([folderId])
   @@index([userId, deletedAt])
+  @@index([isPublic, deletedAt])
+}
+
+model SongView {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([songId, userId])
+  @@index([userId])
+}
+
+model SongReaction {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("fire")
+  createdAt DateTime @default(now())
+
+  @@unique([songId, userId])
+  @@index([userId])
+}
+
+model Conversation {
+  id           String                     @id @default(cuid())
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@unique([userId, conversationId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }

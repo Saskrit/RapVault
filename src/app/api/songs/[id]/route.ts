@@ -78,6 +78,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       ...(body.voiceMemoPath !== undefined
         ? { voiceMemoPath: body.voiceMemoPath }
         : {}),
+      ...(body.isPublic !== undefined ? { isPublic: Boolean(body.isPublic) } : {}),
     },
     include: { folder: { select: { id: true, name: true } } },
   });

@@ -20,6 +20,10 @@ type ProfileUser = {
   id: string;
   email: string;
   name: string | null;
+  displayName: string | null;
+  username: string | null;
+  bio: string;
+  profilePublic: boolean;
   recoveryEmail: string | null;
   hasPassword: boolean;
   hasGoogle: boolean;
@@ -94,6 +98,14 @@ export function VaultSettingsView() {
   const [recoverySuccess, setRecoverySuccess] = useState("");
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [profilePublic, setProfilePublic] = useState(true);
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+
   const loadProfile = useCallback(async () => {
     const res = await fetch("/api/auth/me");
     if (!res.ok) {
@@ -103,6 +115,10 @@ export function VaultSettingsView() {
     const data = await res.json();
     setUser(data.user);
     setRecoveryInput(data.user.recoveryEmail || "");
+    setDisplayName(data.user.displayName || data.user.name || "");
+    setUsername(data.user.username || "");
+    setBio(data.user.bio || "");
+    setProfilePublic(data.user.profilePublic !== false);
     setLoading(false);
   }, [router]);
 
@@ -124,6 +140,37 @@ export function VaultSettingsView() {
       router.replace("/vault/settings");
     }
   }, [searchParams, router, loadProfile]);
+
+  async function handleProfileSubmit(event: FormEvent) {
+    event.preventDefault();
+    setProfileError("");
+    setProfileSuccess("");
+    setProfileLoading(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName,
+          username,
+          bio,
+          profilePublic,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setProfileError(data.error || "Could not update profile.");
+        return;
+      }
+      setProfileSuccess("Profile updated.");
+      if (data.user) setUser(data.user);
+      else await loadProfile();
+    } catch {
+      setProfileError("Network error. Try again.");
+    } finally {
+      setProfileLoading(false);
+    }
+  }
 
   async function handlePasswordSubmit(event: FormEvent) {
     event.preventDefault();
@@ -288,7 +335,7 @@ export function VaultSettingsView() {
 
   if (!user) return null;
 
-  const initials = (user.name || user.email)
+  const initials = (user.displayName || user.name || user.email)
     .split(/[\s@]+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -325,7 +372,7 @@ export function VaultSettingsView() {
               Profile &amp; settings
             </h1>
             <p className="mt-2 max-w-md text-sm text-muted sm:text-base">
-              Manage sign-in, recovery, and connected accounts.
+              Manage your artist profile, sign-in, recovery, and connected accounts.
             </p>
           </div>
         </div>
@@ -350,13 +397,15 @@ export function VaultSettingsView() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-lg font-semibold">
-                {user.name || user.email.split("@")[0]}
+                {user.displayName || user.name || user.email.split("@")[0]}
               </p>
-              <p className="mt-0.5 truncate text-sm text-muted">{user.email}</p>
+              <p className="mt-0.5 truncate text-sm text-muted">
+                {user.username ? `@${user.username}` : user.email}
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted">
                   <Mail className="h-3 w-3" />
-                  Email sign-in
+                  {user.email}
                 </span>
                 {user.hasGoogle && (
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted">
@@ -381,6 +430,99 @@ export function VaultSettingsView() {
         </section>
 
         <div className="grid gap-4 sm:gap-5">
+          {/* Artist profile */}
+          <section className={sectionClass}>
+            <div className="border-b border-border px-5 py-4 sm:px-6">
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <UserRound className="h-4 w-4 text-accent" />
+                Artist profile
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                Your public name and @username on Artists and song pages.
+              </p>
+            </div>
+            <form onSubmit={handleProfileSubmit} className="space-y-3 p-5 sm:p-6">
+              <div>
+                <label htmlFor="display-name" className="mb-1 block text-sm text-muted">
+                  Display name
+                </label>
+                <input
+                  id="display-name"
+                  type="text"
+                  maxLength={60}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="username" className="mb-1 block text-sm text-muted">
+                  Username
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted">@</span>
+                  <input
+                    id="username"
+                    type="text"
+                    minLength={3}
+                    maxLength={20}
+                    value={username}
+                    onChange={(e) =>
+                      setUsername(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
+                      )
+                    }
+                    className={inputClass}
+                    required
+                    pattern="[a-z0-9_]{3,20}"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="bio" className="mb-1 block text-sm text-muted">
+                  Bio
+                </label>
+                <textarea
+                  id="bio"
+                  rows={3}
+                  maxLength={280}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  className={`${inputClass} min-h-[5rem] resize-y`}
+                  placeholder="A short line about your writing..."
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={profilePublic}
+                  onChange={(e) => setProfilePublic(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                Show me on the Artists directory
+              </label>
+              <FieldMessage error={profileError} success={profileSuccess} />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
+                >
+                  {profileLoading ? "Saving..." : "Save profile"}
+                </button>
+                {user.username && (
+                  <Link
+                    href={`/vault/artists/${user.username}`}
+                    className="inline-flex min-h-11 items-center rounded-xl border border-border px-5 text-sm font-medium transition hover:border-accent hover:text-accent"
+                  >
+                    View public profile
+                  </Link>
+                )}
+              </div>
+            </form>
+          </section>
+
           {/* Change email */}
           <section className={sectionClass}>
             <div className="border-b border-border px-5 py-4 sm:px-6">

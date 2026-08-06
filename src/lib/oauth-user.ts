@@ -1,6 +1,12 @@
 import { createSession, seedDefaultFolders } from "@/lib/auth";
 import type { GoogleUserInfo } from "@/lib/google-auth";
 import { prisma } from "@/lib/prisma";
+import {
+  allocateUniqueUsername,
+} from "@/lib/allocate-username";
+import {
+  suggestUsernameFromEmail,
+} from "@/lib/username";
 
 export class GoogleLinkError extends Error {
   code:
@@ -37,6 +43,8 @@ export async function linkGoogleToUser(userId: string, profile: GoogleUserInfo) 
     data: {
       googleId,
       name: user.name ?? profile.name?.trim() ?? null,
+      displayName:
+        user.displayName ?? profile.name?.trim() ?? user.name ?? null,
     },
   });
 }
@@ -52,13 +60,31 @@ export async function findOrCreateGoogleUser(profile: GoogleUserInfo) {
     const existingByEmail = await prisma.user.findUnique({ where: { email } });
 
     if (existingByEmail) {
+      const username =
+        existingByEmail.username ||
+        (await allocateUniqueUsername(suggestUsernameFromEmail(email)));
       user = await prisma.user.update({
         where: { id: existingByEmail.id },
-        data: { googleId, name: existingByEmail.name ?? name },
+        data: {
+          googleId,
+          name: existingByEmail.name ?? name,
+          displayName:
+            existingByEmail.displayName ?? name ?? existingByEmail.name,
+          username,
+        },
       });
     } else {
+      const username = await allocateUniqueUsername(
+        suggestUsernameFromEmail(email),
+      );
       user = await prisma.user.create({
-        data: { email, googleId, name },
+        data: {
+          email,
+          googleId,
+          name,
+          displayName: name || email.split("@")[0] || "Artist",
+          username,
+        },
       });
       await seedDefaultFolders(user.id);
     }
@@ -67,7 +93,7 @@ export async function findOrCreateGoogleUser(profile: GoogleUserInfo) {
   await createSession({
     id: user.id,
     email: user.email,
-    name: user.name,
+    name: user.displayName ?? user.name,
   });
 
   return user;

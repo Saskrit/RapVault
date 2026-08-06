@@ -13,9 +13,15 @@ type BeatPlayerPanelProps = {
   beatUrl: string;
   onBeatUrlChange: (beatUrl: string) => void;
   onClose?: () => void;
+  readOnly?: boolean;
 };
 
-export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlayerPanelProps) {
+export function BeatPlayerPanel({
+  beatUrl,
+  onBeatUrlChange,
+  onClose,
+  readOnly = false,
+}: BeatPlayerPanelProps) {
   const [urlInput, setUrlInput] = useState(beatUrl);
   const [videoId, setVideoId] = useState<string | null>(() => parseYouTubeVideoId(beatUrl));
   const [error, setError] = useState("");
@@ -202,6 +208,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
         )}
       </div>
 
+      {!readOnly && (
       <div className="shrink-0 space-y-1.5 border-b border-border p-3">
         <label htmlFor="beat-url" className="text-[11px] font-medium uppercase tracking-wide text-muted">
           Paste beat link
@@ -242,6 +249,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
         </div>
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col">
         {videoId ? (
@@ -250,7 +258,9 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
               <div ref={playerShellRef} className="absolute inset-0 h-full w-full overflow-hidden" />
             </div>
             <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
-              <p className="truncate text-xs text-muted">Synced to this song</p>
+              <p className="truncate text-xs text-muted">
+                {readOnly ? "Public beat" : "Synced to this song"}
+              </p>
               <a
                 href={youTubeWatchUrl(videoId)}
                 target="_blank"

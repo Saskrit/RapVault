@@ -13,6 +13,8 @@ export type Song = {
   moodTags: string;
   status: string;
   isFavorite: boolean;
+  isPublic: boolean;
+  viewCount: number;
   beatUrl: string;
   voiceMemoPath: string;
   folderId: string | null;
@@ -20,4 +22,12 @@ export type Song = {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+};
+
+export type ArtistSummary = {
+  id: string;
+  username: string;
+  displayName: string;
+  bio: string;
+  publicSongCount: number;
 };

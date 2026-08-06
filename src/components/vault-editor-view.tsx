@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, Download, Music2, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, Eye, Globe, Star, Trash2, Music2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
@@ -279,6 +279,32 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 }`}
               />
             </button>
+            <button
+              type="button"
+              onClick={() =>
+                scheduleSave({ isPublic: !Boolean(song.isPublic) })
+              }
+              className={`${iconBtn} ${
+                song.isPublic
+                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                  : ""
+              }`}
+              aria-label={song.isPublic ? "Make private" : "Make public"}
+              title={song.isPublic ? "Public — click to make private" : "Make public"}
+            >
+              <Globe className="h-4 w-4" />
+            </button>
+            {song.isPublic && (
+              <Link
+                href={`/vault/s/${song.id}`}
+                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+                title="Public view"
+                aria-label="Open public view"
+              >
+                <Eye className="h-4 w-4 shrink-0" />
+                <span className="hidden text-sm sm:inline">Public</span>
+              </Link>
+            )}
             <div ref={downloadMenuRef} className="relative">
               <button
                 type="button"

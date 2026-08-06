@@ -3,7 +3,9 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   FolderInput,
+  Globe,
   PanelLeftClose,
   Plus,
   RotateCcw,
@@ -13,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClaimUsernameModal } from "@/components/claim-username-modal";
 import { MoveSongToFolderModal } from "@/components/move-song-to-folder-modal";
 import { AddSongsToFolderModal } from "@/components/add-songs-to-folder-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -26,6 +29,7 @@ import {
 import { contentSnippet } from "@/lib/rich-text";
 import { Logo, BrandWordmark } from "@/components/logo";
 import type { Folder, Song } from "@/types";
+import { suggestUsernameFromEmail } from "@/lib/username";
 
 const PAGE_SIZE_OPTIONS = [10, 15, 20, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
@@ -53,6 +57,27 @@ export function VaultSongsView() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [needsUsername, setNeedsUsername] = useState(false);
+  const [claimEmail, setClaimEmail] = useState("");
+  const [claimDisplayName, setClaimDisplayName] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.needsUsername) {
+          setNeedsUsername(true);
+          setClaimEmail(data.user.email || "");
+          setClaimDisplayName(
+            data.user.displayName ||
+              data.user.name ||
+              (data.user.email || "").split("@")[0] ||
+              "Artist",
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchFolders = useCallback(async () => {
     const res = await fetch("/api/folders");
@@ -397,6 +422,12 @@ export function VaultSongsView() {
                         {song.title || "Untitled"}
                       </span>
                       <div className="flex shrink-0 items-center gap-1.5">
+                        {song.isPublic && !showTrash && (
+                          <span className="inline-flex items-center gap-0.5 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                            <Globe className="h-2.5 w-2.5" />
+                            Public
+                          </span>
+                        )}
                         {song.folder && (
                           <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
                             {song.folder.name}
@@ -454,6 +485,17 @@ export function VaultSongsView() {
                             }`}
                           />
                         </button>
+                        {song.isPublic && (
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/vault/s/${song.id}`)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                            aria-label={`Public view of "${song.title}"`}
+                            title="Public view"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setSongToMove(song)}
@@ -674,6 +716,14 @@ export function VaultSongsView() {
         destructive
         loading={purging}
       />
+
+      {needsUsername && (
+        <ClaimUsernameModal
+          suggestedUsername={suggestUsernameFromEmail(claimEmail || "artist")}
+          suggestedDisplayName={claimDisplayName}
+          onComplete={() => setNeedsUsername(false)}
+        />
+      )}
     </div>
   );
 }

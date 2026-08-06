@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Search, Settings, X } from "lucide-react";
+import { LogOut, MessageSquare, Search, Settings, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -27,13 +27,18 @@ export function VaultHeader({
   children,
 }: VaultHeaderProps) {
   const showSearch = onSearchChange !== undefined;
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.user?.email) setUserEmail(data.user.email);
+        if (!data?.user) return;
+        setLabel(
+          data.user.username
+            ? `@${data.user.username}`
+            : data.user.displayName || data.user.email,
+        );
       })
       .catch(() => {});
   }, []);
@@ -72,9 +77,26 @@ export function VaultHeader({
         {children}
 
         <div className="flex min-w-0 items-center gap-2.5">
-          <Logo size={34} href="/" priority />
-          <BrandWordmark height={18} className="hidden sm:inline-flex" href="/" priority />
+          <Logo size={34} href="/vault" priority />
+          <BrandWordmark height={18} className="hidden sm:inline-flex" href="/vault" priority />
         </div>
+
+        <nav className="ml-1 hidden items-center gap-1 md:flex">
+          <Link
+            href="/vault/artists"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-muted transition hover:bg-background hover:text-foreground"
+          >
+            <Users className="h-4 w-4" />
+            Artists
+          </Link>
+          <Link
+            href="/vault/messages"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-muted transition hover:bg-background hover:text-foreground"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Messages
+          </Link>
+        </nav>
 
         {showSearch && (
           <div className="relative mx-auto hidden min-w-0 max-w-lg flex-1 lg:block">
@@ -96,6 +118,22 @@ export function VaultHeader({
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <Link
+            href="/vault/artists"
+            className={`${iconBtn} md:hidden`}
+            aria-label="Artists"
+            title="Artists"
+          >
+            <Users className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/vault/messages"
+            className={`${iconBtn} md:hidden`}
+            aria-label="Messages"
+            title="Messages"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Link>
           {showSearch && (
             <button
               type="button"
@@ -106,14 +144,14 @@ export function VaultHeader({
               <Search className="h-4 w-4" />
             </button>
           )}
-          {userEmail && (
+          {label && (
             <Link
               href="/vault/settings"
               className="hidden max-w-[12rem] items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs text-muted transition hover:border-foreground/20 hover:text-foreground xl:flex"
-              title={`${userEmail} — Profile & settings`}
+              title="Profile & settings"
             >
               <Settings className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{userEmail}</span>
+              <span className="truncate">{label}</span>
             </Link>
           )}
           <Link
