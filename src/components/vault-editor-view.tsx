@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Music2, SpellCheck, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, Music2, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
@@ -27,13 +27,33 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [deleting, setDeleting] = useState(false);
   const [spellCheck, setSpellCheck] = useState(true);
   const [beatsOpen, setBeatsOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Partial<Song> | null>(null);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("rapvault-spellcheck");
     if (saved === "false") setSpellCheck(false);
   }, []);
+
+  useEffect(() => {
+    if (!downloadOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!downloadMenuRef.current?.contains(event.target as Node)) {
+        setDownloadOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setDownloadOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [downloadOpen]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -170,12 +190,14 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     const payload = exportPayload();
     if (!payload) return;
     downloadTxt(payload.title, buildTxtExport(payload));
+    setDownloadOpen(false);
   }
 
   async function handleExportPdf() {
     const payload = exportPayload();
     if (!payload) return;
     await downloadPdf(payload.title, payload);
+    setDownloadOpen(false);
   }
 
   const stats = song
@@ -218,124 +240,95 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       </VaultHeader>
 
       <div className="shrink-0 border-b border-border bg-card/50 px-3 py-3 lg:px-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <label
-              htmlFor="song-title"
-              className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted"
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <input
+            id="song-title"
+            type="text"
+            value={song.title}
+            onChange={(e) => scheduleSave({ title: e.target.value })}
+            spellCheck={spellCheck}
+            className="min-w-0 flex-1 basis-40 rounded-xl border border-border bg-background px-3.5 py-2.5 text-lg font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:text-xl lg:text-2xl"
+            placeholder="Untitled track"
+          />
+
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setBeatsOpen((open) => !open)}
+              className={`${iconBtn} lg:hidden ${
+                beatsOpen
+                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                  : ""
+              }`}
+              aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
+              title={beatsOpen ? "Hide beats" : "Show beats"}
             >
-              Song title
-            </label>
-            <input
-              id="song-title"
-              type="text"
-              value={song.title}
-              onChange={(e) => scheduleSave({ title: e.target.value })}
-              spellCheck={spellCheck}
-              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-lg font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:text-xl lg:text-2xl"
-              placeholder="Untitled track"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 sm:pb-1">
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-border/80 bg-background/60 px-2.5 py-1.5 text-[11px] text-muted sm:text-xs">
-              <span>{stats.words} words</span>
-              <span className="text-border">·</span>
-              <span>{stats.lines} lines</span>
-              <span className="text-border">·</span>
-              <span>~{formatDuration(stats.estimatedSeconds)}</span>
-              <span className="text-border">·</span>
-              <span
-                className={
-                  saveState === "error"
-                    ? "text-red-400"
-                    : saveState === "saving"
-                      ? "text-accent"
-                      : saveState === "saved"
-                        ? "text-green-400"
-                        : ""
-                }
-              >
-                {saveState === "saving"
-                  ? "Saving..."
-                  : saveState === "saved"
-                    ? "Saved"
-                    : saveState === "error"
-                      ? "Save failed"
-                      : "Ready"}
-              </span>
-            </div>
-
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:ml-0">
+              <Music2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
+              className={iconBtn}
+              aria-label="Toggle favorite"
+            >
+              <Star
+                className={`h-4 w-4 ${
+                  song.isFavorite
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-muted"
+                }`}
+              />
+            </button>
+            <div ref={downloadMenuRef} className="relative">
               <button
                 type="button"
-                onClick={() => setBeatsOpen((open) => !open)}
-                className={`${iconBtn} lg:hidden ${
-                  beatsOpen
+                onClick={() => setDownloadOpen((open) => !open)}
+                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3 ${
+                  downloadOpen
                     ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
                     : ""
                 }`}
-                aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
-                title={beatsOpen ? "Hide beats" : "Show beats"}
-              >
-                <Music2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={toggleSpellCheck}
-                className={`${iconBtn} ${
-                  spellCheck
-                    ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                    : ""
-                }`}
-                aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
-                title={spellCheck ? "Spell check on" : "Spell check off"}
-              >
-                <SpellCheck className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-                className={iconBtn}
-                aria-label="Toggle favorite"
-              >
-                <Star
-                  className={`h-4 w-4 ${
-                    song.isFavorite
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-muted"
-                  }`}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={handleExportTxt}
-                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
-                title="Export TXT"
-                aria-label="Export TXT"
+                title="Download"
+                aria-label="Download"
+                aria-haspopup="menu"
+                aria-expanded={downloadOpen}
               >
                 <Download className="h-4 w-4 shrink-0" />
-                <span className="hidden text-sm sm:inline">TXT</span>
+                <span className="hidden text-sm sm:inline">Download</span>
+                <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition ${downloadOpen ? "rotate-180" : ""}`} />
               </button>
-              <button
-                type="button"
-                onClick={handleExportPdf}
-                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
-                title="Export PDF"
-                aria-label="Export PDF"
-              >
-                <Download className="h-4 w-4 shrink-0" />
-                <span className="hidden text-sm sm:inline">PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
-                aria-label="Delete song"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {downloadOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-40 mt-1.5 min-w-[9.5rem] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleExportTxt}
+                    className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
+                  >
+                    Download TXT
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleExportPdf}
+                    className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
+                  >
+                    Download PDF
+                  </button>
+                </div>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+              aria-label="Delete song"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -351,6 +344,36 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               value={song.content}
               onChange={(content) => scheduleSave({ content })}
               spellCheck={spellCheck}
+              onSpellCheckChange={toggleSpellCheck}
+              toolbarStats={
+                <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted sm:text-xs">
+                  <span>{stats.words} words</span>
+                  <span className="text-border">·</span>
+                  <span>{stats.lines} lines</span>
+                  <span className="text-border">·</span>
+                  <span>~{formatDuration(stats.estimatedSeconds)}</span>
+                  <span className="text-border">·</span>
+                  <span
+                    className={
+                      saveState === "error"
+                        ? "text-red-400"
+                        : saveState === "saving"
+                          ? "text-accent"
+                          : saveState === "saved"
+                            ? "text-green-400"
+                            : ""
+                    }
+                  >
+                    {saveState === "saving"
+                      ? "Saving..."
+                      : saveState === "saved"
+                        ? "Saved"
+                        : saveState === "error"
+                          ? "Save failed"
+                          : "Ready"}
+                  </span>
+                </div>
+              }
             />
           }
           secondary={

@@ -9,11 +9,12 @@ import {
   List,
   ListOrdered,
   Quote,
+  SpellCheck,
   Strikethrough,
   Sparkles,
   Type,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 import {
   RAP_STRUCTURE_LABELS,
   RHYME_GROUP_COLORS,
@@ -25,6 +26,8 @@ type LyricRichEditorProps = {
   value: string;
   onChange: (value: string) => void;
   spellCheck?: boolean;
+  onSpellCheckChange?: (enabled: boolean) => void;
+  toolbarStats?: ReactNode;
 };
 
 const toolBtn =
@@ -120,6 +123,8 @@ export function LyricRichEditor({
   value,
   onChange,
   spellCheck = true,
+  onSpellCheckChange,
+  toolbarStats,
 }: LyricRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastHtml = useRef("");
@@ -282,11 +287,30 @@ export function LyricRichEditor({
           <button type="button" className={`${toolBtn} w-9`} title="Link" aria-label="Link" onClick={insertLink}>
             <Link className="h-4 w-4" />
           </button>
+          {onSpellCheckChange && (
+            <button
+              type="button"
+              className={`${toolBtn} w-9 ${
+                spellCheck ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent" : ""
+              }`}
+              title={spellCheck ? "Spell check on" : "Spell check off"}
+              aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
+              onClick={() => onSpellCheckChange(!spellCheck)}
+            >
+              <SpellCheck className="h-4 w-4" />
+            </button>
+          )}
+
+          {toolbarStats && (
+            <div className="mx-auto flex min-w-0 flex-1 justify-center px-2">
+              {toolbarStats}
+            </div>
+          )}
 
           <button
             type="button"
             onClick={toggleRapTools}
-            className={`${toolBtn} ml-auto gap-1 px-2.5 text-xs font-medium ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
+            className={`${toolBtn} ${toolbarStats ? "" : "ml-auto "}gap-1 px-2.5 text-xs font-medium ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
             title={rapToolsOpen ? "Hide rap tools" : "Show rap tools"}
             aria-expanded={rapToolsOpen}
           >
