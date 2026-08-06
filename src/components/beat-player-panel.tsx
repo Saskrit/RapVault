@@ -45,17 +45,31 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
     function startTick(player: YT.Player) {
       stopTick();
       tickRef.current = setInterval(() => {
-        setCurrentTime(player.getCurrentTime());
+        try {
+          setCurrentTime(player.getCurrentTime());
+        } catch {
+          stopTick();
+        }
       }, 500);
     }
 
     const id = videoId;
 
+    function destroyPlayer() {
+      const player = playerRef.current;
+      playerRef.current = null;
+      if (!player) return;
+      try {
+        player.destroy();
+      } catch {
+        // YouTube can throw if the iframe was already removed during navigation.
+      }
+    }
+
     async function initPlayer() {
       setDuration(null);
       setCurrentTime(0);
-      playerRef.current?.destroy();
-      playerRef.current = null;
+      destroyPlayer();
 
       await loadYouTubeIframeApi();
       if (cancelled || !playerHostRef.current || !window.YT?.Player) return;
@@ -86,7 +100,11 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
               event.data === PlayerState.ENDED
             ) {
               stopTick();
-              setCurrentTime(event.target.getCurrentTime());
+              try {
+                setCurrentTime(event.target.getCurrentTime());
+              } catch {
+                // Player may already be torn down.
+              }
             }
           },
         },
@@ -98,8 +116,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
     return () => {
       cancelled = true;
       stopTick();
-      playerRef.current?.destroy();
-      playerRef.current = null;
+      destroyPlayer();
     };
   }, [videoId]);
 
@@ -213,7 +230,10 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
               {duration !== null ? (
                 <>
                   <p className="text-xl font-semibold tabular-nums tracking-tight">
-                    0:00 → {formatVideoTime(duration)}
+                    <span>0:00 → {formatVideoTime(duration)}</span>
+                    <span className="ml-2 font-medium text-muted">
+                      [{formatVideoTime(currentTime)} – {formatVideoTime(duration)}]
+                    </span>
                   </p>
                   <div className="space-y-1.5">
                     <div

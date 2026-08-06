@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock, Unlock } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type ResizableSplitProps = {
@@ -21,21 +22,25 @@ export function ResizableSplit({
   minPrimary = 280,
   minSecondary = 240,
 }: ResizableSplitProps) {
+  const lockKey = `${storageKey}-locked`;
   const containerRef = useRef<HTMLDivElement>(null);
   const sizeRef = useRef(defaultSecondarySize);
   const [secondarySize, setSecondarySize] = useState(defaultSecondarySize);
   const [isDragging, setIsDragging] = useState(false);
   const [isVertical, setIsVertical] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
-    if (!saved) return;
-    const parsed = Number(saved);
-    if (!Number.isNaN(parsed) && parsed >= minSecondary) {
-      sizeRef.current = parsed;
-      setSecondarySize(parsed);
+    if (saved) {
+      const parsed = Number(saved);
+      if (!Number.isNaN(parsed) && parsed >= minSecondary) {
+        sizeRef.current = parsed;
+        setSecondarySize(parsed);
+      }
     }
-  }, [storageKey, minSecondary]);
+    setLocked(localStorage.getItem(lockKey) === "true");
+  }, [storageKey, lockKey, minSecondary]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -46,7 +51,7 @@ export function ResizableSplit({
   }, []);
 
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging || locked) return;
 
     function onMove(event: PointerEvent) {
       const container = containerRef.current;
@@ -78,7 +83,16 @@ export function ResizableSplit({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isDragging, isVertical, minPrimary, minSecondary, storageKey]);
+  }, [isDragging, isVertical, locked, minPrimary, minSecondary, storageKey]);
+
+  function toggleLocked() {
+    setLocked((prev) => {
+      const next = !prev;
+      localStorage.setItem(lockKey, String(next));
+      if (next) setIsDragging(false);
+      return next;
+    });
+  }
 
   if (!secondaryVisible) {
     return (
@@ -103,22 +117,41 @@ export function ResizableSplit({
       <div
         role="separator"
         aria-orientation={isVertical ? "horizontal" : "vertical"}
-        aria-label="Resize panels"
+        aria-label={locked ? "Panel size locked" : "Resize panels"}
+        aria-valuenow={Math.round(secondarySize)}
         onPointerDown={(event) => {
+          if (locked) return;
+          // Ignore presses on the lock button itself.
+          if ((event.target as HTMLElement).closest("button")) return;
           event.preventDefault();
           setIsDragging(true);
         }}
-        className={`group z-10 shrink-0 touch-none select-none ${
-          isVertical
-            ? `h-2.5 w-full cursor-row-resize border-y border-border ${isDragging ? "bg-accent/15" : "bg-sidebar hover:bg-accent/10"}`
-            : `w-2.5 cursor-col-resize border-x border-border ${isDragging ? "bg-accent/15" : "bg-sidebar hover:bg-accent/10"}`
+        className={`group relative z-10 flex shrink-0 touch-none select-none items-center justify-center ${
+          isVertical ? "h-8 w-full border-y border-border" : "w-8 border-x border-border"
+        } ${isDragging ? "bg-accent/15" : "bg-sidebar hover:bg-accent/10"} ${
+          locked
+            ? "cursor-default"
+            : isVertical
+              ? "cursor-row-resize"
+              : "cursor-col-resize"
         }`}
       >
         <div
-          className={`rounded-full bg-border transition group-hover:bg-accent ${
-            isVertical ? "mx-auto mt-[0.1875rem] h-1 w-14" : "ml-[0.1875rem] h-14 w-1"
-          }`}
+          className={`pointer-events-none rounded-full bg-border transition group-hover:bg-accent ${
+            isVertical ? "h-1 w-10" : "h-10 w-1"
+          } ${locked ? "opacity-40" : ""}`}
         />
+        <button
+          type="button"
+          onClick={toggleLocked}
+          className={`absolute z-20 flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted shadow-sm transition hover:border-accent hover:text-accent ${
+            isVertical ? "right-2 top-1/2 -translate-y-1/2" : "bottom-2 left-1/2 -translate-x-1/2"
+          } ${locked ? "border-accent/40 text-accent" : ""}`}
+          aria-label={locked ? "Unlock panel size" : "Lock panel size"}
+          title={locked ? "Unlock size" : "Lock size"}
+        >
+          {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+        </button>
       </div>
 
       <div

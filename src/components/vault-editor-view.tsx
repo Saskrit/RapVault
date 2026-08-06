@@ -2,7 +2,6 @@
 
 import { ArrowLeft, Download, Music2, SpellCheck, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -20,7 +19,6 @@ type VaultEditorViewProps = {
 };
 
 export function VaultEditorView({ songId }: VaultEditorViewProps) {
-  const router = useRouter();
   const [song, setSong] = useState<Song | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -50,6 +48,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   useEffect(() => {
     if (song?.beatUrl) setBeatsOpen(true);
   }, [song?.beatUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, []);
 
   function toggleSpellCheck() {
     setSpellCheck((prev) => {
@@ -127,12 +131,22 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   async function confirmDeleteSong() {
     if (!song) return;
     setDeleting(true);
+
+    // Cancel any pending autosave so we don't PATCH a deleted song mid-navigation.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    pendingPatch.current = null;
+
     try {
       const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
       if (res.ok) {
         setShowDeleteModal(false);
-        router.push("/vault");
-        router.refresh();
+        // Hard navigate: soft router.push + refresh can fail after unmounting the
+        // YouTube beat player and leave an empty "page couldn't load" state.
+        window.location.assign("/vault");
+        return;
       }
     } finally {
       setDeleting(false);
