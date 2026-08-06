@@ -1,14 +1,25 @@
 "use client";
 
-import { FolderPlus, Plus, Star, Trash2 } from "lucide-react";
-import type { Folder } from "@/types";
+import {
+  Folder,
+  FolderPlus,
+  ListMusic,
+  Plus,
+  Recycle,
+  Star,
+  Trash2,
+} from "lucide-react";
+import type { Folder as FolderType } from "@/types";
 
 type VaultFoldersPanelProps = {
-  folders: Folder[];
+  folders: FolderType[];
   selectedFolderId: string | null;
   showFavorites: boolean;
+  showTrash: boolean;
+  trashCount?: number;
   onSelectAll: () => void;
   onSelectFavorites: () => void;
+  onSelectTrash: () => void;
   onSelectFolder: (id: string) => void;
   onDeleteFolder: (id: string) => void;
   onNewFolder: () => void;
@@ -16,12 +27,18 @@ type VaultFoldersPanelProps = {
   onNavigate?: () => void;
 };
 
+const navBtn =
+  "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98]";
+
 export function VaultFoldersPanel({
   folders,
   selectedFolderId,
   showFavorites,
+  showTrash,
+  trashCount = 0,
   onSelectAll,
   onSelectFavorites,
+  onSelectTrash,
   onSelectFolder,
   onDeleteFolder,
   onNewFolder,
@@ -35,88 +52,106 @@ export function VaultFoldersPanel({
     };
   }
 
+  function itemClass(active: boolean) {
+    return active
+      ? "border border-accent/30 bg-accent/10 text-accent"
+      : "border border-transparent text-foreground hover:bg-background";
+  }
+
   return (
     <>
-      <div className="border-b border-border p-3">
-        <button
-          type="button"
-          onClick={wrap(onSelectAll)}
-          className={`mb-1 w-full rounded-xl px-3 py-3 text-left text-sm transition active:scale-[0.98] ${
-            !selectedFolderId && !showFavorites
-              ? "bg-accent/20 text-accent"
-              : "text-foreground hover:bg-card"
-          }`}
-        >
-          All Songs
-        </button>
-        <button
-          type="button"
-          onClick={wrap(onSelectFavorites)}
-          className={`flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-sm transition active:scale-[0.98] ${
-            showFavorites
-              ? "bg-accent/20 text-accent"
-              : "text-foreground hover:bg-card"
-          }`}
-        >
-          <Star className="h-4 w-4" />
-          Favorites
-        </button>
+      <div className="border-b border-border px-3 pb-3 pt-4">
+        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+          Library
+        </p>
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={wrap(onSelectAll)}
+            className={`${navBtn} ${itemClass(!selectedFolderId && !showFavorites && !showTrash)}`}
+          >
+            <ListMusic className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">All Songs</span>
+          </button>
+          <button
+            type="button"
+            onClick={wrap(onSelectFavorites)}
+            className={`${navBtn} ${itemClass(showFavorites)}`}
+          >
+            <Star className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Favorites</span>
+          </button>
+          <button
+            type="button"
+            onClick={wrap(onSelectTrash)}
+            className={`${navBtn} ${itemClass(showTrash)}`}
+          >
+            <Recycle className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Recycle Bin</span>
+            {trashCount > 0 && (
+              <span className="rounded-md bg-background px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted">
+                {trashCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted">
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
           Folders
         </p>
-        {folders.map((folder) => (
-          <div
-            key={folder.id}
-            className={`group mb-1 flex items-center gap-1 rounded-xl transition ${
-              selectedFolderId === folder.id
-                ? "bg-accent/20"
-                : "hover:bg-card"
-            }`}
+        <div className="space-y-1">
+          {folders.map((folder) => {
+            const active = selectedFolderId === folder.id;
+            return (
+              <div
+                key={folder.id}
+                className={`group flex items-center gap-0.5 rounded-xl transition ${
+                  active ? "border border-accent/30 bg-accent/10" : "border border-transparent hover:bg-background"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={wrap(() => onSelectFolder(folder.id))}
+                  className={`${navBtn} min-w-0 flex-1 ${
+                    active ? "text-accent" : "text-foreground"
+                  }`}
+                >
+                  <Folder className="h-4 w-4 shrink-0 opacity-70" />
+                  <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                  <span className="rounded-md bg-background/80 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted">
+                    {folder._count.songs}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeleteFolder(folder.id)}
+                  className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted opacity-100 transition hover:bg-red-500/10 hover:text-red-400 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
+                  aria-label={`Delete ${folder.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={onNewFolder}
+            className={`${navBtn} text-muted hover:bg-background hover:text-foreground`}
           >
-            <button
-              type="button"
-              onClick={wrap(() => onSelectFolder(folder.id))}
-              className={`min-w-0 flex-1 rounded-xl px-3 py-3 text-left text-sm transition active:scale-[0.98] ${
-                selectedFolderId === folder.id
-                  ? "text-accent"
-                  : "text-foreground"
-              }`}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="truncate">{folder.name}</span>
-                <span className="ml-2 shrink-0 text-xs text-muted">
-                  {folder._count.songs}
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onDeleteFolder(folder.id)}
-              className="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted opacity-100 transition hover:bg-red-500/10 hover:text-red-400 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
-              aria-label={`Delete ${folder.name}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={onNewFolder}
-          className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-3 text-sm text-muted transition hover:bg-card hover:text-foreground active:scale-[0.98]"
-        >
-          <FolderPlus className="h-4 w-4" />
-          New folder
-        </button>
+            <FolderPlus className="h-4 w-4 shrink-0" />
+            New folder
+          </button>
+        </div>
       </div>
 
       <div className="border-t border-border p-3">
         <button
           type="button"
           onClick={wrap(onNewSong)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
+          disabled={showTrash}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3 text-sm font-semibold text-white transition hover:bg-accent/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus className="h-4 w-4" />
           New song

@@ -19,4 +19,5 @@ export type Song = {
   folder: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 };

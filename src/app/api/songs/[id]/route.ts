@@ -4,9 +4,17 @@ import { prisma } from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-async function getOwnedSong(id: string, userId: string) {
+async function getOwnedSong(
+  id: string,
+  userId: string,
+  options?: { includeDeleted?: boolean },
+) {
   return prisma.song.findFirst({
-    where: { id, userId },
+    where: {
+      id,
+      userId,
+      ...(options?.includeDeleted ? {} : { deletedAt: null }),
+    },
     include: { folder: { select: { id: true, name: true } } },
   });
 }
@@ -33,12 +41,27 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  const body = await request.json();
+
+  if (body.restore === true) {
+    const existing = await getOwnedSong(id, user.id, { includeDeleted: true });
+    if (!existing || !existing.deletedAt) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const song = await prisma.song.update({
+      where: { id },
+      data: { deletedAt: null },
+      include: { folder: { select: { id: true, name: true } } },
+    });
+    return NextResponse.json({ song });
+  }
+
   const existing = await getOwnedSong(id, user.id);
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const body = await request.json();
   const song = await prisma.song.update({
     where: { id },
     data: {
@@ -52,7 +75,9 @@ export async function PATCH(request: Request, context: RouteContext) {
         : {}),
       ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
       ...(body.beatUrl !== undefined ? { beatUrl: body.beatUrl } : {}),
-      ...(body.voiceMemoPath !== undefined ? { voiceMemoPath: body.voiceMemoPath } : {}),
+      ...(body.voiceMemoPath !== undefined
+        ? { voiceMemoPath: body.voiceMemoPath }
+        : {}),
     },
     include: { folder: { select: { id: true, name: true } } },
   });
@@ -60,18 +85,39 @@ export async function PATCH(request: Request, context: RouteContext) {
   return NextResponse.json({ song });
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   const user = await getSession();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await context.params;
-  const existing = await getOwnedSong(id, user.id);
+  const permanent =
+    new URL(request.url).searchParams.get("permanent") === "true";
+
+  const existing = await getOwnedSong(id, user.id, { includeDeleted: true });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.song.delete({ where: { id } });
+  if (permanent) {
+    if (!existing.deletedAt) {
+      return NextResponse.json(
+        { error: "Song must be in recycle bin first" },
+        { status: 400 },
+      );
+    }
+    await prisma.song.delete({ where: { id } });
+    return NextResponse.json({ success: true, permanent: true });
+  }
+
+  if (existing.deletedAt) {
+    return NextResponse.json({ success: true });
+  }
+
+  await prisma.song.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
   return NextResponse.json({ success: true });
 }

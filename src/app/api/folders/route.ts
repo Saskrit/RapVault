@@ -12,7 +12,11 @@ export async function GET() {
     where: { userId: user.id },
     orderBy: { sortOrder: "asc" },
     include: {
-      _count: { select: { songs: true } },
+      _count: {
+        select: {
+          songs: { where: { deletedAt: null } },
+        },
+      },
     },
   });
 
@@ -41,7 +45,13 @@ export async function POST(request: Request) {
       sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
       userId: user.id,
     },
-    include: { _count: { select: { songs: true } } },
+    include: {
+      _count: {
+        select: {
+          songs: { where: { deletedAt: null } },
+        },
+      },
+    },
   });
 
   return NextResponse.json({ folder });

@@ -390,9 +390,9 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         open={showDeleteModal}
         onClose={() => !deleting && setShowDeleteModal(false)}
         onConfirm={confirmDeleteSong}
-        title="Delete song?"
-        description={`"${song.title || "This song"}" will be permanently deleted. This cannot be undone.`}
-        confirmLabel="Delete"
+        title="Move to Recycle Bin?"
+        description={`"${song.title || "This song"}" will be moved to the Recycle Bin. You can restore it later.`}
+        confirmLabel="Move to bin"
         destructive
         loading={deleting}
       />

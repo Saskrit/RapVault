@@ -11,13 +11,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const folderId = searchParams.get("folderId");
   const favorites = searchParams.get("favorites");
+  const trash = searchParams.get("trash") === "true";
   const q = searchParams.get("q")?.trim();
 
   const songs = await prisma.song.findMany({
     where: {
       userId: user.id,
-      ...(folderId ? { folderId } : {}),
-      ...(favorites === "true" ? { isFavorite: true } : {}),
+      deletedAt: trash ? { not: null } : null,
+      ...(trash
+        ? {}
+        : {
+            ...(folderId ? { folderId } : {}),
+            ...(favorites === "true" ? { isFavorite: true } : {}),
+          }),
       ...(q
         ? {
             OR: [
@@ -29,7 +35,7 @@ export async function GET(request: Request) {
           }
         : {}),
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: trash ? { deletedAt: "desc" } : { updatedAt: "desc" },
     include: { folder: { select: { id: true, name: true } } },
   });
 

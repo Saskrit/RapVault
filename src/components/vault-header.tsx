@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Search, X } from "lucide-react";
+import { LogOut, Search, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -16,7 +16,7 @@ type VaultHeaderProps = {
 };
 
 const iconBtn =
-  "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition active:scale-95 hover:border-accent hover:text-accent";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground";
 
 export function VaultHeader({
   searchQuery = "",
@@ -39,18 +39,18 @@ export function VaultHeader({
   }, []);
 
   return (
-    <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-xl pt-[max(0.625rem,env(safe-area-inset-top))]">
+    <header className="shrink-0 border-b border-border bg-card pt-[max(0.625rem,env(safe-area-inset-top))]">
       {showSearch && mobileSearchOpen && (
         <div className="flex items-center gap-2 px-3 py-2.5 lg:hidden">
           <div className="relative min-w-0 flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
               type="search"
               autoFocus
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search..."
-              className="w-full min-h-11 rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-base outline-none focus:border-accent"
+              placeholder="Search songs..."
+              className="w-full min-h-11 rounded-2xl border border-border bg-background py-2.5 pl-11 pr-4 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
           <button
@@ -65,34 +65,42 @@ export function VaultHeader({
       )}
 
       <div
-        className={`items-center gap-2 px-3 py-2.5 lg:gap-3 lg:px-4 lg:py-3 ${
+        className={`items-center gap-2.5 px-3 py-3 lg:gap-3 lg:px-5 ${
           showSearch && mobileSearchOpen ? "hidden" : "flex"
         }`}
       >
         {children}
 
-        <Logo size={32} href={null} priority />
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Logo size={30} href={null} priority />
+          <div className="hidden min-w-0 sm:block">
+            <p className="text-sm font-semibold tracking-tight text-foreground">RapVault</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+              Your vault
+            </p>
+          </div>
+        </div>
 
         {showSearch && (
-          <div className="relative mx-auto hidden min-w-0 max-w-md flex-1 lg:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <div className="relative mx-auto hidden min-w-0 max-w-lg flex-1 lg:block">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search title, lyrics, tags..."
-              className="w-full min-h-10 rounded-xl border border-border bg-background py-2 pl-10 pr-4 text-sm outline-none focus:border-accent"
+              className="w-full min-h-10 rounded-2xl border border-border bg-background py-2 pl-11 pr-4 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
         )}
 
         {centerLabel && (
-          <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted lg:hidden">
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-foreground lg:hidden">
             {centerLabel}
           </p>
         )}
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {showSearch && (
             <button
               type="button"
@@ -106,12 +114,21 @@ export function VaultHeader({
           {userEmail && (
             <Link
               href="/vault/settings"
-              className="max-w-[7rem] truncate text-xs text-muted transition hover:text-accent sm:max-w-[10rem] lg:max-w-[14rem] lg:text-sm"
+              className="hidden max-w-[12rem] items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs text-muted transition hover:border-foreground/20 hover:text-foreground xl:flex"
               title={`${userEmail} — Profile & settings`}
             >
-              {userEmail}
+              <Settings className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{userEmail}</span>
             </Link>
           )}
+          <Link
+            href="/vault/settings"
+            className={`${iconBtn} xl:hidden`}
+            aria-label="Profile & settings"
+            title="Profile & settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
           <ThemeToggle />
           <button
             type="button"
@@ -119,7 +136,7 @@ export function VaultHeader({
               await fetch("/api/auth/logout", { method: "POST" });
               window.location.href = "/login";
             }}
-            className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+            className={`${iconBtn} hover:border-red-500/40 hover:text-red-400`}
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
