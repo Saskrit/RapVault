@@ -23,7 +23,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({ where: { email: normalized } });
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: normalized }, { recoveryEmail: normalized }],
+      },
+    });
 
     if (user) {
       const token = randomBytes(32).toString("hex");
@@ -36,8 +40,8 @@ export async function POST(request: Request) {
 
       const resetUrl = `${getAppOrigin(request)}/reset-password?token=${token}`;
       const googleOnly = Boolean(user.googleId && !user.password);
-
-      await sendPasswordResetEmail(user.email, resetUrl, { googleOnly });
+      // Send to the address they entered so they can open the inbox they still have.
+      await sendPasswordResetEmail(normalized, resetUrl, { googleOnly });
     }
 
     return NextResponse.json({

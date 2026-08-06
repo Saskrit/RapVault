@@ -49,7 +49,8 @@ export function ForgotPasswordForm() {
           Forgot password?
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Enter your email and we&apos;ll send you a reset link.
+          Enter your sign-in email or recovery email and we&apos;ll send a reset
+          link to that address.
         </p>
       </div>
 
@@ -62,7 +63,7 @@ export function ForgotPasswordForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
-            placeholder="you@example.com"
+            placeholder="Sign-in or recovery email"
           />
         </div>
 
