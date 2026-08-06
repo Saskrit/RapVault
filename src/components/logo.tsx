@@ -16,7 +16,7 @@ export function Logo({
 }: LogoProps) {
   const image = (
     <Image
-      src="/rvlogo.png"
+      src="/logo.png"
       alt="RapVault"
       width={size}
       height={size}
@@ -43,17 +43,16 @@ type BrandWordmarkProps = {
   href?: string | null;
 };
 
-/** Official “RAP VAULT” wordmark — keep transparent; no background fill */
 export function BrandWordmark({
   height = 22,
   className = "",
   priority = false,
   href = "/",
 }: BrandWordmarkProps) {
-  const width = Math.round(height * (480 / 120));
+  const width = Math.round(height * (1024 / 134));
   const image = (
     <Image
-      src="/rvtext.png"
+      src="/rvtxt.png"
       alt="Rap Vault"
       width={width}
       height={height}
