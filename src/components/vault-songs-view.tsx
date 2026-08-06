@@ -330,7 +330,7 @@ export function VaultSongsView() {
               )}
             </div>
           ) : (
-            <div className="mx-auto flex max-w-4xl flex-col gap-2">
+            <div className="flex flex-col gap-2">
               {songs.map((song) => (
                 <div
                   key={song.id}
