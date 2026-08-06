@@ -6,8 +6,6 @@ type LogoProps = {
   href?: string | null;
   className?: string;
   priority?: boolean;
-  /** Prefer PNG for crisp UI; SVG kept in /public for other uses */
-  variant?: "png" | "svg";
 };
 
 export function Logo({
@@ -15,22 +13,21 @@ export function Logo({
   href = "/",
   className = "",
   priority = false,
-  variant = "png",
 }: LogoProps) {
   const image = (
     <Image
-      src={variant === "svg" ? "/logo.svg" : "/logo.png"}
+      src="/rvlogo.png"
       alt="RapVault"
       width={size}
       height={size}
       priority={priority}
-      className={`rounded-full object-contain ${className}`}
+      className={`object-contain ${className}`}
     />
   );
 
   if (href) {
     return (
-      <Link href={href} className="inline-flex shrink-0">
+      <Link href={href} className="inline-flex shrink-0" aria-label="RapVault home">
         {image}
       </Link>
     );
@@ -43,27 +40,41 @@ type BrandWordmarkProps = {
   height?: number;
   className?: string;
   priority?: boolean;
+  href?: string | null;
 };
 
-/** Official “RAP VAULT” wordmark asset */
+/** Official “RAP VAULT” wordmark — keep transparent; no background fill */
 export function BrandWordmark({
   height = 22,
   className = "",
   priority = false,
+  href = "/",
 }: BrandWordmarkProps) {
   const width = Math.round(height * (480 / 120));
+  const image = (
+    <Image
+      src="/rvtext.png"
+      alt="Rap Vault"
+      width={width}
+      height={height}
+      priority={priority}
+      className="object-contain"
+    />
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`inline-flex shrink-0 items-center ${className}`}
+        aria-label="RapVault home"
+      >
+        {image}
+      </Link>
+    );
+  }
+
   return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded-md bg-[#0a0a0a] px-2 py-1 ${className}`}
-    >
-      <Image
-        src="/rvtext.png"
-        alt="Rap Vault"
-        width={width}
-        height={height}
-        priority={priority}
-        className="object-contain"
-      />
-    </span>
+    <span className={`inline-flex shrink-0 items-center ${className}`}>{image}</span>
   );
 }

@@ -61,7 +61,7 @@ const FEATURES = [
   },
 ];
 
-export function LandingPage() {
+export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   return (
     <div className="relative min-h-[100dvh] overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0">
@@ -81,22 +81,33 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2.5">
             <Logo size={40} href="/" priority />
-            <BrandWordmark height={20} priority />
+            <BrandWordmark height={20} href="/" priority />
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
-            <Link
-              href="/login"
-              className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:text-foreground sm:inline-flex md:px-4"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex min-h-10 items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] sm:px-4"
-            >
-              Get started
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/vault"
+                className="inline-flex min-h-10 items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] sm:px-4"
+              >
+                My Vault
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="hidden min-h-10 items-center rounded-xl px-3 py-2 text-sm font-medium text-muted transition hover:text-foreground sm:inline-flex md:px-4"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  className="inline-flex min-h-10 items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] sm:px-4"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -122,18 +133,29 @@ export function LandingPage() {
                 and never lose a line.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
-                <Link
-                  href="/register"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
-                >
-                  Start writing free
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card/50 px-7 py-3.5 text-sm font-semibold transition hover:border-accent hover:text-accent active:scale-[0.98] sm:w-auto"
-                >
-                  Sign in
-                </Link>
+                {isLoggedIn ? (
+                  <Link
+                    href="/vault"
+                    className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
+                  >
+                    My Vault
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/register"
+                      className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
+                    >
+                      Start writing free
+                    </Link>
+                    <Link
+                      href="/login"
+                      className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card/50 px-7 py-3.5 text-sm font-semibold transition hover:border-accent hover:text-accent active:scale-[0.98] sm:w-auto"
+                    >
+                      Sign in
+                    </Link>
+                  </>
+                )}
               </div>
               <div className="mt-10 flex flex-wrap gap-6 text-sm text-muted">
                 <span className="flex items-center gap-2">
@@ -234,10 +256,10 @@ export function LandingPage() {
               and the bars.
             </p>
             <Link
-              href="/register"
+              href={isLoggedIn ? "/vault" : "/register"}
               className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:mt-8"
             >
-              Create your vault
+              {isLoggedIn ? "My Vault" : "Create your vault"}
             </Link>
           </div>
         </section>
@@ -247,16 +269,24 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-muted sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
             <Logo size={28} href="/" />
-            <BrandWordmark height={16} />
+            <BrandWordmark height={16} href="/" />
             <span className="text-muted">© {new Date().getFullYear()}</span>
           </div>
           <div className="flex gap-6">
-            <Link href="/login" className="transition hover:text-foreground">
-              Sign in
-            </Link>
-            <Link href="/register" className="transition hover:text-foreground">
-              Register
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/vault" className="transition hover:text-foreground">
+                My Vault
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="transition hover:text-foreground">
+                  Sign in
+                </Link>
+                <Link href="/register" className="transition hover:text-foreground">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </footer>
