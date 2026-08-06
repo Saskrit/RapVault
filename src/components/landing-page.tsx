@@ -115,12 +115,12 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
       <main className="relative z-10">
         <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-16 md:pt-24">
-          <div className="grid items-center gap-10 sm:gap-14 lg:grid-cols-2 lg:gap-10">
-            <div>
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium uppercase tracking-widest text-accent">
-                <Cloud className="h-3.5 w-3.5" />
-                Private lyrics cloud
-              </p>
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium uppercase tracking-widest text-accent">
+            <Cloud className="h-3.5 w-3.5" />
+            Private lyrics cloud
+          </p>
+          <div className="grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-8 xl:gap-10">
+            <div className="flex flex-col">
               <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
                 Your bars.
                 <br />
@@ -158,7 +158,7 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   </>
                 )}
               </div>
-              <div className="mt-10 flex flex-wrap gap-6 text-sm text-muted">
+              <div className="mt-auto flex flex-wrap gap-6 pt-10 text-sm text-muted">
                 <span className="flex items-center gap-2">
                   <Music2 className="h-4 w-4 text-accent" />
                   Write to beats
@@ -174,41 +174,41 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative flex min-h-[26rem] w-full lg:min-h-full">
               <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
-              <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-                <div className="flex items-center gap-2 border-b border-border bg-sidebar px-4 py-3">
+              <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
+                <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
                   <div className="h-3 w-3 rounded-full bg-red-500/80" />
                   <div className="h-3 w-3 rounded-full bg-amber-400/80" />
                   <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                  <span className="ml-2 text-xs text-muted">Midnight Freestyle — Draft</span>
+                  <span className="ml-2 text-sm text-muted">Midnight Freestyle — Draft</span>
                 </div>
-                <div className="grid grid-cols-[minmax(0,1fr)_120px] sm:grid-cols-[minmax(0,1fr)_160px]">
-                  <div className="border-r border-border bg-editor p-4 font-mono text-sm leading-relaxed sm:p-5">
+                <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_7.5rem] sm:grid-cols-[minmax(0,1fr)_10rem]">
+                  <div className="flex min-h-0 flex-col border-r border-border bg-editor p-5 font-mono text-[15px] leading-relaxed sm:p-6 sm:text-base">
                     <p className="text-accent/80">[Verse 1]</p>
-                    <p className="mt-2 text-foreground">
+                    <p className="mt-3 text-foreground">
                       Started with a vision, pen hit the pad
                     </p>
                     <p className="text-foreground">
                       Lines in the vault, never lookin&apos; back...
                     </p>
-                    <p className="mt-3 text-accent/80">[Hook]</p>
-                    <p className="mt-1 text-foreground">Locked in, never fold</p>
-                    <p className="mt-4 text-accent/60">|</p>
+                    <p className="mt-5 text-accent/80">[Hook]</p>
+                    <p className="mt-2 text-foreground">Locked in, never fold</p>
+                    <p className="mt-auto pt-6 text-accent/60">|</p>
                   </div>
-                  <div className="flex flex-col bg-sidebar">
-                    <div className="border-b border-border px-2 py-1.5 text-[10px] font-medium text-muted">
+                  <div className="flex min-h-0 flex-col bg-sidebar">
+                    <div className="shrink-0 border-b border-border px-2 py-2 text-[10px] font-medium text-muted sm:text-xs">
                       Beat
                     </div>
-                    <div className="flex flex-1 flex-col items-center justify-center gap-1 bg-black/90 p-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600">
-                        <Music2 className="h-4 w-4 text-white" />
+                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-black/90 p-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600">
+                        <Music2 className="h-5 w-5 text-white" />
                       </div>
-                      <p className="text-center text-[9px] text-muted">YouTube beat</p>
+                      <p className="text-center text-[10px] text-muted sm:text-xs">YouTube beat</p>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted">
+                <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
                   <span>847 words · ~3m 24s</span>
                   <span className="text-green-400">Saved</span>
                 </div>
