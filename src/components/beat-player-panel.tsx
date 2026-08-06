@@ -21,9 +21,12 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
   const [error, setError] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const playerHostRef = useRef<HTMLDivElement>(null);
+  const [clearedToast, setClearedToast] = useState(false);
+  const playerShellRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YT.Player | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clearingRef = useRef(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setUrlInput(beatUrl);
@@ -31,9 +34,21 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
   }, [beatUrl]);
 
   useEffect(() => {
-    if (!videoId || !playerHostRef.current) return;
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!videoId || !playerShellRef.current) return;
 
     let cancelled = false;
+    const shell = playerShellRef.current;
+    // YouTube replaces this node with an iframe — keep it outside React's DOM ownership.
+    const host = document.createElement("div");
+    host.style.width = "100%";
+    host.style.height = "100%";
+    shell.replaceChildren(host);
 
     function stopTick() {
       if (tickRef.current) {
@@ -53,28 +68,30 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
       }, 500);
     }
 
-    const id = videoId;
-
     function destroyPlayer() {
+      stopTick();
       const player = playerRef.current;
       playerRef.current = null;
-      if (!player) return;
-      try {
-        player.destroy();
-      } catch {
-        // YouTube can throw if the iframe was already removed during navigation.
+      if (player) {
+        try {
+          player.destroy();
+        } catch {
+          // YouTube may already have removed the iframe.
+        }
       }
+      shell.replaceChildren();
     }
+
+    const id = videoId;
 
     async function initPlayer() {
       setDuration(null);
       setCurrentTime(0);
-      destroyPlayer();
 
       await loadYouTubeIframeApi();
-      if (cancelled || !playerHostRef.current || !window.YT?.Player) return;
+      if (cancelled || !window.YT?.Player || !host.isConnected) return;
 
-      playerRef.current = new window.YT.Player(playerHostRef.current, {
+      playerRef.current = new window.YT.Player(host, {
         videoId: id,
         width: "100%",
         height: "100%",
@@ -115,12 +132,13 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
 
     return () => {
       cancelled = true;
-      stopTick();
       destroyPlayer();
     };
   }, [videoId]);
 
   function loadBeat(input?: string) {
+    if (clearingRef.current) return;
+
     const value = (input ?? urlInput).trim();
     const id = parseYouTubeVideoId(value);
 
@@ -137,19 +155,38 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
   }
 
   function clearBeat() {
+    clearingRef.current = true;
     setVideoId(null);
     setUrlInput("");
     setError("");
     setDuration(null);
     setCurrentTime(0);
     onBeatUrlChange("");
+    setClearedToast(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setClearedToast(false);
+      toastTimerRef.current = null;
+    }, 2000);
+    // Blur from the trash click can fire loadBeat with the old URL — ignore briefly.
+    window.setTimeout(() => {
+      clearingRef.current = false;
+    }, 0);
   }
 
   const progress =
     duration && duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-sidebar">
+    <div className="relative flex h-full min-h-0 flex-col bg-sidebar">
+      {clearedToast && (
+        <div
+          role="status"
+          className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-lg"
+        >
+          Beat cleared
+        </div>
+      )}
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5">
         <Music2 className="h-4 w-4 shrink-0 text-accent" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Beat player</h2>
@@ -194,6 +231,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
           <button
             type="button"
             onClick={clearBeat}
+            onMouseDown={(e) => e.preventDefault()}
             disabled={!urlInput && !videoId}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
             aria-label="Clear beat"
@@ -209,7 +247,7 @@ export function BeatPlayerPanel({ beatUrl, onBeatUrlChange, onClose }: BeatPlaye
         {videoId ? (
           <>
             <div className="relative w-full shrink-0 bg-black pt-[56.25%]">
-              <div ref={playerHostRef} className="absolute inset-0 h-full w-full" />
+              <div ref={playerShellRef} className="absolute inset-0 h-full w-full overflow-hidden" />
             </div>
             <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
               <p className="truncate text-xs text-muted">Synced to this song</p>
