@@ -15,9 +15,12 @@ const GOOGLE_ERRORS: Record<string, string> = {
 
 type AuthFormProps = {
   mode: "login" | "register";
+  /** Compact form for hero panel — no logo card chrome */
+  embedded?: boolean;
+  onSwitchMode?: (mode: "login" | "register") => void;
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, embedded = false, onSwitchMode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -35,6 +38,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       setError("");
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    setError("");
+    setEmail("");
+    setPassword("");
+    setName("");
+  }, [mode]);
 
   const resetSuccess = searchParams.get("reset") === "success";
 
@@ -65,22 +75,33 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
-  return (
-    <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
-      <div className="mb-8 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <Logo size={56} priority />
-          <BrandWordmark height={22} priority />
+  const title = mode === "login" ? "Welcome back" : "Create your vault";
+  const subtitle =
+    mode === "login"
+      ? "Sign in to access your lyrics."
+      : "Start writing and never lose a bar.";
+
+  const form = (
+    <>
+      {!embedded && (
+        <div className="mb-8 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <Logo size={56} priority />
+            <BrandWordmark height={22} priority />
+          </div>
+          <h1 className="mt-5 text-2xl font-bold text-foreground">{title}</h1>
+          <p className="mt-2 text-sm text-muted">{subtitle}</p>
         </div>
-        <h1 className="mt-5 text-2xl font-bold text-foreground">
-          {mode === "login" ? "Welcome back" : "Create your vault"}
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          {mode === "login"
-            ? "Sign in to access your lyrics."
-            : "Start writing and never lose a bar."}
-        </p>
-      </div>
+      )}
+
+      {embedded && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {title}
+          </h2>
+          <p className="mt-2 text-base leading-relaxed text-muted sm:text-lg">{subtitle}</p>
+        </div>
+      )}
 
       <GoogleSignInButton
         label={mode === "login" ? "Sign in with Google" : "Sign up with Google"}
@@ -91,7 +112,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs uppercase tracking-wider">
-          <span className="bg-card px-3 text-muted">or</span>
+          <span className={`${embedded ? "bg-editor" : "bg-card"} px-3 text-muted`}>or</span>
         </div>
       </div>
 
@@ -169,23 +190,53 @@ export function AuthForm({ mode }: AuthFormProps) {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted">
+      <p className="mt-6 text-sm text-muted">
         {mode === "login" ? (
           <>
             New here?{" "}
-            <Link href="/register" className="text-accent hover:underline">
-              Create an account
-            </Link>
+            {onSwitchMode ? (
+              <button
+                type="button"
+                onClick={() => onSwitchMode("register")}
+                className="font-medium text-accent hover:underline"
+              >
+                Create an account
+              </button>
+            ) : (
+              <Link href="/register" className="text-accent hover:underline">
+                Create an account
+              </Link>
+            )}
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="text-accent hover:underline">
-              Sign in
-            </Link>
+            {onSwitchMode ? (
+              <button
+                type="button"
+                onClick={() => onSwitchMode("login")}
+                className="font-medium text-accent hover:underline"
+              >
+                Sign in
+              </button>
+            ) : (
+              <Link href="/login" className="text-accent hover:underline">
+                Sign in
+              </Link>
+            )}
           </>
         )}
       </p>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="mx-auto w-full max-w-md">{form}</div>;
+  }
+
+  return (
+    <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
+      {form}
     </div>
   );
 }
