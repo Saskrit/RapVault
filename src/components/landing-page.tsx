@@ -13,11 +13,13 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { Suspense, useState } from "react";
-import { AuthForm } from "@/components/auth-form";
+import { useState } from "react";
+import { HeroAuthForm } from "@/components/hero-auth-form";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { SiteCredit } from "@/components/site-credit";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+type AuthMode = "login" | "register";
 
 const FEATURES = [
   {
@@ -64,8 +66,6 @@ const FEATURES = [
     description: "Your lyrics stay yours. Sign in with email or Google.",
   },
 ];
-
-type AuthMode = "login" | "register";
 
 export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
@@ -138,14 +138,14 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             Private lyrics cloud
           </p>
 
-          <div
-            className={`grid items-stretch gap-10 transition-all duration-500 sm:gap-14 lg:gap-8 xl:gap-10 ${
-              authOpen
-                ? "grid-cols-1"
-                : "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]"
-            }`}
-          >
-            {!authOpen && (
+          <div className="relative">
+            {/* Invisible when auth opens — preserves height so sections below don't shift */}
+            <div
+              className={`grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-8 xl:gap-10 ${
+                authOpen ? "invisible pointer-events-none" : ""
+              }`}
+              aria-hidden={authOpen}
+            >
               <div className="flex flex-col">
                 <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
                   Your bars.
@@ -201,91 +201,93 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   </span>
                 </div>
               </div>
-            )}
 
-            <div
-              className={`relative flex w-full transition-all duration-500 ${
-                authOpen ? "min-h-[32rem]" : "min-h-[26rem] lg:min-h-full"
-              }`}
-            >
-              <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
-              <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
-                <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
-                  <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                  <div className="h-3 w-3 rounded-full bg-amber-400/80" />
-                  <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                  <span className="ml-2 min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                    {authOpen
-                      ? authMode === "login"
-                        ? "Sign in"
-                        : "Get started"
-                      : "Midnight Freestyle — Draft"}
-                  </span>
-                  {authOpen && (
+              <div className="relative flex min-h-[26rem] w-full lg:min-h-full">
+                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
+                <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
+                  <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
+                    <div className="h-3 w-3 rounded-full bg-red-500/80" />
+                    <div className="h-3 w-3 rounded-full bg-amber-400/80" />
+                    <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                    <span className="ml-2 text-sm text-muted">Midnight Freestyle — Draft</span>
+                  </div>
+                  <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_7.5rem] sm:grid-cols-[minmax(0,1fr)_10rem]">
+                    <div className="flex min-h-0 flex-col border-r border-border bg-editor p-5 font-mono text-[15px] leading-relaxed sm:p-6 sm:text-base">
+                      <p className="text-accent/80">[Verse 1]</p>
+                      <p className="mt-3 text-foreground">
+                        Started with a vision, pen hit the pad
+                      </p>
+                      <p className="text-foreground">
+                        Lines in the vault, never lookin&apos; back...
+                      </p>
+                      <p className="mt-5 text-accent/80">[Hook]</p>
+                      <p className="mt-2 text-foreground">Locked in, never fold</p>
+                      <p className="mt-auto pt-6 text-accent/60">|</p>
+                    </div>
+                    <div className="flex min-h-0 flex-col bg-sidebar">
+                      <div className="shrink-0 border-b border-border px-2 py-2 text-[10px] font-medium text-muted sm:text-xs">
+                        Beat
+                      </div>
+                      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-black/90 p-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600">
+                          <Music2 className="h-5 w-5 text-white" />
+                        </div>
+                        <p className="text-center text-[10px] text-muted sm:text-xs">YouTube beat</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
+                    <span>847 words · ~3m 24s</span>
+                    <span className="text-green-400">Saved</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {authOpen && authMode && (
+              <div className="absolute inset-0 z-20">
+                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
+                <div className="relative flex h-full min-h-[26rem] w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+                  <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
+                    <div className="h-3 w-3 rounded-full bg-red-500/80" />
+                    <div className="h-3 w-3 rounded-full bg-amber-400/80" />
+                    <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                    <h2 className="ml-2 min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
+                      {authMode === "login" ? "Sign in" : "Get started"}
+                    </h2>
                     <button
                       type="button"
                       onClick={closeAuth}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
                       aria-label="Close"
-                      title="Back"
                     >
                       <X className="h-4 w-4" />
                     </button>
-                  )}
-                </div>
-
-                {authOpen && authMode ? (
-                  <div className="min-h-0 flex-1 overflow-y-auto bg-editor px-5 py-6 sm:px-8 sm:py-8">
-                    <Suspense
-                      fallback={
-                        <p className="text-sm text-muted">Loading form...</p>
-                      }
-                    >
-                      <AuthForm
-                        key={authMode}
-                        mode={authMode}
-                        embedded
-                        onSwitchMode={setAuthMode}
-                      />
-                    </Suspense>
                   </div>
-                ) : (
-                  <>
-                    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_7.5rem] sm:grid-cols-[minmax(0,1fr)_10rem]">
-                      <div className="flex min-h-0 flex-col border-r border-border bg-editor p-5 font-mono text-[15px] leading-relaxed sm:p-6 sm:text-base">
-                        <p className="text-accent/80">[Verse 1]</p>
-                        <p className="mt-3 text-foreground">
-                          Started with a vision, pen hit the pad
-                        </p>
-                        <p className="text-foreground">
-                          Lines in the vault, never lookin&apos; back...
-                        </p>
-                        <p className="mt-5 text-accent/80">[Hook]</p>
-                        <p className="mt-2 text-foreground">Locked in, never fold</p>
-                        <p className="mt-auto pt-6 text-accent/60">|</p>
-                      </div>
-                      <div className="flex min-h-0 flex-col bg-sidebar">
-                        <div className="shrink-0 border-b border-border px-2 py-2 text-[10px] font-medium text-muted sm:text-xs">
-                          Beat
-                        </div>
-                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-black/90 p-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600">
-                            <Music2 className="h-5 w-5 text-white" />
-                          </div>
-                          <p className="text-center text-[10px] text-muted sm:text-xs">
-                            YouTube beat
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
-                      <span>847 words · ~3m 24s</span>
-                      <span className="text-green-400">Saved</span>
-                    </div>
-                  </>
-                )}
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor">
+                    <HeroAuthForm
+                      key={authMode}
+                      mode={authMode}
+                      onSwitchMode={setAuthMode}
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
+                    <span>
+                      {authMode === "login"
+                        ? "Welcome back to your vault"
+                        : "Your bars. Locked in."}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={closeAuth}
+                      className="font-medium text-accent transition hover:underline"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
 

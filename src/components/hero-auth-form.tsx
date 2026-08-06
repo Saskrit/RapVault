@@ -1,42 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
-import { Logo, BrandWordmark } from "@/components/logo";
 
-const GOOGLE_ERRORS: Record<string, string> = {
-  google_config: "Google sign-in is not configured yet.",
-  google_denied: "Google sign-in was cancelled.",
-  google_state: "Sign-in expired. Please try again.",
-  google_failed: "Google sign-in failed. Please try again.",
-};
-
-type AuthFormProps = {
+type HeroAuthFormProps = {
   mode: "login" | "register";
+  onSwitchMode: (mode: "login" | "register") => void;
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const googleError = searchParams.get("error");
-    if (googleError && GOOGLE_ERRORS[googleError]) {
-      setError(GOOGLE_ERRORS[googleError]);
-    }
-    if (searchParams.get("reset") === "success") {
-      setError("");
-    }
-  }, [searchParams]);
-
-  const resetSuccess = searchParams.get("reset") === "success";
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -66,36 +46,29 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
-      <div className="mb-8 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <Logo size={56} priority />
-          <BrandWordmark height={22} priority />
-        </div>
-        <h1 className="mt-5 text-2xl font-bold text-foreground">
-          {mode === "login" ? "Welcome back" : "Create your vault"}
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          {mode === "login"
-            ? "Sign in to access your lyrics."
-            : "Start writing and never lose a bar."}
-        </p>
+    <div className="mx-auto flex h-full w-full max-w-xl flex-col justify-center px-5 py-5 sm:px-8 sm:py-6">
+      <p className="text-base leading-relaxed text-muted sm:text-lg">
+        {mode === "login"
+          ? "Sign in to open your private lyrics vault and pick up where you left off."
+          : "Create your free vault and start locking bars, hooks, and unfinished verses."}
+      </p>
+
+      <div className="mt-5 sm:mt-6">
+        <GoogleSignInButton
+          label={mode === "login" ? "Sign in with Google" : "Sign up with Google"}
+        />
       </div>
 
-      <GoogleSignInButton
-        label={mode === "login" ? "Sign in with Google" : "Sign up with Google"}
-      />
-
-      <div className="relative my-6">
+      <div className="relative my-5 sm:my-6">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs uppercase tracking-wider">
-          <span className="bg-card px-3 text-muted">or</span>
+          <span className="bg-editor px-3 text-muted">or</span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
         {mode === "register" && (
           <div>
             <label className="mb-1 block text-sm text-muted">Name (optional)</label>
@@ -144,12 +117,6 @@ export function AuthForm({ mode }: AuthFormProps) {
           />
         </div>
 
-        {resetSuccess && (
-          <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-400">
-            Password updated. You can sign in now.
-          </p>
-        )}
-
         {error && (
           <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
             {error}
@@ -159,7 +126,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full min-h-11 rounded-xl bg-accent py-3 font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
+          className="w-full min-h-12 rounded-xl bg-accent py-3.5 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
         >
           {loading
             ? "Please wait..."
@@ -169,20 +136,28 @@ export function AuthForm({ mode }: AuthFormProps) {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted">
+      <p className="mt-5 text-center text-sm text-muted sm:mt-6">
         {mode === "login" ? (
           <>
             New here?{" "}
-            <Link href="/register" className="text-accent hover:underline">
-              Create an account
-            </Link>
+            <button
+              type="button"
+              onClick={() => onSwitchMode("register")}
+              className="font-medium text-accent hover:underline"
+            >
+              Get started
+            </button>
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="text-accent hover:underline">
+            <button
+              type="button"
+              onClick={() => onSwitchMode("login")}
+              className="font-medium text-accent hover:underline"
+            >
               Sign in
-            </Link>
+            </button>
           </>
         )}
       </p>
