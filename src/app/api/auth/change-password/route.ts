@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { validatePassword } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -9,11 +10,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { currentPassword, newPassword } = await request.json();
+    const body = await request.json();
+    const currentPassword =
+      typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const newPassword =
+      typeof body.newPassword === "string" ? body.newPassword : "";
 
-    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
       return NextResponse.json(
-        { error: "New password must be at least 6 characters" },
+        { error: passwordError.replace("Password", "New password") },
         { status: 400 },
       );
     }
@@ -24,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     if (user.password) {
-      if (!currentPassword || typeof currentPassword !== "string") {
+      if (!currentPassword) {
         return NextResponse.json(
           { error: "Current password is required" },
           { status: 400 },

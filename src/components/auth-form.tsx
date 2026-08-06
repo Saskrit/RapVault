@@ -22,7 +22,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -47,7 +46,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -96,19 +95,6 @@ export function AuthForm({ mode }: AuthFormProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {mode === "register" && (
-          <div>
-            <label className="mb-1 block text-sm text-muted">Name (optional)</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
-              placeholder="Your artist name"
-            />
-          </div>
-        )}
-
         <div>
           <label className="mb-1 block text-sm text-muted">Email</label>
           <input

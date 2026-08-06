@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getAppOrigin } from "@/lib/app-url";
+import { isValidEmail, normalizeEmail } from "@/lib/auth-validation";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
@@ -8,11 +9,18 @@ const RESET_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
-    const normalized = email?.toLowerCase()?.trim();
+    const body = await request.json();
+    const normalized = normalizeEmail(body.email);
 
     if (!normalized) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    if (!isValidEmail(normalized)) {
+      return NextResponse.json(
+        { error: "Enter a valid email address" },
+        { status: 400 },
+      );
     }
 
     const user = await prisma.user.findUnique({ where: { email: normalized } });

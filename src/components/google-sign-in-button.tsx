@@ -3,16 +3,18 @@
 type GoogleSignInButtonProps = {
   label?: string;
   href?: string;
+  className?: string;
 };
 
 export function GoogleSignInButton({
   label = "Continue with Google",
   href = "/api/auth/google",
+  className = "",
 }: GoogleSignInButtonProps) {
   return (
     <a
       href={href}
-      className="flex w-full min-h-11 items-center justify-center gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:border-accent hover:bg-card active:scale-[0.98]"
+      className={`flex w-full min-h-11 items-center justify-center gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:border-accent hover:bg-card active:scale-[0.98] ${className}`}
     >
       <GoogleIcon />
       {label}

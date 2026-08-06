@@ -194,3 +194,50 @@ textarea {
   color: var(--muted);
   pointer-events: none;
 }
+
+@keyframes hero-auth-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-auth-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hero-auth-mode-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-auth-enter {
+  animation: hero-auth-fade-in 0.5s ease-in-out both;
+}
+
+.hero-auth-exit {
+  animation: hero-auth-fade-out 0.4s ease-in-out both;
+}
+
+.hero-auth-mode {
+  animation: hero-auth-mode-fade 0.35s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-auth-enter,
+  .hero-auth-exit,
+  .hero-auth-mode {
+    animation: none;
+  }
+}

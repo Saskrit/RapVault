@@ -13,13 +13,14 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState, type AnimationEvent } from "react";
 import { HeroAuthForm } from "@/components/hero-auth-form";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { SiteCredit } from "@/components/site-credit";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type AuthMode = "login" | "register";
+type AuthPhase = "closed" | "open" | "closing";
 
 const FEATURES = [
   {
@@ -69,14 +70,44 @@ const FEATURES = [
 
 export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
-  const authOpen = authMode !== null;
+  const [authPhase, setAuthPhase] = useState<AuthPhase>("closed");
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const authOpen = authPhase === "open" || authPhase === "closing";
+
+  function clearCloseTimer() {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+
+  function finishClose() {
+    clearCloseTimer();
+    setAuthMode(null);
+    setAuthPhase("closed");
+  }
 
   function openAuth(mode: AuthMode) {
+    clearCloseTimer();
     setAuthMode(mode);
+    setAuthPhase("open");
   }
 
   function closeAuth() {
-    setAuthMode(null);
+    if (authPhase === "closing" || authPhase === "closed") return;
+    setAuthPhase("closing");
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(finishClose, 400);
+  }
+
+  function handleAuthAnimEnd(event: AnimationEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return;
+    if (authPhase === "closing") finishClose();
+  }
+
+  function switchAuthMode(mode: AuthMode) {
+    setAuthMode(mode);
+    if (authPhase !== "open") setAuthPhase("open");
   }
 
   return (
@@ -138,80 +169,99 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             Private lyrics cloud
           </p>
 
-          <div className="relative">
-            {/* Invisible when auth opens — preserves height so sections below don't shift */}
-            <div
-              className={`grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-8 xl:gap-10 ${
-                authOpen ? "invisible pointer-events-none" : ""
-              }`}
-              aria-hidden={authOpen}
-            >
-              <div className="flex flex-col">
-                <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                  Your bars.
-                  <br />
-                  <span className="bg-gradient-to-r from-accent to-accent-muted bg-clip-text text-transparent">
-                    Locked in the vault.
-                  </span>
-                </h1>
-                <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
-                  RapVault is a private notebook built for hooks, punchlines,
-                  freestyles, and unfinished verses. Write to beats, organize fast,
-                  and never lose a line.
-                </p>
-                <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
-                  {isLoggedIn ? (
-                    <Link
-                      href="/vault"
+          <div className="grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-8 xl:gap-10">
+            <div className="flex flex-col">
+              <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+                Your bars.
+                <br />
+                <span className="bg-gradient-to-r from-accent to-accent-muted bg-clip-text text-transparent">
+                  Locked in the vault.
+                </span>
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
+                RapVault is a private notebook built for hooks, punchlines,
+                freestyles, and unfinished verses. Write to beats, organize fast,
+                and never lose a line.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
+                {isLoggedIn ? (
+                  <Link
+                    href="/vault"
+                    className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
+                  >
+                    My Vault
+                  </Link>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openAuth("register")}
                       className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
                     >
-                      My Vault
-                    </Link>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => openAuth("register")}
-                        className="inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition hover:bg-violet-500 active:scale-[0.98] sm:w-auto"
-                      >
-                        Start writing free
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openAuth("login")}
-                        className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card/50 px-7 py-3.5 text-sm font-semibold transition hover:border-accent hover:text-accent active:scale-[0.98] sm:w-auto"
-                      >
-                        Sign in
-                      </button>
-                    </>
+                      Start writing free
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAuth("login")}
+                      className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border bg-card/50 px-7 py-3.5 text-sm font-semibold transition hover:border-accent hover:text-accent active:scale-[0.98] sm:w-auto"
+                    >
+                      Sign in
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="mt-auto flex flex-wrap gap-6 pt-10 text-sm text-muted">
+                <span className="flex items-center gap-2">
+                  <Music2 className="h-4 w-4 text-accent" />
+                  Write to beats
+                </span>
+                <span className="flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-accent" />
+                  Auto-save
+                </span>
+                <span className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-accent" />
+                  Google + email login
+                </span>
+              </div>
+            </div>
+
+            <div className="relative flex min-h-[26rem] w-full lg:min-h-full">
+              <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
+              <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
+                <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
+                  <div className="h-3 w-3 rounded-full bg-red-500/80" />
+                  <div className="h-3 w-3 rounded-full bg-amber-400/80" />
+                  <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                  <span className="ml-2 min-w-0 flex-1 truncate text-sm text-muted">
+                    {authOpen
+                      ? authMode === "login"
+                        ? "Sign in"
+                        : "Get started"
+                      : "Midnight Freestyle — Draft"}
+                  </span>
+                  {authOpen && (
+                    <button
+                      type="button"
+                      onClick={closeAuth}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
+                      aria-label="Close"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   )}
                 </div>
-                <div className="mt-auto flex flex-wrap gap-6 pt-10 text-sm text-muted">
-                  <span className="flex items-center gap-2">
-                    <Music2 className="h-4 w-4 text-accent" />
-                    Write to beats
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Timer className="h-4 w-4 text-accent" />
-                    Auto-save
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-accent" />
-                    Google + email login
-                  </span>
-                </div>
-              </div>
 
-              <div className="relative flex min-h-[26rem] w-full lg:min-h-full">
-                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
-                <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
-                  <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
-                    <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                    <div className="h-3 w-3 rounded-full bg-amber-400/80" />
-                    <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                    <span className="ml-2 text-sm text-muted">Midnight Freestyle — Draft</span>
-                  </div>
-                  <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_7.5rem] sm:grid-cols-[minmax(0,1fr)_10rem]">
+                <div className="relative min-h-0 flex-1 bg-editor">
+                  {/* Preview — fades out when auth opens */}
+                  <div
+                    className={`absolute inset-0 grid grid-cols-[minmax(0,1fr)_7.5rem] transition-opacity duration-500 ease-in-out sm:grid-cols-[minmax(0,1fr)_10rem] ${
+                      authPhase === "open"
+                        ? "pointer-events-none opacity-0"
+                        : "opacity-100"
+                    }`}
+                    aria-hidden={authPhase === "open"}
+                  >
                     <div className="flex min-h-0 flex-col border-r border-border bg-editor p-5 font-mono text-[15px] leading-relaxed sm:p-6 sm:text-base">
                       <p className="text-accent/80">[Verse 1]</p>
                       <p className="mt-3 text-foreground">
@@ -232,62 +282,57 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600">
                           <Music2 className="h-5 w-5 text-white" />
                         </div>
-                        <p className="text-center text-[10px] text-muted sm:text-xs">YouTube beat</p>
+                        <p className="text-center text-[10px] text-muted sm:text-xs">
+                          YouTube beat
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
-                    <span>847 words · ~3m 24s</span>
-                    <span className="text-green-400">Saved</span>
-                  </div>
+
+                  {/* Auth — fades in inside the same box */}
+                  {authOpen && authMode && (
+                    <div
+                      key={authPhase === "closing" ? "auth-exit" : `auth-${authMode}`}
+                      className={`absolute inset-0 ${
+                        authPhase === "closing"
+                          ? "hero-auth-exit"
+                          : "hero-auth-enter"
+                      }`}
+                      onAnimationEnd={handleAuthAnimEnd}
+                    >
+                      <HeroAuthForm
+                        mode={authMode}
+                        onSwitchMode={switchAuthMode}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
+                  {authOpen ? (
+                    <>
+                      <span>
+                        {authMode === "login"
+                          ? "Welcome back"
+                          : "Your bars. Locked in."}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={closeAuth}
+                        className="font-medium text-accent transition hover:underline"
+                      >
+                        Back
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>847 words · ~3m 24s</span>
+                      <span className="text-green-400">Saved</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
-
-            {authOpen && authMode && (
-              <div className="absolute inset-0 z-20">
-                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
-                <div className="relative flex h-full min-h-[26rem] w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-                  <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
-                    <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                    <div className="h-3 w-3 rounded-full bg-amber-400/80" />
-                    <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                    <h2 className="ml-2 min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
-                      {authMode === "login" ? "Sign in" : "Get started"}
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={closeAuth}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
-                      aria-label="Close"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor">
-                    <HeroAuthForm
-                      key={authMode}
-                      mode={authMode}
-                      onSwitchMode={setAuthMode}
-                    />
-                  </div>
-                  <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5 sm:text-sm">
-                    <span>
-                      {authMode === "login"
-                        ? "Welcome back to your vault"
-                        : "Your bars. Locked in."}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={closeAuth}
-                      className="font-medium text-accent transition hover:underline"
-                    >
-                      Back
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </section>
 

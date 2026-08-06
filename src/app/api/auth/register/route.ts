@@ -5,22 +5,51 @@ import {
   hashPassword,
   seedDefaultFolders,
 } from "@/lib/auth";
+import {
+  isValidEmail,
+  normalizeEmail,
+  validatePassword,
+} from "@/lib/auth-validation";
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name } = await request.json();
+    const body = await request.json();
+    const email = normalizeEmail(body.email);
+    const password = typeof body.password === "string" ? body.password : "";
 
-    if (!email || !password || password.length < 6) {
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    if (!isValidEmail(email)) {
       return NextResponse.json(
-        { error: "Email and password (min 6 chars) are required" },
+        { error: "Enter a valid email address" },
         { status: 400 },
       );
     }
 
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
+      if (existing.googleId && !existing.password) {
+        return NextResponse.json(
+          {
+            error:
+              "This email is already registered with Google. Sign in with Google, or use Forgot password to set an email password.",
+          },
+          { status: 409 },
+        );
+      }
+
       return NextResponse.json(
-        { error: "Email already registered" },
+        {
+          error:
+            "This email is already registered. Sign in instead, or use Forgot password if you need access.",
+        },
         { status: 409 },
       );
     }
@@ -28,9 +57,8 @@ export async function POST(request: Request) {
     const hashed = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email,
         password: hashed,
-        name: name?.trim() || null,
       },
     });
 
