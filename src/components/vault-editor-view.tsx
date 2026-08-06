@@ -217,114 +217,125 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         </Link>
       </VaultHeader>
 
-      <div className="shrink-0 border-b border-border bg-card/50 px-3 py-2 lg:px-4">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <input
-            type="text"
-            value={song.title}
-            onChange={(e) => scheduleSave({ title: e.target.value })}
-            spellCheck={spellCheck}
-            className="min-w-0 flex-1 basis-40 bg-transparent text-base font-bold outline-none placeholder:text-muted sm:text-lg lg:min-w-[12rem] lg:text-xl"
-            placeholder="Song title"
-          />
-
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted sm:text-xs">
-            <span>{stats.words} words</span>
-            <span className="text-border">·</span>
-            <span>{stats.lines} lines</span>
-            <span className="text-border">·</span>
-            <span>~{formatDuration(stats.estimatedSeconds)}</span>
-            <span className="text-border">·</span>
-            <span
-              className={
-                saveState === "error"
-                  ? "text-red-400"
-                  : saveState === "saving"
-                    ? "text-accent"
-                    : saveState === "saved"
-                      ? "text-green-400"
-                      : ""
-              }
+      <div className="shrink-0 border-b border-border bg-card/50 px-3 py-3 lg:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <label
+              htmlFor="song-title"
+              className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted"
             >
-              {saveState === "saving"
-                ? "Saving..."
-                : saveState === "saved"
-                  ? "Saved"
-                  : saveState === "error"
-                    ? "Save failed"
-                    : "Ready"}
-            </span>
+              Song title
+            </label>
+            <input
+              id="song-title"
+              type="text"
+              value={song.title}
+              onChange={(e) => scheduleSave({ title: e.target.value })}
+              spellCheck={spellCheck}
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-lg font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:text-xl lg:text-2xl"
+              placeholder="Untitled track"
+            />
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setBeatsOpen((open) => !open)}
-              className={`${iconBtn} lg:hidden ${
-                beatsOpen
-                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                  : ""
-              }`}
-              aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
-              title={beatsOpen ? "Hide beats" : "Show beats"}
-            >
-              <Music2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={toggleSpellCheck}
-              className={`${iconBtn} ${
-                spellCheck
-                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                  : ""
-              }`}
-              aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
-              title={spellCheck ? "Spell check on" : "Spell check off"}
-            >
-              <SpellCheck className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-              className={iconBtn}
-              aria-label="Toggle favorite"
-            >
-              <Star
-                className={`h-4 w-4 ${
-                  song.isFavorite
-                    ? "fill-amber-400 text-amber-400"
-                    : "text-muted"
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 sm:pb-1">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-border/80 bg-background/60 px-2.5 py-1.5 text-[11px] text-muted sm:text-xs">
+              <span>{stats.words} words</span>
+              <span className="text-border">·</span>
+              <span>{stats.lines} lines</span>
+              <span className="text-border">·</span>
+              <span>~{formatDuration(stats.estimatedSeconds)}</span>
+              <span className="text-border">·</span>
+              <span
+                className={
+                  saveState === "error"
+                    ? "text-red-400"
+                    : saveState === "saving"
+                      ? "text-accent"
+                      : saveState === "saved"
+                        ? "text-green-400"
+                        : ""
+                }
+              >
+                {saveState === "saving"
+                  ? "Saving..."
+                  : saveState === "saved"
+                    ? "Saved"
+                    : saveState === "error"
+                      ? "Save failed"
+                      : "Ready"}
+              </span>
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:ml-0">
+              <button
+                type="button"
+                onClick={() => setBeatsOpen((open) => !open)}
+                className={`${iconBtn} lg:hidden ${
+                  beatsOpen
+                    ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                    : ""
                 }`}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={handleExportTxt}
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
-              title="Export TXT"
-              aria-label="Export TXT"
-            >
-              <Download className="h-4 w-4 shrink-0" />
-              <span className="hidden text-sm sm:inline">TXT</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
-              title="Export PDF"
-              aria-label="Export PDF"
-            >
-              <Download className="h-4 w-4 shrink-0" />
-              <span className="hidden text-sm sm:inline">PDF</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
-              aria-label="Delete song"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+                aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
+                title={beatsOpen ? "Hide beats" : "Show beats"}
+              >
+                <Music2 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={toggleSpellCheck}
+                className={`${iconBtn} ${
+                  spellCheck
+                    ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                    : ""
+                }`}
+                aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
+                title={spellCheck ? "Spell check on" : "Spell check off"}
+              >
+                <SpellCheck className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
+                className={iconBtn}
+                aria-label="Toggle favorite"
+              >
+                <Star
+                  className={`h-4 w-4 ${
+                    song.isFavorite
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted"
+                  }`}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleExportTxt}
+                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+                title="Export TXT"
+                aria-label="Export TXT"
+              >
+                <Download className="h-4 w-4 shrink-0" />
+                <span className="hidden text-sm sm:inline">TXT</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+                title="Export PDF"
+                aria-label="Export PDF"
+              >
+                <Download className="h-4 w-4 shrink-0" />
+                <span className="hidden text-sm sm:inline">PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+                aria-label="Delete song"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
