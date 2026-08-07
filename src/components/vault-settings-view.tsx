@@ -566,7 +566,7 @@ export function VaultSettingsView() {
   const photoDirty = Boolean(pendingAvatarFile) || pendingRemoveAvatar;
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
       <VaultHeader>
         <Link
           href="/vault"
@@ -598,17 +598,17 @@ export function VaultSettingsView() {
         </div>
       )}
 
-      <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
-        <div className="mb-4 shrink-0 sm:mb-5">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
+        <div className="mb-4 sm:mb-5">
           <p className="type-eyebrow text-muted">Account</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
             Profile &amp; settings
           </h1>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6">
+        <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6">
           {/* Side profile card */}
-          <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto lg:overflow-visible">
+          <aside className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
             <div className="overflow-hidden rounded-3xl border border-border bg-card">
               <div className="h-14 bg-sidebar" />
               <div className="-mt-10 flex flex-col items-center px-4 pb-4 text-center">
@@ -711,7 +711,7 @@ export function VaultSettingsView() {
           </aside>
 
           {/* Panels */}
-          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4">
+          <div className="min-w-0 pb-8">
             <div className="space-y-4">
             {tab === "profile" && (
               <section className="rounded-3xl border border-border bg-card">
