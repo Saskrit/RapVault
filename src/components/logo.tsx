@@ -21,7 +21,7 @@ export function Logo({
       width={size}
       height={size}
       priority={priority}
-      className={`object-contain ${className}`}
+      className={`rounded-full object-cover ${className}`}
     />
   );
 
@@ -43,6 +43,7 @@ type BrandWordmarkProps = {
   href?: string | null;
 };
 
+/** Text wordmark (rvtxt.png) — for marketing/auth splash only, not site headers. */
 export function BrandWordmark({
   height = 22,
   className = "",

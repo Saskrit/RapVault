@@ -1279,10 +1279,22 @@ export function VaultSettingsView() {
                   <div className="flex flex-wrap gap-3">
                     <CookiePreferencesButton label="Manage preferences" />
                     <Link
+                      href="/privacy"
+                      className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                    >
+                      Privacy Policy
+                    </Link>
+                    <Link
+                      href="/terms"
+                      className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                    >
+                      Terms of Service
+                    </Link>
+                    <Link
                       href="/cookies"
                       className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
                     >
-                      Cookie policy
+                      Cookie Policy
                     </Link>
                   </div>
                 </div>

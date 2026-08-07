@@ -77,7 +77,7 @@ export function VaultHeader({
         {children}
 
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-          <Logo size={34} href="/vault" priority />
+          <Logo size={36} href="/vault" priority />
           <BrandWordmark
             height={18}
             className="hidden sm:inline-flex"

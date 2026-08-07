@@ -6,9 +6,11 @@ import { useCookieConsent } from "@/components/cookie-consent-provider";
 export function CookiePreferencesButton({
   className = "",
   label = "Manage cookie preferences",
+  showIcon = true,
 }: {
   className?: string;
   label?: string;
+  showIcon?: boolean;
 }) {
   const { openPreferences } = useCookieConsent();
 
@@ -21,7 +23,7 @@ export function CookiePreferencesButton({
         "inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium transition hover:border-accent hover:text-accent"
       }
     >
-      <Cookie className="h-4 w-4" />
+      {showIcon && <Cookie className="h-4 w-4" />}
       {label}
     </button>
   );

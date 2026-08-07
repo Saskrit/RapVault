@@ -27,6 +27,7 @@ import {
 } from "react";
 import { HeroAuthForm } from "@/components/hero-auth-form";
 import { HeroWritePreview } from "@/components/hero-write-preview";
+import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { SiteCredit } from "@/components/site-credit";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -158,7 +159,7 @@ export function LandingPage({
             className={`mx-auto flex w-full max-w-[84rem] items-center justify-between py-2.5 sm:py-3 ${shellPad}`}
         >
           <div className="flex items-center gap-2">
-            <Logo size={34} href="/" priority />
+            <Logo size={36} href="/" priority />
             <BrandWordmark height={18} href="/" priority />
           </div>
           <div className="flex items-center gap-2">
@@ -727,7 +728,7 @@ export function LandingPage({
         >
           <div className="flex w-full flex-col items-center justify-between gap-5 sm:flex-row">
             <div className="flex items-center gap-2.5">
-              <Logo size={26} href="/" />
+              <Logo size={28} href="/" />
               <BrandWordmark height={15} href="/" />
               <span className="text-sm text-muted">
                 © {new Date().getFullYear()}
@@ -756,9 +757,17 @@ export function LandingPage({
                   </button>
                 </>
               )}
-              <Link href="/cookies" className="transition hover:text-foreground">
-                Cookies
+              <Link href="/privacy" className="transition hover:text-foreground">
+                Privacy
               </Link>
+              <Link href="/terms" className="transition hover:text-foreground">
+                Terms
+              </Link>
+              <CookiePreferencesButton
+                label="Cookie settings"
+                showIcon={false}
+                className="inline-flex items-center text-sm text-muted transition hover:text-foreground"
+              />
             </nav>
           </div>
           <p className="text-center text-xs text-muted">

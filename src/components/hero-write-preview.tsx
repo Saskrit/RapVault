@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Bold,
@@ -19,15 +19,15 @@ import {
   MessageSquare,
   Moon,
   Music2,
+  Play,
   Quote,
   Settings,
   SpellCheck,
-  Sparkles,
   Star,
   Strikethrough,
   Trash2,
-  Type,
   Users,
+  X,
 } from "lucide-react";
 import { BrandWordmark, Logo } from "@/components/logo";
 import type { HeroPreviewSong, HeroPreviewScriptLine } from "@/lib/hero-preview-song";
@@ -55,6 +55,12 @@ function shortBeatUrl(url: string) {
   }
 }
 
+function scriptToPlain(script: HeroPreviewScriptLine[]) {
+  return script
+    .map((row) => (row.kind === "blank" ? "" : row.text))
+    .join("\n");
+}
+
 type HeroWritePreviewProps = {
   song?: HeroPreviewSong | null;
 };
@@ -62,27 +68,37 @@ type HeroWritePreviewProps = {
 /**
  * Scaled-down replica of the real write page — same chrome and panels,
  * compact sizing so the full UI fits in the hero box.
+ * "Use Demo" unlocks paste/type in the miniature editor.
  */
 export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
-  const script = useMemo(
+  const previewScript = useMemo(
     () => (song?.script?.length ? song.script : DEFAULT_SCRIPT),
     [song],
   );
-  const title = song?.title?.trim() || "Midnight Freestyle";
-  const isFinished = (song?.status ?? "draft") === "finished";
-  const isFavorite = song?.isFavorite ?? true;
-  const isPublic = song?.isPublic ?? false;
-  const beatUrl = song?.beatUrl?.trim() || "";
+  const previewTitle = song?.title?.trim() || "Midnight Freestyle";
+  const previewFinished = (song?.status ?? "draft") === "finished";
+  const previewFavorite = song?.isFavorite ?? true;
+  const previewPublic = song?.isPublic ?? false;
+  const previewBeat = song?.beatUrl?.trim() || "";
   const usernameLabel = song?.username
     ? song.username.startsWith("@")
       ? song.username
       : `@${song.username}`
     : "@artist";
 
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoTitle, setDemoTitle] = useState("Untitled demo");
+  const [demoLyrics, setDemoLyrics] = useState("");
+  const [demoBeatUrl, setDemoBeatUrl] = useState("");
+  const [demoFavorite, setDemoFavorite] = useState(false);
+  const [demoFinished, setDemoFinished] = useState(false);
+  const [demoPublic, setDemoPublic] = useState(false);
+  const lyricsRef = useRef<HTMLTextAreaElement>(null);
+
   const [lineIndex, setLineIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [done, setDone] = useState(false);
-  const scriptKey = song?.id ?? "demo";
+  const scriptKey = song?.id ?? "demo-preview";
 
   useEffect(() => {
     setLineIndex(0);
@@ -91,6 +107,8 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
   }, [scriptKey]);
 
   useEffect(() => {
+    if (demoMode) return;
+
     if (done) {
       const pause = window.setTimeout(() => {
         setLineIndex(0);
@@ -100,7 +118,7 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
       return () => window.clearTimeout(pause);
     }
 
-    const current = script[lineIndex];
+    const current = previewScript[lineIndex];
     if (!current) {
       setDone(true);
       return;
@@ -123,40 +141,89 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
     }
 
     const next = window.setTimeout(() => {
-      if (lineIndex >= script.length - 1) setDone(true);
+      if (lineIndex >= previewScript.length - 1) setDone(true);
       else {
         setLineIndex((i) => i + 1);
         setCharIndex(0);
       }
     }, current.kind === "tag" ? 300 : 400);
     return () => window.clearTimeout(next);
-  }, [lineIndex, charIndex, done, script]);
+  }, [lineIndex, charIndex, done, previewScript, demoMode]);
 
-  const visible = script.slice(0, lineIndex + 1).map((row, i) => {
+  function startDemo() {
+    setDemoTitle(previewTitle);
+    setDemoLyrics(scriptToPlain(previewScript));
+    setDemoBeatUrl(previewBeat);
+    setDemoFavorite(previewFavorite);
+    setDemoFinished(previewFinished);
+    setDemoPublic(previewPublic);
+    setDemoMode(true);
+    window.setTimeout(() => lyricsRef.current?.focus(), 50);
+  }
+
+  function exitDemo() {
+    setDemoMode(false);
+    setLineIndex(0);
+    setCharIndex(0);
+    setDone(false);
+  }
+
+  const title = demoMode ? demoTitle : previewTitle;
+  const isFinished = demoMode ? demoFinished : previewFinished;
+  const isFavorite = demoMode ? demoFavorite : previewFavorite;
+  const isPublic = demoMode ? demoPublic : previewPublic;
+  const beatUrl = demoMode ? demoBeatUrl.trim() : previewBeat;
+
+  const visible = previewScript.slice(0, lineIndex + 1).map((row, i) => {
     if (i < lineIndex) return row.text;
     if (row.kind === "blank") return "";
     return row.text.slice(0, charIndex);
   });
 
-  const typedText = visible.filter(Boolean).join("\n");
+  const typedText = demoMode
+    ? demoLyrics
+    : visible.filter(Boolean).join("\n");
   const words = typedText.trim() ? typedText.trim().split(/\s+/).length : 0;
-  const lines = visible.filter((v, i) => script[i]?.kind !== "blank" && v).length;
-
-  const syllableSamples = script
-    .map((row, i) => ({ row, text: visible[i] ?? row.text, i }))
-    .filter(({ row, text }) => row.kind === "line" && text.trim())
-    .slice(0, 2);
+  const lines = typedText
+    .split(/\n/)
+    .filter((line) => line.trim().length > 0).length;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background" aria-hidden>
-      {/* Mac traffic lights — matches sign-in / register chrome */}
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+      aria-hidden={!demoMode}
+    >
+      {/* Mac traffic lights + Use Demo */}
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3 py-2 sm:px-4 sm:py-2.5">
         <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
         <div className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
         <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
-        <span className="ml-1.5 min-w-0 flex-1 truncate text-[10px] text-muted sm:text-xs">
-          write · {title}
-        </span>
+        <div className="ml-1.5 flex min-w-0 flex-1 items-center justify-end gap-2">
+          {demoMode ? (
+            <>
+              <span className="mr-auto truncate text-[10px] font-medium text-accent sm:text-xs">
+                Demo mode — paste &amp; type
+              </span>
+              <button
+                type="button"
+                onClick={exitDemo}
+                className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-background px-2 text-[10px] font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+                Exit
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={startDemo}
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-accent/40 bg-accent/10 px-2.5 text-[10px] font-semibold text-accent transition hover:bg-accent/20 sm:text-[11px]"
+            >
+              <Play className="h-3 w-3 fill-current" />
+              Use Demo
+            </button>
+          )}
+        </div>
       </div>
 
       {/* VaultHeader */}
@@ -166,7 +233,7 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
           <span className="text-[9px] font-medium">Library</span>
         </span>
         <div className="flex min-w-0 items-center gap-1">
-          <Logo size={18} href={null} />
+          <Logo size={20} href={null} />
           <BrandWordmark height={10} href={null} className="hidden sm:inline-flex" />
         </div>
         <div className="ml-auto flex items-center gap-1">
@@ -192,9 +259,19 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
       {/* Title + song actions */}
       <div className="shrink-0 border-b border-border bg-card/50 px-2 py-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          <div className="min-w-0 flex-1 basis-24 truncate rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-semibold tracking-tight sm:text-xs">
-            {title}
-          </div>
+          {demoMode ? (
+            <input
+              type="text"
+              value={demoTitle}
+              onChange={(e) => setDemoTitle(e.target.value)}
+              placeholder="Untitled track"
+              className="min-w-0 flex-1 basis-24 rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-semibold tracking-tight outline-none focus:border-accent sm:text-xs"
+            />
+          ) : (
+            <div className="min-w-0 flex-1 basis-24 truncate rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-semibold tracking-tight sm:text-xs">
+              {title}
+            </div>
+          )}
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             <span className={iconBtn} title="Beat">
               <Music2 className="h-3 w-3" />
@@ -203,7 +280,13 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
               <Users className="h-3 w-3" />
               <span className="hidden text-[8px] sm:inline">Collab</span>
             </span>
-            <span className={iconBtn}>
+            <button
+              type="button"
+              disabled={!demoMode}
+              onClick={() => setDemoFavorite((v) => !v)}
+              className={iconBtn}
+              tabIndex={demoMode ? 0 : -1}
+            >
               <Star
                 className={`h-3 w-3 ${
                   isFavorite
@@ -211,13 +294,17 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
                     : "text-muted"
                 }`}
               />
-            </span>
-            <span
+            </button>
+            <button
+              type="button"
+              disabled={!demoMode}
+              onClick={() => setDemoFinished((v) => !v)}
               className={`${iconBtn} w-auto gap-0.5 px-1.5 ${
                 isFinished
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
                   : ""
               }`}
+              tabIndex={demoMode ? 0 : -1}
             >
               {isFinished ? (
                 <CheckCircle2 className="h-3 w-3" />
@@ -227,20 +314,24 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
               <span className="hidden text-[8px] sm:inline">
                 {isFinished ? "Finished" : "Draft"}
               </span>
-            </span>
-            <span
+            </button>
+            <button
+              type="button"
+              disabled={!demoMode}
+              onClick={() => setDemoPublic((v) => !v)}
               className={`${iconBtn} ${
                 isPublic
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
                   : "border-amber-500/40 bg-amber-500/10 text-amber-500"
               }`}
+              tabIndex={demoMode ? 0 : -1}
             >
               {isPublic ? (
                 <Globe className="h-3 w-3" />
               ) : (
                 <Lock className="h-3 w-3" />
               )}
-            </span>
+            </button>
             {isPublic && (
               <span className={`${iconBtn} w-auto gap-0.5 px-1`}>
                 <Eye className="h-3 w-3" />
@@ -284,8 +375,18 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
                   <span className="text-border">·</span>
                   <span>{lines} lines</span>
                   <span className="text-border">·</span>
-                  <span className={done || lineIndex > 1 ? "text-green-400" : "text-accent"}>
-                    {done || lineIndex > 1 ? "Saved" : "Saving..."}
+                  <span
+                    className={
+                      demoMode || done || lineIndex > 1
+                        ? "text-green-400"
+                        : "text-accent"
+                    }
+                  >
+                    {demoMode
+                      ? "Local only"
+                      : done || lineIndex > 1
+                        ? "Saved"
+                        : "Saving..."}
                   </span>
                 </div>
               </div>
@@ -295,73 +396,68 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-0.5 border-t border-border px-1.5 py-1">
-              <span className={`${iconBtn} w-auto gap-0.5 border-accent bg-accent/10 px-1.5 text-accent`}>
-                <Type className="h-3 w-3" />
-                <span className="text-[8px] font-medium">Syllables</span>
-              </span>
-              <span className={`${iconBtn} w-auto gap-0.5 px-1.5`}>
-                <Sparkles className="h-3 w-3" />
-                <span className="text-[8px] font-medium">Rhymes</span>
-              </span>
-            </div>
             <div className="flex gap-1 overflow-x-auto border-t border-border px-1.5 py-1">
               {RAP_STRUCTURE_LABELS.map((label) => (
-                <span
+                <button
                   key={label}
-                  className="shrink-0 rounded-md border border-border bg-background px-1.5 py-0.5 text-[8px] font-medium text-muted"
+                  type="button"
+                  disabled={!demoMode}
+                  tabIndex={demoMode ? 0 : -1}
+                  onClick={() => {
+                    if (!demoMode) return;
+                    setDemoLyrics((prev) => {
+                      const pad = prev && !prev.endsWith("\n") ? "\n" : "";
+                      return `${prev}${pad}${label}\n`;
+                    });
+                    lyricsRef.current?.focus();
+                  }}
+                  className="shrink-0 rounded-md border border-border bg-background px-1.5 py-0.5 text-[8px] font-medium text-muted transition enabled:hover:border-accent enabled:hover:text-accent disabled:cursor-default"
                 >
                   {label}
-                </span>
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="max-h-12 shrink-0 overflow-hidden border-b border-border bg-sidebar/80 px-2 py-1 text-[8px]">
-            {(syllableSamples.length
-              ? syllableSamples
-              : [
-                  { text: "Started with a vision…", i: 0 },
-                  { text: "Lines in the vault…", i: 1 },
-                ]
-            ).map((sample) => (
-              <div key={sample.i} className="flex items-baseline gap-2 py-0.5">
-                <span className="min-w-0 flex-1 truncate text-foreground/90">
-                  {sample.text}
-                </span>
-                <span className="shrink-0 text-muted">
-                  {Math.max(1, sample.text.trim().split(/\s+/).length)} syl
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="relative min-h-0 flex-1 overflow-hidden bg-editor px-2.5 py-2 font-mono text-[11px] leading-relaxed sm:px-3 sm:py-2.5 sm:text-[12px]">
+          <div className="relative min-h-0 flex-1 overflow-hidden bg-editor">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(139,92,246,0.06),_transparent_55%)]" />
-            <div className="relative space-y-1">
-              {script.map((row, i) => {
-                if (i > lineIndex) return null;
-                const text = visible[i] ?? "";
-                const isActive = i === lineIndex && !done;
-                if (row.kind === "blank") return <div key={i} className="h-1.5" />;
-                return (
-                  <p
-                    key={i}
-                    className={row.kind === "tag" ? "text-accent/85" : "text-foreground"}
-                  >
-                    {text}
-                    {isActive && (
-                      <span className="hero-type-caret ml-px inline-block h-[1em] w-[2px] translate-y-[1px] bg-accent align-text-bottom" />
-                    )}
+            {demoMode ? (
+              <textarea
+                ref={lyricsRef}
+                value={demoLyrics}
+                onChange={(e) => setDemoLyrics(e.target.value)}
+                placeholder={"Paste your lyrics here…\n\n[Verse 1]\nYour bars…"}
+                spellCheck
+                className="relative h-full w-full resize-none bg-transparent px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground outline-none placeholder:text-muted/50 sm:px-3 sm:py-2.5 sm:text-[12px]"
+              />
+            ) : (
+              <div className="relative space-y-1 px-2.5 py-2 font-mono text-[11px] leading-relaxed sm:px-3 sm:py-2.5 sm:text-[12px]">
+                {previewScript.map((row, i) => {
+                  if (i > lineIndex) return null;
+                  const text = visible[i] ?? "";
+                  const isActive = i === lineIndex && !done;
+                  if (row.kind === "blank") return <div key={i} className="h-1.5" />;
+                  return (
+                    <p
+                      key={i}
+                      className={
+                        row.kind === "tag" ? "text-accent/85" : "text-foreground"
+                      }
+                    >
+                      {text}
+                      {isActive && (
+                        <span className="hero-type-caret ml-px inline-block h-[1em] w-[2px] translate-y-[1px] bg-accent align-text-bottom" />
+                      )}
+                    </p>
+                  );
+                })}
+                {done && (
+                  <p className="text-accent/45">
+                    <span className="hero-type-caret inline-block h-[1em] w-[2px] translate-y-[1px] bg-accent align-text-bottom" />
                   </p>
-                );
-              })}
-              {done && (
-                <p className="text-accent/45">
-                  <span className="hero-type-caret inline-block h-[1em] w-[2px] translate-y-[1px] bg-accent align-text-bottom" />
-                </p>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -377,12 +473,28 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
               Paste beat link
             </p>
             <div className="flex gap-1">
-              <div className="min-w-0 flex-1 truncate rounded-md border border-border bg-background px-1.5 py-1 text-[7px] text-muted sm:text-[8px]">
-                {beatUrl ? shortBeatUrl(beatUrl) : "youtube.com/…"}
-              </div>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border text-muted">
+              {demoMode ? (
+                <input
+                  type="url"
+                  value={demoBeatUrl}
+                  onChange={(e) => setDemoBeatUrl(e.target.value)}
+                  placeholder="youtube.com/…"
+                  className="min-w-0 flex-1 truncate rounded-md border border-border bg-background px-1.5 py-1 text-[7px] text-foreground outline-none placeholder:text-muted focus:border-accent sm:text-[8px]"
+                />
+              ) : (
+                <div className="min-w-0 flex-1 truncate rounded-md border border-border bg-background px-1.5 py-1 text-[7px] text-muted sm:text-[8px]">
+                  {beatUrl ? shortBeatUrl(beatUrl) : "youtube.com/…"}
+                </div>
+              )}
+              <button
+                type="button"
+                disabled={!demoMode || !demoBeatUrl}
+                tabIndex={demoMode ? 0 : -1}
+                onClick={() => setDemoBeatUrl("")}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border text-muted transition enabled:hover:border-red-500/50 enabled:hover:text-red-400 disabled:opacity-40"
+              >
                 <Trash2 className="h-2.5 w-2.5" />
-              </span>
+              </button>
             </div>
           </div>
           <div className="flex min-h-0 flex-1 flex-col">
@@ -411,7 +523,7 @@ export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
               <div className="h-1 overflow-hidden rounded-full bg-border">
                 <div
                   className={`h-full w-2/5 rounded-full bg-accent ${
-                    beatUrl ? "hero-beat-bar" : ""
+                    beatUrl && !demoMode ? "hero-beat-bar" : ""
                   }`}
                 />
               </div>
