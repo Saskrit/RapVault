@@ -334,20 +334,6 @@ export function LandingPage({
                           </div>
                         )}
                       </div>
-                      <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5">
-                        <span>
-                          {authMode === "login"
-                            ? "Welcome back"
-                            : "Your bars. Locked in."}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={closeAuth}
-                          className="min-h-10 px-1 font-medium text-accent transition hover:underline"
-                        >
-                          Back
-                        </button>
-                      </div>
                     </>
                   ) : (
                     <HeroWritePreview song={previewSong} />

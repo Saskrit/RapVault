@@ -138,7 +138,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
         <h1 className="type-h2 mt-5 text-foreground">
           {mode === "login"
-            ? "Welcome back"
+            ? "Sign in"
             : awaitingCode
               ? "Verify your email"
               : "Create your vault"}
