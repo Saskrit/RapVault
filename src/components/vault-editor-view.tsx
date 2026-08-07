@@ -461,195 +461,208 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             value={song.title}
             onChange={(e) => scheduleSave({ title: e.target.value })}
             spellCheck={spellCheck}
-            className="min-w-0 w-full flex-1 rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:min-w-[14rem] lg:text-2xl"
+            className="min-w-0 w-full flex-1 rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:min-w-[12rem] lg:text-2xl"
             placeholder="Untitled track"
           />
 
-          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 lg:ml-auto lg:flex-nowrap lg:shrink-0 lg:justify-start">
-            <button
-              type="button"
-              onClick={() => setBeatsOpen((open) => !open)}
-              className={`${iconBtn} lg:hidden ${
-                beatsOpen
-                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                  : ""
-              }`}
-              aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
-              title={beatsOpen ? "Hide beats" : "Show beats"}
-            >
-              <Music2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCollabModal(true)}
-              className={`${iconBtn} w-auto max-w-[12rem] gap-1.5 px-2.5 xl:max-w-[16rem] xl:px-3`}
-              aria-label="Collaborators"
-              title={
-                (song.collaborators?.length || 0) > 0
-                  ? `With ${song.collaborators!
-                      .map((c) => c.artist.displayName)
-                      .join(", ")}`
-                  : "Collaborators"
-              }
-            >
-              <Users className="h-4 w-4 shrink-0" />
-              <span className="hidden min-w-0 truncate text-sm xl:inline">
-                {(song.collaborators?.length || 0) > 0
-                  ? song.collaborators!.length === 1
-                    ? song.collaborators![0]!.artist.displayName
-                    : `${song.collaborators!.length} collabs`
-                  : "Collab"}
-              </span>
-            </button>
-            {isOwner && (
+          <div className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:ml-auto lg:w-auto lg:shrink-0 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
-                onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-                className={iconBtn}
-                aria-label="Toggle favorite"
-                title="Favorite"
-              >
-                <Star
-                  className={`h-4 w-4 ${
-                    song.isFavorite
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-muted"
-                  }`}
-                />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() =>
-                scheduleSave({
-                  status: song.status === "finished" ? "draft" : "finished",
-                })
-              }
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
-                song.status === "finished"
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
-                  : ""
-              }`}
-              aria-label={
-                song.status === "finished"
-                  ? "Finished — click to mark as draft"
-                  : "Draft — click to mark as finished"
-              }
-              title={
-                song.status === "finished"
-                  ? "Finished — click to mark as draft"
-                  : "Draft — click to mark as finished"
-              }
-            >
-              {song.status === "finished" ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-              ) : (
-                <CircleDashed className="h-4 w-4 shrink-0" aria-hidden />
-              )}
-              <span className="hidden text-sm xl:inline">
-                {song.status === "finished" ? "Finished" : "Draft"}
-              </span>
-            </button>
-            {isOwner && (
-              <button
-                type="button"
-                onClick={() =>
-                  scheduleSave({ isPublic: !Boolean(song.isPublic) })
-                }
-                className={`${iconBtn} ${
-                  song.isPublic
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
-                    : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
-                }`}
-                aria-label={
-                  song.isPublic
-                    ? "Public — click to make personal"
-                    : "Personal — click to make public"
-                }
-                title={
-                  song.isPublic
-                    ? "Public — click to make personal"
-                    : "Personal — click to make public"
-                }
-              >
-                {song.isPublic ? (
-                  <Globe className="h-4 w-4" aria-hidden />
-                ) : (
-                  <Lock className="h-4 w-4" aria-hidden />
-                )}
-              </button>
-            )}
-            {song.isPublic && (
-              <Link
-                href={`/vault/s/${song.id}`}
-                className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3`}
-                title="Public view"
-                aria-label="Open public view"
-              >
-                <Eye className="h-4 w-4 shrink-0" />
-                <span className="hidden text-sm xl:inline">Public view</span>
-              </Link>
-            )}
-            {!isOwner && song.owner && (
-              <p className="hidden max-w-[10rem] truncate text-xs text-muted xl:inline">
-                with {song.owner.displayName}
-              </p>
-            )}
-            <div ref={downloadMenuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setDownloadOpen((open) => !open)}
-                className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
-                  downloadOpen
+                onClick={() => setBeatsOpen((open) => !open)}
+                className={`${iconBtn} lg:hidden ${
+                  beatsOpen
                     ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
                     : ""
                 }`}
-                title="Download"
-                aria-label="Download"
-                aria-haspopup="menu"
-                aria-expanded={downloadOpen}
+                aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
+                title={beatsOpen ? "Hide beats" : "Show beats"}
               >
-                <Download className="h-4 w-4 shrink-0" />
-                <span className="hidden text-sm xl:inline">Download</span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 shrink-0 transition ${downloadOpen ? "rotate-180" : ""}`}
-                />
+                <Music2 className="h-4 w-4" />
               </button>
-              {downloadOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full z-40 mt-1.5 min-w-[9.5rem] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleExportTxt}
-                    className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
-                  >
-                    Download TXT
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleExportPdf}
-                    className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
-                  >
-                    Download PDF
-                  </button>
-                </div>
-              )}
-            </div>
-            {isOwner && (
+
               <button
                 type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
-                aria-label="Delete song"
-                title="Delete"
+                onClick={() => setShowCollabModal(true)}
+                className={`${iconBtn} w-auto max-w-[10rem] gap-1.5 px-2.5 xl:max-w-[14rem] xl:px-3`}
+                aria-label="Collaborators"
+                title={
+                  (song.collaborators?.length || 0) > 0
+                    ? `With ${song.collaborators!
+                        .map((c) => c.artist.displayName)
+                        .join(", ")}`
+                    : "Collaborators"
+                }
               >
-                <Trash2 className="h-4 w-4" />
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="hidden min-w-0 truncate text-sm lg:inline">
+                  {(song.collaborators?.length || 0) > 0
+                    ? song.collaborators!.length === 1
+                      ? song.collaborators![0]!.artist.displayName
+                      : `${song.collaborators!.length} collabs`
+                    : "Collab"}
+                </span>
               </button>
-            )}
+
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
+                  className={iconBtn}
+                  aria-label="Toggle favorite"
+                  title="Favorite"
+                >
+                  <Star
+                    className={`h-4 w-4 ${
+                      song.isFavorite
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted"
+                    }`}
+                  />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  scheduleSave({
+                    status: song.status === "finished" ? "draft" : "finished",
+                  })
+                }
+                className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
+                  song.status === "finished"
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
+                    : ""
+                }`}
+                aria-label={
+                  song.status === "finished"
+                    ? "Finished — click to mark as draft"
+                    : "Draft — click to mark as finished"
+                }
+                title={
+                  song.status === "finished"
+                    ? "Finished — click to mark as draft"
+                    : "Draft — click to mark as finished"
+                }
+              >
+                {song.status === "finished" ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+                ) : (
+                  <CircleDashed className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                <span className="hidden text-sm lg:inline">
+                  {song.status === "finished" ? "Finished" : "Draft"}
+                </span>
+              </button>
+
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    scheduleSave({ isPublic: !Boolean(song.isPublic) })
+                  }
+                  className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
+                    song.isPublic
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
+                      : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
+                  }`}
+                  aria-label={
+                    song.isPublic
+                      ? "Public — click to make personal"
+                      : "Personal — click to make public"
+                  }
+                  title={
+                    song.isPublic
+                      ? "Public — click to make personal"
+                      : "Personal — click to make public"
+                  }
+                >
+                  {song.isPublic ? (
+                    <Globe className="h-4 w-4 shrink-0" aria-hidden />
+                  ) : (
+                    <Lock className="h-4 w-4 shrink-0" aria-hidden />
+                  )}
+                  <span className="hidden text-sm lg:inline">
+                    {song.isPublic ? "Public" : "Personal"}
+                  </span>
+                </button>
+              )}
+
+              {song.isPublic && (
+                <Link
+                  href={`/vault/s/${song.id}`}
+                  className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3`}
+                  title="Public view"
+                  aria-label="Open public view"
+                >
+                  <Eye className="h-4 w-4 shrink-0" />
+                  <span className="hidden text-sm lg:inline">View</span>
+                </Link>
+              )}
+
+              {!isOwner && song.owner && (
+                <p className="hidden max-w-[10rem] truncate text-xs text-muted xl:inline">
+                  with {song.owner.displayName}
+                </p>
+              )}
+
+              <div ref={downloadMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDownloadOpen((open) => !open)}
+                  className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
+                    downloadOpen
+                      ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
+                      : ""
+                  }`}
+                  title="Download"
+                  aria-label="Download"
+                  aria-haspopup="menu"
+                  aria-expanded={downloadOpen}
+                >
+                  <Download className="h-4 w-4 shrink-0" />
+                  <span className="hidden text-sm lg:inline">Download</span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 transition ${downloadOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {downloadOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-40 mt-1.5 min-w-[9.5rem] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleExportTxt}
+                      className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
+                    >
+                      Download TXT
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleExportPdf}
+                      className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
+                    >
+                      Download PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+                  aria-label="Delete song"
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
