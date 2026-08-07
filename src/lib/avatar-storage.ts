@@ -52,6 +52,35 @@ export async function storeAvatar(params: {
   return result.secure_url;
 }
 
+export async function storeCover(params: {
+  userId: string;
+  buffer: Buffer;
+  contentType: string;
+  ext: string;
+}): Promise<string> {
+  ensureCloudinary();
+  const { userId, buffer, contentType } = params;
+  const dataUri = `data:${contentType};base64,${buffer.toString("base64")}`;
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: "rapvault/covers",
+    public_id: userId,
+    overwrite: true,
+    invalidate: true,
+    resource_type: "image",
+    transformation: [
+      { width: 1500, height: 500, crop: "fill", gravity: "auto" },
+      { quality: "auto", fetch_format: "auto" },
+    ],
+  });
+
+  if (!result.secure_url) {
+    throw new Error("Cloudinary did not return a URL");
+  }
+
+  return result.secure_url;
+}
+
 export async function deleteStoredAvatar(avatarUrl: string | null | undefined) {
   if (!avatarUrl || !isCloudinaryUrl(avatarUrl)) return;
 
@@ -66,3 +95,5 @@ export async function deleteStoredAvatar(avatarUrl: string | null | undefined) {
 
   await cloudinary.uploader.destroy(publicId).catch(() => {});
 }
+
+export const deleteStoredCover = deleteStoredAvatar;

@@ -28,6 +28,7 @@ import {
 } from "react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { AvatarCropModal } from "@/components/avatar-crop-modal";
+import { CoverCropModal } from "@/components/cover-crop-modal";
 import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
 import { useCookieConsent } from "@/components/cookie-consent-provider";
 import { RapVaultLoading } from "@/components/rapvault-loading";
@@ -48,6 +49,7 @@ type ProfileUser = {
   username: string | null;
   bio: string;
   avatarUrl: string | null;
+  coverUrl?: string | null;
   profilePublic: boolean;
   youtubeUrl?: string;
   facebookUrl?: string;
@@ -120,7 +122,9 @@ export function VaultSettingsView() {
   const searchParams = useSearchParams();
   const { consent } = useCookieConsent();
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverFileRef = useRef<HTMLInputElement>(null);
   const photoMenuRef = useRef<HTMLDivElement>(null);
+  const coverMenuRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,6 +133,7 @@ export function VaultSettingsView() {
     text: string;
   } | null>(null);
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+  const [coverMenuOpen, setCoverMenuOpen] = useState(false);
   const [socialError, setSocialError] = useState("");
   const [socialLoading, setSocialLoading] = useState(false);
 
@@ -160,12 +165,20 @@ export function VaultSettingsView() {
 
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  const [coverCropFile, setCoverCropFile] = useState<File | null>(null);
+  const [coverCropOpen, setCoverCropOpen] = useState(false);
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(
     null,
   );
   const [pendingRemoveAvatar, setPendingRemoveAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+  const [pendingCoverPreview, setPendingCoverPreview] = useState<string | null>(
+    null,
+  );
+  const [pendingRemoveCover, setPendingRemoveCover] = useState(false);
+  const [coverError, setCoverError] = useState("");
 
   function showToast(type: "success" | "error", text: string) {
     setToast({ type, text });
@@ -184,6 +197,12 @@ export function VaultSettingsView() {
   }, [pendingAvatarPreview]);
 
   useEffect(() => {
+    return () => {
+      if (pendingCoverPreview) URL.revokeObjectURL(pendingCoverPreview);
+    };
+  }, [pendingCoverPreview]);
+
+  useEffect(() => {
     if (!photoMenuOpen) return;
     function onPointerDown(event: PointerEvent) {
       if (!photoMenuRef.current?.contains(event.target as Node)) {
@@ -200,6 +219,24 @@ export function VaultSettingsView() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [photoMenuOpen]);
+
+  useEffect(() => {
+    if (!coverMenuOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!coverMenuRef.current?.contains(event.target as Node)) {
+        setCoverMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setCoverMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [coverMenuOpen]);
 
   const loadProfile = useCallback(async () => {
     const res = await fetch("/api/auth/me");
@@ -246,6 +283,13 @@ export function VaultSettingsView() {
     });
   }
 
+  function clearPendingCoverPreview() {
+    setPendingCoverPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
   function handleAvatarPick(file: File | null) {
     if (!file) return;
     setAvatarError("");
@@ -255,9 +299,23 @@ export function VaultSettingsView() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  function handleCoverPick(file: File | null) {
+    if (!file) return;
+    setCoverError("");
+    setCoverMenuOpen(false);
+    setCoverCropFile(file);
+    setCoverCropOpen(true);
+    if (coverFileRef.current) coverFileRef.current.value = "";
+  }
+
   function handleCropCancel() {
     setCropOpen(false);
     setCropFile(null);
+  }
+
+  function handleCoverCropCancel() {
+    setCoverCropOpen(false);
+    setCoverCropFile(null);
   }
 
   function handleCropConfirm(cropped: File) {
@@ -270,6 +328,16 @@ export function VaultSettingsView() {
     setAvatarError("");
   }
 
+  function handleCoverCropConfirm(cropped: File) {
+    setCoverCropOpen(false);
+    setCoverCropFile(null);
+    clearPendingCoverPreview();
+    setPendingCoverFile(cropped);
+    setPendingCoverPreview(URL.createObjectURL(cropped));
+    setPendingRemoveCover(false);
+    setCoverError("");
+  }
+
   function handleRemoveAvatar() {
     setAvatarError("");
     setPhotoMenuOpen(false);
@@ -278,10 +346,19 @@ export function VaultSettingsView() {
     setPendingRemoveAvatar(true);
   }
 
+  function handleRemoveCover() {
+    setCoverError("");
+    setCoverMenuOpen(false);
+    clearPendingCoverPreview();
+    setPendingCoverFile(null);
+    setPendingRemoveCover(true);
+  }
+
   async function handleProfileSubmit(event: FormEvent) {
     event.preventDefault();
     setProfileError("");
     setAvatarError("");
+    setCoverError("");
     setProfileLoading(true);
     try {
       let nextUser = user;
@@ -309,6 +386,29 @@ export function VaultSettingsView() {
         if (data.user) nextUser = data.user;
       }
 
+      if (pendingRemoveCover) {
+        const res = await fetch("/api/auth/cover", { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setCoverError(data.error || "Could not remove cover.");
+          return;
+        }
+        if (data.user) nextUser = { ...nextUser!, ...data.user };
+      } else if (pendingCoverFile) {
+        const form = new FormData();
+        form.append("cover", pendingCoverFile);
+        const res = await fetch("/api/auth/cover", {
+          method: "POST",
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setCoverError(data.error || "Could not upload cover.");
+          return;
+        }
+        if (data.user) nextUser = { ...nextUser!, ...data.user };
+      }
+
       const res = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -329,12 +429,17 @@ export function VaultSettingsView() {
       clearPendingAvatarPreview();
       setPendingAvatarFile(null);
       setPendingRemoveAvatar(false);
+      clearPendingCoverPreview();
+      setPendingCoverFile(null);
+      setPendingRemoveCover(false);
 
       if (data.user) {
         setUser({
           ...data.user,
           avatarUrl:
             data.user.avatarUrl ?? nextUser?.avatarUrl ?? user?.avatarUrl ?? null,
+          coverUrl:
+            data.user.coverUrl ?? nextUser?.coverUrl ?? user?.coverUrl ?? null,
         });
         setSocialLinks(pickSocialLinks(data.user));
       } else if (nextUser) {
@@ -574,7 +679,15 @@ export function VaultSettingsView() {
     ? null
     : pendingAvatarPreview || user.avatarUrl;
   const hasAvatar = Boolean(avatarSrc);
-  const photoDirty = Boolean(pendingAvatarFile) || pendingRemoveAvatar;
+  const coverSrc = pendingRemoveCover
+    ? null
+    : pendingCoverPreview || user.coverUrl;
+  const hasCover = Boolean(coverSrc);
+  const photoDirty =
+    Boolean(pendingAvatarFile) ||
+    pendingRemoveAvatar ||
+    Boolean(pendingCoverFile) ||
+    pendingRemoveCover;
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
@@ -621,7 +734,67 @@ export function VaultSettingsView() {
           {/* Side profile card */}
           <aside className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
             <div className="overflow-hidden rounded-3xl border border-border bg-card">
-              <div className="h-14 bg-sidebar" />
+              <div className="relative h-24 bg-sidebar sm:h-28" ref={coverMenuRef}>
+                {coverSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={coverSrc}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-sidebar" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!profileEditing) {
+                      setProfileEditing(true);
+                    }
+                    setCoverMenuOpen((open) => !open);
+                    setPhotoMenuOpen(false);
+                  }}
+                  disabled={profileLoading}
+                  className="absolute bottom-2 right-2 flex h-8 items-center gap-1.5 rounded-full border border-border bg-background/95 px-2.5 text-xs font-medium text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
+                  aria-label="Cover options"
+                  aria-expanded={coverMenuOpen}
+                  title="Cover photo"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  Cover
+                </button>
+                {coverMenuOpen && (
+                  <div className="absolute right-2 top-[calc(100%+0.35rem)] z-20 w-48 overflow-hidden rounded-2xl border border-border bg-card py-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => coverFileRef.current?.click()}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition hover:bg-background"
+                    >
+                      <ImagePlus className="h-4 w-4 text-muted" />
+                      Change cover
+                    </button>
+                    {hasCover && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveCover}
+                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-red-400 transition hover:bg-background"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove cover
+                      </button>
+                    )}
+                  </div>
+                )}
+                <input
+                  ref={coverFileRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
+                  className="hidden"
+                  onChange={(e) =>
+                    handleCoverPick(e.target.files?.[0] ?? null)
+                  }
+                />
+              </div>
               <div className="-mt-10 flex flex-col items-center px-4 pb-4 text-center">
                 <div className="relative" ref={photoMenuRef}>
                   <UserAvatar
@@ -637,6 +810,7 @@ export function VaultSettingsView() {
                         setProfileEditing(true);
                       }
                       setPhotoMenuOpen((open) => !open);
+                      setCoverMenuOpen(false);
                     }}
                     disabled={profileLoading}
                     className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
@@ -692,6 +866,9 @@ export function VaultSettingsView() {
                 )}
                 {avatarError && (
                   <p className="mt-2 text-xs text-red-400">{avatarError}</p>
+                )}
+                {coverError && (
+                  <p className="mt-2 text-xs text-red-400">{coverError}</p>
                 )}
               </div>
             </div>
@@ -1310,6 +1487,12 @@ export function VaultSettingsView() {
         file={cropFile}
         onCancel={handleCropCancel}
         onConfirm={handleCropConfirm}
+      />
+      <CoverCropModal
+        open={coverCropOpen}
+        file={coverCropFile}
+        onCancel={handleCoverCropCancel}
+        onConfirm={handleCoverCropConfirm}
       />
     </div>
   );

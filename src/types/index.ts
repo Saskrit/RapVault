@@ -51,6 +51,7 @@ export type ArtistSummary = {
   displayName: string;
   bio: string;
   avatarUrl: string | null;
+  coverUrl?: string | null;
   publicSongCount: number;
 };
 

@@ -29,6 +29,7 @@ type ArtistProfile = {
   displayName: string;
   bio: string;
   avatarUrl: string | null;
+  coverUrl?: string | null;
   youtubeUrl?: string;
   facebookUrl?: string;
   instagramUrl?: string;
@@ -316,24 +317,36 @@ export function ArtistProfileView({ username }: { username: string }) {
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Header */}
             <section className="shrink-0 border-b border-border bg-background">
-              <div className="mx-auto w-full max-w-5xl px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:px-8">
+              <div className="relative">
+                <div className="h-36 w-full overflow-hidden bg-sidebar sm:h-44 lg:h-52">
+                  {artist.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={artist.coverUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                </div>
                 <Link
                   href="/vault/artists"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-muted transition hover:text-foreground"
+                  className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/85 px-2.5 py-1 text-xs font-medium text-muted backdrop-blur transition hover:text-foreground sm:left-6 lg:left-8"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Artists
                 </Link>
+              </div>
 
-                <div className="mt-5 flex items-start gap-4 sm:mt-6 sm:gap-6">
+              <div className="mx-auto w-full max-w-5xl px-4 pb-6 sm:px-6 lg:px-8">
+                <div className="-mt-12 flex items-end gap-4 sm:-mt-14 sm:gap-6">
                   <UserAvatar
                     src={artist.avatarUrl}
                     name={artist.displayName}
                     size="xl"
-                    className="h-32 w-32 shrink-0 border-2 border-border text-4xl shadow-md sm:h-40 sm:w-40 sm:text-5xl"
+                    className="h-32 w-32 shrink-0 border-4 border-background text-4xl shadow-md sm:h-40 sm:w-40 sm:text-5xl"
                   />
 
-                  <div className="min-w-0 flex-1 pt-0.5 sm:pt-1">
+                  <div className="min-w-0 flex-1 pb-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                         Artist
@@ -349,44 +362,44 @@ export function ArtistProfileView({ username }: { username: string }) {
                       {artist.displayName}
                     </h1>
                     <p className="mt-0.5 text-sm text-muted">@{artist.username}</p>
-
-                    {artist.bio?.trim() && (
-                      <p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/80 line-clamp-3">
-                        {artist.bio.trim()}
-                      </p>
-                    )}
-
-                    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                      <span className="tabular-nums text-foreground">
-                        <strong className="font-semibold">{artist.songs.length}</strong>
-                        <span className="ml-1 text-muted">
-                          {artist.songs.length === 1 ? "song" : "songs"}
-                        </span>
-                      </span>
-                      <span className="tabular-nums text-foreground">
-                        <strong className="font-semibold">{totals.views}</strong>
-                        <span className="ml-1 text-muted">views</span>
-                      </span>
-                      <span className="tabular-nums text-foreground">
-                        <strong className="font-semibold">{totals.fires}</strong>
-                        <span className="ml-1 text-muted">fires</span>
-                      </span>
-                    </div>
-
-                    <ArtistSocialLinks
-                      className="mt-4"
-                      links={{
-                        youtubeUrl: artist.youtubeUrl,
-                        facebookUrl: artist.facebookUrl,
-                        instagramUrl: artist.instagramUrl,
-                        spotifyUrl: artist.spotifyUrl,
-                        appleMusicUrl: artist.appleMusicUrl,
-                      }}
-                    />
-
-                    <div className="mt-5">{renderActions()}</div>
                   </div>
                 </div>
+
+                {artist.bio?.trim() && (
+                  <p className="mt-4 max-w-xl text-sm leading-relaxed text-foreground/80 line-clamp-3">
+                    {artist.bio.trim()}
+                  </p>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                  <span className="tabular-nums text-foreground">
+                    <strong className="font-semibold">{artist.songs.length}</strong>
+                    <span className="ml-1 text-muted">
+                      {artist.songs.length === 1 ? "song" : "songs"}
+                    </span>
+                  </span>
+                  <span className="tabular-nums text-foreground">
+                    <strong className="font-semibold">{totals.views}</strong>
+                    <span className="ml-1 text-muted">views</span>
+                  </span>
+                  <span className="tabular-nums text-foreground">
+                    <strong className="font-semibold">{totals.fires}</strong>
+                    <span className="ml-1 text-muted">fires</span>
+                  </span>
+                </div>
+
+                <ArtistSocialLinks
+                  className="mt-4"
+                  links={{
+                    youtubeUrl: artist.youtubeUrl,
+                    facebookUrl: artist.facebookUrl,
+                    instagramUrl: artist.instagramUrl,
+                    spotifyUrl: artist.spotifyUrl,
+                    appleMusicUrl: artist.appleMusicUrl,
+                  }}
+                />
+
+                <div className="mt-5">{renderActions()}</div>
               </div>
             </section>
 

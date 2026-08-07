@@ -9,6 +9,7 @@ type UserLike = {
   username: string | null;
   bio: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   profilePublic: boolean;
   youtubeUrl?: string | null;
   facebookUrl?: string | null;
@@ -31,6 +32,7 @@ export function toPublicUser(user: UserLike) {
     username: user.username,
     bio: user.bio,
     avatarUrl: user.avatarUrl || null,
+    coverUrl: user.coverUrl || null,
     profilePublic: user.profilePublic,
     ...social,
     recoveryEmail: user.recoveryEmail,

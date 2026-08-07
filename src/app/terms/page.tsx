@@ -21,9 +21,9 @@ export default function TermsPage() {
     >
       <LegalSection id="agreement" title="1. Agreement to Terms">
         <p>
-          These Terms form a binding agreement between you and{" "}
-          <strong>Saskrit Bhattarai</strong>, operator of RapVault. Additional
-          policies referenced herein—including our{" "}
+          These Terms form a binding agreement between you and me,{" "}
+          <strong>Saskrit Bhattarai</strong>, the sole operator of RapVault.
+          Additional policies referenced herein—including my{" "}
           <Link href="/privacy">Privacy Policy</Link> and{" "}
           <Link href="/cookies">Cookie Policy</Link>—are incorporated by
           reference.
@@ -43,8 +43,8 @@ export default function TermsPage() {
         <p>
           You are responsible for maintaining the confidentiality of your login
           credentials and for all activity under your account. Provide accurate
-          registration information and keep it updated. Notify us promptly of
-          any unauthorized use. We may suspend or terminate accounts that appear
+          registration information and keep it updated. Notify me promptly of
+          any unauthorized use. I may suspend or terminate accounts that appear
           compromised, abusive, or in violation of these Terms.
         </p>
         <p>
@@ -59,11 +59,11 @@ export default function TermsPage() {
           optionally publish lyrics and related creative materials. Features may
           include folders, search, beat links, export, offline caching (with
           consent), artist profiles, messaging, and analytics related to your
-          vault. We may modify, suspend, or discontinue features with or without
+          vault. I may modify, suspend, or discontinue features with or without
           notice, subject to applicable law.
         </p>
         <p>
-          The Service is provided on an “as available” basis. We do not
+          The Service is provided on an “as available” basis. I do not
           guarantee uninterrupted or error-free operation, or that offline mode
           will capture every edit in every network condition.
         </p>
@@ -73,10 +73,10 @@ export default function TermsPage() {
         <p>
           <strong>Ownership.</strong> You retain all rights to the lyrics and
           other content you create or upload (“User Content”). These Terms do
-          not transfer ownership of your songs to RapVault.
+          not transfer ownership of your songs to me or to RapVault.
         </p>
         <p>
-          <strong>License to operate the Service.</strong> You grant us a
+          <strong>License to operate the Service.</strong> You grant me a
           limited, worldwide, non-exclusive license to host, store, process,
           transmit, display, and back up User Content solely as needed to
           provide and secure the Service and features you enable (including
@@ -126,7 +126,7 @@ export default function TermsPage() {
           </li>
         </ul>
         <p>
-          We may remove content or restrict access when we reasonably believe
+          I may remove content or restrict access when I reasonably believe
           these rules have been violated.
         </p>
       </LegalSection>
@@ -134,9 +134,9 @@ export default function TermsPage() {
       <LegalSection id="ip" title="7. RapVault intellectual property">
         <p>
           The RapVault name, logos, interface, software, and documentation are
-          owned by us or our licensors and are protected by intellectual property
+          owned by me or my licensors and are protected by intellectual property
           laws. Except for the limited rights expressly granted to use the
-          Service, no license to our IP is granted.
+          Service, no license to my IP is granted.
         </p>
       </LegalSection>
 
@@ -144,7 +144,7 @@ export default function TermsPage() {
         <p>
           The Service may integrate or link to third parties (for example Google
           authentication or YouTube beat playback). Those services are governed
-          by their own terms and privacy policies. We are not responsible for
+          by their own terms and privacy policies. I am not responsible for
           third-party services you choose to use.
         </p>
       </LegalSection>
@@ -155,47 +155,46 @@ export default function TermsPage() {
           IS” AND “AS AVAILABLE,” WITHOUT WARRANTIES OF ANY KIND, WHETHER
           EXPRESS, IMPLIED, OR STATUTORY, INCLUDING IMPLIED WARRANTIES OF
           MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
-          NON-INFRINGEMENT. WE DO NOT WARRANT THAT YOUR CONTENT WILL NEVER BE
+          NON-INFRINGEMENT. I DO NOT WARRANT THAT YOUR CONTENT WILL NEVER BE
           LOST; YOU SHOULD KEEP YOUR OWN BACKUPS OF IMPORTANT WORK.
         </p>
       </LegalSection>
 
       <LegalSection id="liability" title="10. Limitation of liability">
         <p>
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, RAPVAULT AND ITS OPERATOR
-          SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
-          CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS,
-          DATA, GOODWILL, OR BUSINESS OPPORTUNITY, ARISING OUT OF OR RELATED TO
-          YOUR USE OF THE SERVICE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-          DAMAGES.
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, I (SASKRIT BHATTARAI), AS THE
+          OPERATOR OF RAPVAULT, SHALL NOT BE LIABLE FOR ANY INDIRECT,
+          INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR
+          ANY LOSS OF PROFITS, DATA, GOODWILL, OR BUSINESS OPPORTUNITY, ARISING
+          OUT OF OR RELATED TO YOUR USE OF THE SERVICE, EVEN IF ADVISED OF THE
+          POSSIBILITY OF SUCH DAMAGES.
         </p>
         <p>
-          OUR TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF OR RELATING TO THE
-          SERVICE SHALL NOT EXCEED THE GREATER OF (A) THE AMOUNTS YOU PAID US
+          MY TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF OR RELATING TO THE
+          SERVICE SHALL NOT EXCEED THE GREATER OF (A) THE AMOUNTS YOU PAID ME
           FOR THE SERVICE IN THE TWELVE (12) MONTHS BEFORE THE CLAIM OR (B) ONE
           HUNDRED U.S. DOLLARS (US $100), IF YOU HAVE NOT PAID ANY FEES.
         </p>
         <p>
           Some jurisdictions do not allow certain limitations; in those cases,
-          our liability is limited to the fullest extent permitted.
+          my liability is limited to the fullest extent permitted.
         </p>
       </LegalSection>
 
       <LegalSection id="indemnity" title="11. Indemnification">
         <p>
-          You agree to defend, indemnify, and hold harmless RapVault and its
-          operator from and against claims, damages, losses, and expenses
-          (including reasonable legal fees) arising out of your User Content,
-          your use of the Service, or your violation of these Terms or
-          applicable law.
+          You agree to defend, indemnify, and hold me harmless from and against
+          claims, damages, losses, and expenses (including reasonable legal fees)
+          arising out of your User Content, your use of the Service, or your
+          violation of these Terms or applicable law.
         </p>
       </LegalSection>
 
       <LegalSection id="termination" title="12. Termination">
         <p>
           You may stop using the Service at any time and may request account
-          deletion. We may suspend or terminate access immediately if you
-          breach these Terms, if required by law, or if we discontinue the
+          deletion. I may suspend or terminate access immediately if you
+          breach these Terms, if required by law, or if I discontinue the
           Service. Provisions that by their nature should survive (including
           ownership, disclaimers, limitations, and indemnity) will survive
           termination.
@@ -215,8 +214,8 @@ export default function TermsPage() {
 
       <LegalSection id="changes" title="14. Changes to these Terms">
         <p>
-          We may update these Terms from time to time. The “Last updated” date
-          will be revised accordingly. If changes are material, we may provide
+          I may update these Terms from time to time. The “Last updated” date
+          will be revised accordingly. If changes are material, I may provide
           additional notice. Continued use of the Service after changes become
           effective constitutes acceptance of the updated Terms.
         </p>
@@ -224,8 +223,8 @@ export default function TermsPage() {
 
       <LegalSection id="contact" title="15. Contact">
         <p>
-          Questions about these Terms may be directed to{" "}
-          <strong>Saskrit Bhattarai</strong> via{" "}
+          Questions about these Terms may be directed to me,{" "}
+          <strong>Saskrit Bhattarai</strong>, via{" "}
           <a
             href="https://saskritbhattarai.com.np/"
             target="_blank"

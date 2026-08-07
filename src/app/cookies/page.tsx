@@ -5,7 +5,7 @@ import { LegalPageShell, LegalSection } from "@/components/legal-page-shell";
 export const metadata = {
   title: "Cookie Policy — RapVault",
   description:
-    "How RapVault uses essential cookies, optional preference storage, and offline app cache — and how you control them.",
+    "How I use essential cookies, optional preference storage, and offline app cache on RapVault — and how you control them.",
 };
 
 const EFFECTIVE = "August 7, 2026";
@@ -16,7 +16,7 @@ export default function CookiesPage() {
       active="cookies"
       eyebrow="Legal"
       title="Cookie Policy"
-      description="This Cookie Policy explains how RapVault uses cookies and similar technologies (including browser local storage and service-worker caches) and how you can manage your preferences."
+      description="This Cookie Policy explains how I use cookies and similar technologies on RapVault (including browser local storage and service-worker caches) and how you can manage your preferences."
       effectiveDate={EFFECTIVE}
       lastUpdated={EFFECTIVE}
       actions={<CookiePreferencesButton label="Manage cookie preferences" />}
@@ -25,12 +25,12 @@ export default function CookiesPage() {
         <p>
           Cookies are small text files stored on your device. RapVault also uses
           local storage and, if you allow it, a service worker to support offline
-          use. We ask for your permission before enabling optional storage
+          use. I ask for your permission before enabling optional storage
           categories. Essential cookies required for sign-in and security remain
           active so the Service can function.
         </p>
         <p>
-          This Policy should be read together with our{" "}
+          This Policy should be read together with my{" "}
           <Link href="/privacy">Privacy Policy</Link> and{" "}
           <Link href="/terms">Terms of Service</Link>.
         </p>
@@ -49,7 +49,7 @@ export default function CookiesPage() {
           </li>
           <li>
             <strong>Consent record</strong> — stores your cookie/storage choices
-            so we do not re-prompt on every visit.
+            so I do not re-prompt on every visit.
           </li>
         </ul>
         <p>
@@ -60,7 +60,7 @@ export default function CookiesPage() {
 
       <LegalSection id="preferences" title="3. Preferences (optional)">
         <p>
-          If you allow Preferences, we may store on-device settings such as theme,
+          If you allow Preferences, I may store on-device settings such as theme,
           sidebar state, lyric font size, page size, spell-check preference, and
           editor split layout. These improve convenience and are not used for
           advertising.
@@ -84,7 +84,7 @@ export default function CookiesPage() {
           </li>
         </ul>
         <p>
-          If you decline this category, we unregister the RapVault service
+          If you decline this category, I unregister the RapVault service
           worker (when present), delete related caches, and stop writing offline
           storage keys—reducing the risk of stale cache or storage errors.
         </p>
@@ -92,10 +92,10 @@ export default function CookiesPage() {
 
       <LegalSection id="third-party" title="5. Third-party technologies">
         <p>
-          RapVault does not deploy third-party advertising cookies. When you paste
-          a YouTube beat URL, playback may involve YouTube/Google technologies
-          under their policies. We use privacy-enhanced (“nocookie”) embed URLs
-          where supported.
+          I do not deploy third-party advertising cookies on RapVault. When you
+          paste a YouTube beat URL, playback may involve YouTube/Google
+          technologies under their policies. I use privacy-enhanced (“nocookie”)
+          embed URLs where supported.
         </p>
         <p>
           Google sign-in is processed by Google under Google’s terms and privacy
@@ -128,23 +128,23 @@ export default function CookiesPage() {
           Essential session cookies last for the configured session lifetime.
           OAuth state cookies are short-lived. Consent preferences are typically
           stored for up to one year (or until you change them). Local preference
-          and offline keys remain until you clear them, change consent, or we
+          and offline keys remain until you clear them, change consent, or I
           purge them when you opt out.
         </p>
       </LegalSection>
 
       <LegalSection id="updates" title="8. Updates">
         <p>
-          We may update this Cookie Policy to reflect product or legal changes.
-          The “Last updated” date will be revised when we do. Continued use after
+          I may update this Cookie Policy to reflect product or legal changes.
+          The “Last updated” date will be revised when I do. Continued use after
           updates constitutes acceptance where permitted by law.
         </p>
       </LegalSection>
 
       <LegalSection id="contact" title="9. Contact">
         <p>
-          Questions about cookies or storage may be directed to{" "}
-          <strong>Saskrit Bhattarai</strong> via{" "}
+          Questions about cookies or storage may be directed to me,{" "}
+          <strong>Saskrit Bhattarai</strong>, via{" "}
           <a
             href="https://saskritbhattarai.com.np/"
             target="_blank"

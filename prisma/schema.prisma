@@ -17,6 +17,7 @@ model User {
   username          String?   @unique
   bio               String    @default("")
   avatarUrl         String?
+  coverUrl          String?
   profilePublic     Boolean   @default(true)
   youtubeUrl        String    @default("")
   facebookUrl       String    @default("")

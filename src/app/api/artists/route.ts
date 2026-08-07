@@ -29,6 +29,7 @@ export async function GET(request: Request) {
       displayName: true,
       bio: true,
       avatarUrl: true,
+      coverUrl: true,
       _count: {
         select: {
           songs: { where: { isPublic: true, deletedAt: null } },
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
         displayName: a.displayName || a.username!,
         bio: a.bio,
         avatarUrl: a.avatarUrl,
+        coverUrl: a.coverUrl,
         publicSongCount: a._count.songs,
       })),
   });
