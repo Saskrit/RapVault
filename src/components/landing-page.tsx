@@ -27,6 +27,7 @@ import {
 } from "react";
 import { HeroAuthForm } from "@/components/hero-auth-form";
 import { HeroWritePreview } from "@/components/hero-write-preview";
+import { AddToHomeScreen } from "@/components/add-to-home-screen";
 import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { SiteCredit } from "@/components/site-credit";
@@ -114,11 +115,18 @@ export function LandingPage({
   }
 
   function focusAuthBox() {
-    // Keep the site header visible — never scroll it off-screen.
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const isNarrow = window.matchMedia("(max-width: 1023px)").matches;
+    // Wait a frame so the auth panel is mounted before scrolling.
+    requestAnimationFrame(() => {
+      authBoxRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: isNarrow ? "start" : "nearest",
+        inline: "nearest",
+      });
+    });
     setAuthHighlight(true);
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-    highlightTimerRef.current = setTimeout(() => setAuthHighlight(false), 1600);
+    highlightTimerRef.current = setTimeout(() => setAuthHighlight(false), 1800);
   }
 
   function openAuth(mode: AuthMode) {
@@ -201,7 +209,7 @@ export function LandingPage({
           {/* Left copy + right box — lightly centered in the viewport */}
           <div className="flex min-h-0 flex-1 items-center py-4 sm:py-5 lg:py-6">
             <div className="grid w-full grid-cols-1 items-stretch gap-5 sm:gap-6 lg:grid-cols-[0.9fr_1.15fr] lg:gap-0 xl:gap-1">
-              <div className="flex min-h-[34rem] flex-col justify-center gap-7 sm:gap-8 lg:pr-0">
+              <div className="flex min-h-0 flex-col justify-center gap-6 sm:min-h-0 sm:gap-8 lg:min-h-[34rem] lg:pr-0">
                 <p className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-widest text-accent sm:text-xs">
                   <Cloud className="h-3.5 w-3.5" />
                   Private lyrics cloud
@@ -266,7 +274,7 @@ export function LandingPage({
               <div
                 ref={authBoxRef}
                 id="auth-box"
-                className="relative flex min-h-[34rem] w-full"
+                className="relative flex min-h-[22rem] w-full scroll-mt-[4.75rem] sm:min-h-[28rem] lg:min-h-[34rem] lg:scroll-mt-24"
               >
                 <div className="pointer-events-none absolute -inset-3 rounded-3xl bg-accent/12 blur-2xl" />
                 <div
@@ -721,6 +729,8 @@ export function LandingPage({
           </div>
         </section>
       </main>
+
+      <AddToHomeScreen />
 
       <footer className="relative z-10 border-t border-border/60 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div

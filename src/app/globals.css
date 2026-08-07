@@ -87,7 +87,8 @@ body {
   line-height: var(--leading-body);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
-  overflow-x: hidden;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 h1,
@@ -167,6 +168,27 @@ textarea {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Minimum tap target for primary controls on phones */
+.tap-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+@media (min-width: 1024px) {
+  .tap-target {
+    min-height: 0;
+    min-width: 0;
+  }
+}
+
+html {
+  max-width: 100%;
 }
 
 .lyric-markdown {

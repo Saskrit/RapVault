@@ -9,8 +9,6 @@ type CoverCropModalProps = {
   onConfirm: (file: File) => void;
 };
 
-const VIEW_W = 480;
-const VIEW_H = 160;
 const OUT_W = 1500;
 const OUT_H = 500;
 
@@ -21,8 +19,10 @@ export function CoverCropModal({
   onConfirm,
 }: CoverCropModalProps) {
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [natural, setNatural] = useState({ w: 0, h: 0 });
+  const [view, setView] = useState({ w: 480, h: 160 });
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -41,10 +41,28 @@ export function CoverCropModal({
     return () => URL.revokeObjectURL(url);
   }, [open, file]);
 
+  useEffect(() => {
+    if (!open || !src) return;
+    const el = frameRef.current;
+    if (!el) return;
+
+    function measure() {
+      const node = frameRef.current;
+      if (!node) return;
+      const w = Math.max(240, Math.floor(node.clientWidth));
+      setView({ w, h: Math.max(80, Math.round(w / 3)) });
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [open, src]);
+
   const coverScale = useMemo(() => {
     if (!natural.w || !natural.h) return 1;
-    return Math.max(VIEW_W / natural.w, VIEW_H / natural.h);
-  }, [natural]);
+    return Math.max(view.w / natural.w, view.h / natural.h);
+  }, [natural, view.h, view.w]);
 
   const displayScale = coverScale * zoom;
   const drawnW = natural.w * displayScale;
@@ -80,12 +98,12 @@ export function CoverCropModal({
     const img = imgRef.current;
     if (!img || !natural.w || !file) return;
 
-    const left = (VIEW_W - drawnW) / 2 + offset.x;
-    const top = (VIEW_H - drawnH) / 2 + offset.y;
+    const left = (view.w - drawnW) / 2 + offset.x;
+    const top = (view.h - drawnH) / 2 + offset.y;
     const sx = (0 - left) / displayScale;
     const sy = (0 - top) / displayScale;
-    const sW = VIEW_W / displayScale;
-    const sH = VIEW_H / displayScale;
+    const sW = view.w / displayScale;
+    const sH = view.h / displayScale;
 
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W;
@@ -118,7 +136,7 @@ export function CoverCropModal({
         role="dialog"
         aria-modal="true"
         aria-label="Crop cover photo"
-        className="relative z-[1] w-full max-w-xl rounded-t-2xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl"
+        className="relative z-[1] w-full max-w-xl rounded-t-2xl border border-border bg-card p-5 shadow-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-5"
       >
         <h2 className="text-lg font-semibold tracking-tight">Crop cover</h2>
         <p className="mt-1 text-sm text-muted">
@@ -126,8 +144,9 @@ export function CoverCropModal({
         </p>
 
         <div
-          className="relative mx-auto mt-5 max-w-full overflow-hidden rounded-xl border border-border bg-background"
-          style={{ width: VIEW_W, height: VIEW_H, maxWidth: "100%" }}
+          ref={frameRef}
+          className="relative mx-auto mt-5 w-full overflow-hidden rounded-xl border border-border bg-background"
+          style={{ height: view.h }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -149,8 +168,8 @@ export function CoverCropModal({
             style={{
               width: drawnW || undefined,
               height: drawnH || undefined,
-              left: (VIEW_W - drawnW) / 2 + offset.x,
-              top: (VIEW_H - drawnH) / 2 + offset.y,
+              left: (view.w - drawnW) / 2 + offset.x,
+              top: (view.h - drawnH) / 2 + offset.y,
               maxWidth: "none",
             }}
           />

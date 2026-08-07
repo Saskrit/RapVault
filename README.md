@@ -129,7 +129,7 @@ Most rappers still dump bars in Notes, WhatsApp drafts, Google Docs, or random v
 | Feature | Details |
 |---------|---------|
 | Marketing landing | Hero write preview, feature sections, auth |
-| PWA | Installable app shell |
+| PWA | Installable app shell; “Add to home screen” CTA above the landing footer |
 | Offline | Optional offline cache + sync (cookie consent) |
 | Cookies | Essential / Preferences / Offline categories |
 | Legal | Privacy, Terms, Cookie Policy (first person — solo operator) |

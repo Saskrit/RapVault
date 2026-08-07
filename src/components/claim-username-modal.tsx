@@ -43,12 +43,12 @@ export function ClaimUsernameModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="claim-username-title"
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-6"
+        className="w-full max-w-md rounded-t-2xl border border-border bg-card p-5 shadow-xl pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-2xl sm:p-6 sm:pb-6"
       >
         <h2
           id="claim-username-title"

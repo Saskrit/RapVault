@@ -352,7 +352,7 @@ export function ArtistsDirectoryView() {
                             type="button"
                             onClick={() => startMessage(artist.username)}
                             disabled={messaging === artist.username}
-                            className="absolute right-2 top-1/2 z-[2] flex h-9 w-9 -translate-y-1/2 items-center justify-center border border-border bg-background text-muted transition hover:border-foreground hover:text-foreground disabled:opacity-50 sm:right-14 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                            className="absolute right-2 top-1/2 z-[2] flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl border border-border bg-background text-muted transition hover:border-foreground hover:text-foreground disabled:opacity-50 sm:right-14 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             aria-label={`Message ${artist.displayName}`}
                             title="Message"
                           >

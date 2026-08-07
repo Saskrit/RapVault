@@ -9,7 +9,6 @@ type AvatarCropModalProps = {
   onConfirm: (file: File) => void;
 };
 
-const VIEWPORT = 280;
 const OUTPUT_SIZE = 512;
 
 export function AvatarCropModal({
@@ -21,6 +20,7 @@ export function AvatarCropModal({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [natural, setNatural] = useState({ w: 0, h: 0 });
+  const [viewport, setViewport] = useState(280);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -39,10 +39,20 @@ export function AvatarCropModal({
     return () => URL.revokeObjectURL(url);
   }, [open, file]);
 
+  useEffect(() => {
+    if (!open) return;
+    function sync() {
+      setViewport(Math.min(280, Math.max(200, window.innerWidth - 48)));
+    }
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, [open]);
+
   const coverScale = useMemo(() => {
     if (!natural.w || !natural.h) return 1;
-    return Math.max(VIEWPORT / natural.w, VIEWPORT / natural.h);
-  }, [natural]);
+    return Math.max(viewport / natural.w, viewport / natural.h);
+  }, [natural, viewport]);
 
   const displayScale = coverScale * zoom;
   const drawnW = natural.w * displayScale;
@@ -78,11 +88,11 @@ export function AvatarCropModal({
     const img = imgRef.current;
     if (!img || !natural.w || !file) return;
 
-    const left = (VIEWPORT - drawnW) / 2 + offset.x;
-    const top = (VIEWPORT - drawnH) / 2 + offset.y;
+    const left = (viewport - drawnW) / 2 + offset.x;
+    const top = (viewport - drawnH) / 2 + offset.y;
     const sx = (0 - left) / displayScale;
     const sy = (0 - top) / displayScale;
-    const sSize = VIEWPORT / displayScale;
+    const sSize = viewport / displayScale;
 
     const canvas = document.createElement("canvas");
     canvas.width = OUTPUT_SIZE;
@@ -115,7 +125,7 @@ export function AvatarCropModal({
         role="dialog"
         aria-modal="true"
         aria-label="Crop profile photo"
-        className="relative z-[1] w-full max-w-md rounded-t-2xl border border-border bg-card p-5 shadow-2xl sm:rounded-2xl"
+        className="relative z-[1] w-full max-w-md rounded-t-2xl border border-border bg-card p-5 shadow-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-5"
       >
         <h2 className="text-lg font-semibold tracking-tight">Crop photo</h2>
         <p className="mt-1 text-sm text-muted">
@@ -124,7 +134,7 @@ export function AvatarCropModal({
 
         <div
           className="relative mx-auto mt-5 overflow-hidden rounded-full border border-border bg-background"
-          style={{ width: VIEWPORT, height: VIEWPORT }}
+          style={{ width: viewport, height: viewport }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -146,8 +156,8 @@ export function AvatarCropModal({
             style={{
               width: drawnW || undefined,
               height: drawnH || undefined,
-              left: (VIEWPORT - drawnW) / 2 + offset.x,
-              top: (VIEWPORT - drawnH) / 2 + offset.y,
+              left: (viewport - drawnW) / 2 + offset.x,
+              top: (viewport - drawnH) / 2 + offset.y,
               maxWidth: "none",
             }}
           />

@@ -66,7 +66,7 @@ const VISIBILITY_FILTERS: { id: VisibilityFilter; label: string }[] = [
 ];
 
 function filterChipClass(active: boolean) {
-  return `rounded-md px-2.5 py-1 text-[11px] font-semibold tracking-wide transition ${
+  return `min-h-10 rounded-lg px-3 py-2 text-xs font-semibold tracking-wide transition sm:min-h-0 sm:rounded-md sm:px-2.5 sm:py-1 sm:text-[11px] ${
     active
       ? "bg-foreground text-background shadow-sm"
       : "text-muted hover:text-foreground"
@@ -428,96 +428,97 @@ export function VaultSongsView() {
   function renderSongList(className = "") {
     return (
       <section className={`flex min-h-0 min-w-0 flex-1 flex-col bg-background ${className}`}>
-        <div className="shrink-0 border-b border-border bg-card px-4 py-3 lg:px-6">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                  {collectionTitle}
-                </h1>
-                {selectedFolder && !showTrash && (
+        <div className="shrink-0 border-b border-border bg-card px-3 py-3 sm:px-4 lg:px-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                    {collectionTitle}
+                  </h1>
+                  {selectedFolder && !showTrash && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddSongsModal(true)}
+                      className="flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted transition hover:border-foreground/20 hover:text-foreground lg:min-h-7 lg:rounded-lg lg:px-2"
+                    >
+                      <FolderInput className="h-3.5 w-3.5 shrink-0" />
+                      <span>Add songs</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {!showTrash && (
+                <div className="flex shrink-0 items-center gap-2">
+                  <p className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] text-muted xs:block sm:block">
+                    <span className="hidden sm:inline">Total Songs</span>
+                    <span className="ml-0 tabular-nums text-foreground sm:ml-1.5">
+                      {filtersActive ? filteredSongs.length : songs.length}
+                    </span>
+                  </p>
+                  <span className="text-sm font-semibold tabular-nums text-foreground sm:hidden">
+                    {filtersActive ? filteredSongs.length : songs.length}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setShowAddSongsModal(true)}
-                    className="flex h-7 items-center gap-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                    onClick={handleNewSong}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white transition hover:bg-accent/90 active:scale-95 lg:h-7 lg:w-7 lg:rounded-lg"
+                    aria-label="New song"
+                    title="New song"
                   >
-                    <FolderInput className="h-3.5 w-3.5 shrink-0" />
-                    <span>Add songs</span>
+                    <Plus className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!showTrash && (
+              <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div
+                  className="inline-flex shrink-0 items-center rounded-xl bg-background p-0.5 ring-1 ring-border sm:rounded-lg"
+                  role="group"
+                  aria-label="Filter by status"
+                >
+                  {STATUS_FILTERS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setStatusFilter(item.id)}
+                      className={filterChipClass(statusFilter === item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <div
+                  className="inline-flex shrink-0 items-center rounded-xl bg-background p-0.5 ring-1 ring-border sm:rounded-lg"
+                  role="group"
+                  aria-label="Filter by visibility"
+                >
+                  {VISIBILITY_FILTERS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setVisibilityFilter(item.id)}
+                      className={filterChipClass(visibilityFilter === item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                {filtersActive && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl px-2.5 text-xs font-semibold text-muted transition hover:text-foreground lg:min-h-7 lg:rounded-md lg:px-1.5 lg:text-[11px]"
+                  >
+                    <X className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
+                    Clear
                   </button>
                 )}
               </div>
-            </div>
-
-            {!showTrash ? (
-              <div className="flex shrink-0 items-center gap-2 justify-self-center">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                  Total Songs
-                  <span className="ml-1.5 tabular-nums text-foreground">
-                    {filtersActive ? filteredSongs.length : songs.length}
-                  </span>
-                </p>
-                <button
-                  type="button"
-                  onClick={handleNewSong}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-white transition hover:bg-accent/90 active:scale-95"
-                  aria-label="New song"
-                  title="New song"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <div />
             )}
-
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-              {!showTrash && (
-                <>
-                  <div
-                    className="inline-flex items-center rounded-lg bg-background p-0.5 ring-1 ring-border"
-                    role="group"
-                    aria-label="Filter by status"
-                  >
-                    {STATUS_FILTERS.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setStatusFilter(item.id)}
-                        className={filterChipClass(statusFilter === item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div
-                    className="inline-flex items-center rounded-lg bg-background p-0.5 ring-1 ring-border"
-                    role="group"
-                    aria-label="Filter by visibility"
-                  >
-                    {VISIBILITY_FILTERS.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setVisibilityFilter(item.id)}
-                        className={filterChipClass(visibilityFilter === item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                  {filtersActive && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-muted transition hover:text-foreground"
-                    >
-                      <X className="h-3 w-3" />
-                      Clear
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
           </div>
         </div>
 
@@ -570,7 +571,7 @@ export function VaultSongsView() {
               {pageSongs.map((song) => (
                 <div
                   key={song.id}
-                  className="group flex items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 transition hover:border-foreground/15 sm:gap-3 sm:px-3"
+                  className="group flex items-start gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 transition hover:border-foreground/15 sm:items-center sm:gap-3 sm:px-3"
                 >
                   <button
                     type="button"
@@ -642,13 +643,13 @@ export function VaultSongsView() {
                     </p>
                   </button>
 
-                  <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border bg-background/80 p-0.5">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5 rounded-xl border border-border bg-background/80 p-0.5">
                     {showTrash ? (
                       <>
                         <button
                           type="button"
                           onClick={() => restoreSong(song)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg text-muted transition hover:bg-card hover:text-accent"
                           aria-label={`Restore "${song.title}"`}
                           title="Restore"
                         >
@@ -657,7 +658,7 @@ export function VaultSongsView() {
                         <button
                           type="button"
                           onClick={() => setSongToPurge(song)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-red-400"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg text-muted transition hover:bg-card hover:text-red-400"
                           aria-label={`Delete "${song.title}" forever`}
                           title="Delete forever"
                         >
@@ -670,7 +671,7 @@ export function VaultSongsView() {
                           <button
                             type="button"
                             onClick={() => toggleFavorite(song)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-amber-400"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg text-muted transition hover:bg-card hover:text-amber-400"
                             aria-label={song.isFavorite ? "Remove from favorites" : "Add to favorites"}
                             title={song.isFavorite ? "Unfavorite" : "Favorite"}
                           >
@@ -684,7 +685,7 @@ export function VaultSongsView() {
                         <button
                           type="button"
                           onClick={() => toggleStatus(song)}
-                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-card ${
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg transition hover:bg-card ${
                             song.status === "finished"
                               ? "text-emerald-500 hover:text-emerald-400"
                               : "text-muted hover:text-accent"
@@ -710,7 +711,7 @@ export function VaultSongsView() {
                           <button
                             type="button"
                             onClick={() => togglePublic(song)}
-                            className={`flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-card ${
+                            className={`flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg transition hover:bg-card ${
                               song.isPublic
                                 ? "text-emerald-500 hover:text-emerald-400"
                                 : "text-amber-500 hover:text-amber-400"
@@ -735,7 +736,7 @@ export function VaultSongsView() {
                           <button
                             type="button"
                             onClick={() => router.push(`/vault/s/${song.id}`)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg text-muted transition hover:bg-card hover:text-accent"
                             aria-label={`Public view of "${song.title}"`}
                             title="Public view"
                           >
@@ -746,7 +747,7 @@ export function VaultSongsView() {
                           <button
                             type="button"
                             onClick={() => setSongToMove(song)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg text-muted transition hover:bg-card hover:text-accent"
                             aria-label={`Add "${song.title}" to folder`}
                             title="Add to folder"
                           >
@@ -757,7 +758,7 @@ export function VaultSongsView() {
                           <button
                             type="button"
                             onClick={() => moveSongToBin(song)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-red-400"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl lg:h-7 lg:w-7 lg:rounded-lg text-muted transition hover:bg-card hover:text-red-400"
                             aria-label={`Move "${song.title}" to recycle bin`}
                             title="Move to recycle bin"
                           >
@@ -852,7 +853,7 @@ export function VaultSongsView() {
         />
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <div className="flex min-h-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
         {loading ? (
           <RapVaultLoading label="Loading..." />
         ) : (

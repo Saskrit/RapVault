@@ -56,10 +56,10 @@ type LyricRichEditorProps = {
 };
 
 const toolBtn =
-  "flex h-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-muted transition hover:border-border hover:bg-background hover:text-foreground active:scale-95";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-transparent text-muted transition hover:border-border hover:bg-background hover:text-foreground active:scale-95 lg:h-9 lg:w-9 lg:rounded-lg";
 
 const structureBtn =
-  "shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95";
+  "shrink-0 rounded-xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95 lg:rounded-lg lg:px-2.5 lg:py-1.5";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28] as const;
 const DEFAULT_FONT_SIZE = 16;
@@ -804,13 +804,18 @@ export function LyricRichEditor({
                       title={`Write in ${color}`}
                       aria-label={`Write in ${color}`}
                       onClick={() => chooseWriterColor(color)}
-                      className={`h-5 w-5 rounded-full border transition active:scale-95 ${
+                      className={`h-10 w-10 rounded-full border p-1.5 transition active:scale-95 lg:h-5 lg:w-5 lg:p-0 ${
                         selected
                           ? "border-foreground ring-2 ring-foreground/25 ring-offset-1 ring-offset-background"
                           : "border-border/80 hover:scale-110"
                       }`}
-                      style={{ backgroundColor: color }}
-                    />
+                    >
+                      <span
+                        className="block h-full w-full rounded-full"
+                        style={{ backgroundColor: color }}
+                        aria-hidden
+                      />
+                    </button>
                   );
                 })}
               </div>

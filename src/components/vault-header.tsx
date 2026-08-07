@@ -38,14 +38,14 @@ type VaultHeaderProps = {
 
 const SKIP_LOGOUT_CONFIRM_KEY = "rapvault-skip-logout-confirm";
 
-/** Compact on mobile; unchanged desktop (lg+) sizing. */
+/** Touch-friendly on phones; same visual size on desktop (lg+). */
 const iconBtn =
-  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-9 sm:w-9 lg:h-10 lg:w-10 lg:rounded-xl";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground";
 
 const logoutBtn =
-  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400 sm:h-9 sm:w-9 lg:h-10 lg:w-10 lg:rounded-xl";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400";
 
-const headerIcon = "h-3.5 w-3.5 lg:h-4 lg:w-4";
+const headerIcon = "h-4 w-4";
 
 function formatNotifTime(iso: string) {
   const date = new Date(iso);
@@ -261,14 +261,11 @@ export function VaultHeader({
               title="Notifications"
             >
               <Bell className={headerIcon} />
-              <UnreadBadge
-                count={notifCount}
-                className="-right-0.5 -top-0.5 h-3.5 min-w-3.5 text-[9px] lg:-right-1 lg:-top-1 lg:h-4 lg:min-w-4 lg:text-[10px]"
-              />
+              <UnreadBadge count={notifCount} />
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.4rem)] z-40 flex w-[min(22rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+              <div className="fixed inset-x-2 top-[max(3.75rem,calc(env(safe-area-inset-top)+3.25rem))] z-40 flex max-h-[min(70dvh,24rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.4rem)] sm:max-h-[20rem] sm:w-[min(22rem,calc(100vw-1.5rem))]">
                 <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold tracking-tight">
@@ -378,10 +375,7 @@ export function VaultHeader({
             title="Messages"
           >
             <MessageSquare className={headerIcon} />
-            <UnreadBadge
-              count={unreadCount}
-              className="-right-0.5 -top-0.5 h-3.5 min-w-3.5 text-[9px] lg:-right-1 lg:-top-1 lg:h-4 lg:min-w-4 lg:text-[10px]"
-            />
+            <UnreadBadge count={unreadCount} />
           </Link>
           {label && (
             <Link

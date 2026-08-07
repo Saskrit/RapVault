@@ -228,13 +228,13 @@ export function NetworkView() {
             </div>
 
             <div className="mx-auto mt-5 flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-1 rounded-2xl border border-border bg-card/70 p-1 backdrop-blur">
+              <div className="-mx-1 flex gap-1 overflow-x-auto rounded-2xl border border-border bg-card/70 p-1 backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible">
                 {tabs.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setTab(item.id)}
-                    className={`inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium transition ${
+                    className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium transition sm:min-h-9 ${
                       tab === item.id
                         ? "bg-accent text-white"
                         : "text-muted hover:text-foreground"

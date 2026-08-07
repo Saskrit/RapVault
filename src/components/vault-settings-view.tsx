@@ -725,10 +725,10 @@ export function VaultSettingsView() {
       <VaultHeader centerLabel="Profile & settings">
         <Link
           href="/vault"
-          className="relative z-10 flex h-8 w-auto shrink-0 items-center gap-1 rounded-lg border border-border px-2 text-xs font-medium text-muted transition hover:border-foreground/25 hover:text-foreground sm:h-9 sm:gap-1.5 sm:rounded-xl sm:px-2.5 sm:text-sm lg:h-11 lg:px-3"
+          className="relative z-10 flex h-10 w-auto shrink-0 items-center gap-1 rounded-xl border border-border px-2.5 text-sm font-medium text-muted transition hover:border-foreground/25 hover:text-foreground sm:gap-1.5 sm:px-3 lg:h-11"
           aria-label="Back to library"
         >
-          <ArrowLeft className="h-3.5 w-3.5 shrink-0 lg:h-4 lg:w-4" />
+          <ArrowLeft className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Library</span>
         </Link>
       </VaultHeader>
@@ -779,7 +779,7 @@ export function VaultSettingsView() {
                     setPhotoMenuOpen(false);
                   }}
                   disabled={profileLoading}
-                  className="absolute bottom-2 right-2 flex h-8 items-center gap-1.5 rounded-full border border-border bg-background/95 px-2.5 text-xs font-medium text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
+                  className="absolute bottom-2 right-2 flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-background/95 px-3 text-xs font-medium text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
                   aria-label="Cover options"
                   aria-expanded={coverMenuOpen}
                   title="Cover photo"
@@ -898,7 +898,7 @@ export function VaultSettingsView() {
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-1.5">
-              <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+              <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
                 {TABS.map((item) => {
                   const Icon = item.icon;
                   const active = tab === item.id;

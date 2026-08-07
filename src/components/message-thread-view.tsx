@@ -192,10 +192,10 @@ export function MessageThreadView({
             <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-2 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:px-8">
               <Link
                 href="/vault/messages"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-foreground/20 hover:text-foreground sm:h-9 sm:w-9 sm:rounded-xl"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground sm:h-9 sm:w-9"
                 aria-label="Back to inbox"
               >
-                <ArrowLeft className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
+                <ArrowLeft className="h-4 w-4" />
               </Link>
               <UserAvatar
                 src={thread.other?.avatarUrl}

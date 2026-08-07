@@ -34,17 +34,22 @@ export function ResizableSplit({
   const [isVertical, setIsVertical] = useState(false);
   const [locked, setLocked] = useState(false);
 
+  const effectiveMinPrimary = isVertical ? Math.min(minPrimary, 140) : minPrimary;
+  const effectiveMinSecondary = isVertical
+    ? Math.min(minSecondary, 160)
+    : minSecondary;
+
   useEffect(() => {
     const saved = preferenceStorageGet(storageKey);
     if (saved) {
       const parsed = Number(saved);
-      if (!Number.isNaN(parsed) && parsed >= minSecondary) {
+      if (!Number.isNaN(parsed) && parsed >= 120) {
         sizeRef.current = parsed;
         setSecondarySize(parsed);
       }
     }
     setLocked(preferenceStorageGet(lockKey) === "true");
-  }, [storageKey, lockKey, minSecondary]);
+  }, [storageKey, lockKey]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -53,6 +58,34 @@ export function ResizableSplit({
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  // On phones, keep the beat panel from eating the whole editor.
+  useEffect(() => {
+    if (!isVertical || !secondaryVisible) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    function clamp() {
+      const el = containerRef.current;
+      if (!el) return;
+      const h = el.getBoundingClientRect().height;
+      if (h < 80) return;
+      const maxSec = Math.max(effectiveMinSecondary, Math.floor(h * 0.42));
+      const next = Math.max(
+        effectiveMinSecondary,
+        Math.min(maxSec, sizeRef.current),
+      );
+      if (next !== sizeRef.current) {
+        sizeRef.current = next;
+        setSecondarySize(next);
+      }
+    }
+
+    clamp();
+    const observer = new ResizeObserver(clamp);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [isVertical, secondaryVisible, effectiveMinSecondary]);
 
   useEffect(() => {
     if (!isDragging || locked) return;
@@ -63,9 +96,17 @@ export function ResizableSplit({
 
       const rect = container.getBoundingClientRect();
       const containerSize = isVertical ? rect.height : rect.width;
-      const raw = isVertical ? rect.bottom - event.clientY : rect.right - event.clientX;
-      const maxSecondary = Math.max(minSecondary, containerSize - minPrimary);
-      const next = Math.max(minSecondary, Math.min(maxSecondary, raw));
+      const raw = isVertical
+        ? rect.bottom - event.clientY
+        : rect.right - event.clientX;
+      const maxSecondary = Math.max(
+        effectiveMinSecondary,
+        containerSize - effectiveMinPrimary,
+      );
+      const next = Math.max(
+        effectiveMinSecondary,
+        Math.min(maxSecondary, raw),
+      );
 
       sizeRef.current = next;
       setSecondarySize(next);
@@ -87,7 +128,14 @@ export function ResizableSplit({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isDragging, isVertical, locked, minPrimary, minSecondary, storageKey]);
+  }, [
+    isDragging,
+    isVertical,
+    locked,
+    effectiveMinPrimary,
+    effectiveMinSecondary,
+    storageKey,
+  ]);
 
   function toggleLocked() {
     setLocked((prev) => {
@@ -113,7 +161,11 @@ export function ResizableSplit({
     >
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-        style={isVertical ? { minHeight: minPrimary } : { minWidth: minPrimary }}
+        style={
+          isVertical
+            ? { minHeight: effectiveMinPrimary }
+            : { minWidth: effectiveMinPrimary }
+        }
       >
         {primary}
       </div>
@@ -125,13 +177,14 @@ export function ResizableSplit({
         aria-valuenow={Math.round(secondarySize)}
         onPointerDown={(event) => {
           if (locked) return;
-          // Ignore presses on the lock button itself.
           if ((event.target as HTMLElement).closest("button")) return;
           event.preventDefault();
           setIsDragging(true);
         }}
         className={`group relative z-10 flex shrink-0 touch-none select-none items-center justify-center ${
-          isVertical ? "h-8 w-full border-y border-border" : "w-8 border-x border-border"
+          isVertical
+            ? "h-10 w-full border-y border-border lg:h-8"
+            : "w-8 border-x border-border"
         } ${isDragging ? "bg-accent/15" : "bg-sidebar hover:bg-accent/10"} ${
           locked
             ? "cursor-default"
@@ -148,13 +201,19 @@ export function ResizableSplit({
         <button
           type="button"
           onClick={toggleLocked}
-          className={`absolute z-20 flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-muted shadow-sm transition hover:border-accent hover:text-accent ${
-            isVertical ? "right-2 top-1/2 -translate-y-1/2" : "bottom-2 left-1/2 -translate-x-1/2"
+          className={`absolute z-20 flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-muted shadow-sm transition hover:border-accent hover:text-accent lg:h-7 lg:w-7 ${
+            isVertical
+              ? "right-2 top-1/2 -translate-y-1/2"
+              : "bottom-2 left-1/2 -translate-x-1/2"
           } ${locked ? "border-accent/40 text-accent" : ""}`}
           aria-label={locked ? "Unlock panel size" : "Lock panel size"}
           title={locked ? "Unlock size" : "Lock size"}
         >
-          {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+          {locked ? (
+            <Lock className="h-3.5 w-3.5" />
+          ) : (
+            <Unlock className="h-3.5 w-3.5" />
+          )}
         </button>
       </div>
 
@@ -162,8 +221,8 @@ export function ResizableSplit({
         className="min-h-0 shrink-0 overflow-hidden"
         style={
           isVertical
-            ? { height: secondarySize, minHeight: minSecondary }
-            : { width: secondarySize, minWidth: minSecondary }
+            ? { height: secondarySize, minHeight: effectiveMinSecondary }
+            : { width: secondarySize, minWidth: effectiveMinSecondary }
         }
       >
         {secondary}

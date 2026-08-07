@@ -269,7 +269,7 @@ export function VaultShell({
             onClick={() => setFolderDrawerOpen(false)}
             aria-label="Close folders"
           />
-          <aside className="absolute bottom-0 left-0 top-0 flex w-[min(88vw,320px)] max-w-full flex-col border-r border-border bg-sidebar">
+          <aside className="absolute bottom-0 left-0 top-0 flex w-[min(88vw,320px)] max-w-full flex-col border-r border-border bg-sidebar pb-[env(safe-area-inset-bottom)]">
             <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">

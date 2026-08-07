@@ -2,6 +2,11 @@
 
 import { useEffect } from "react";
 import { useCookieConsentOptional } from "@/components/cookie-consent-provider";
+import {
+  clearDeferredInstallPrompt,
+  setDeferredInstallPrompt,
+  type BeforeInstallPromptEvent,
+} from "@/lib/pwa-install";
 
 const WARM_PATHS = ["/", "/vault", "/~offline", "/manifest.json"];
 
@@ -10,12 +15,29 @@ export function PwaRegister() {
   const functional = Boolean(consent?.consent?.functional);
 
   useEffect(() => {
+    function onBeforeInstall(event: Event) {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+    }
+
+    function onInstalled() {
+      clearDeferredInstallPrompt();
+    }
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!functional) return;
     if (!("serviceWorker" in navigator)) return;
 
     const register = async () => {
       try {
-        // Register in production builds; also allow explicit opt-in for testing.
         if (
           process.env.NODE_ENV !== "production" &&
           process.env.NEXT_PUBLIC_PWA_DEV !== "1"
@@ -30,7 +52,6 @@ export function PwaRegister() {
 
         await navigator.serviceWorker.ready;
 
-        // Warm HTML routes while online so /vault can reopen offline.
         if (navigator.onLine) {
           await Promise.all(
             WARM_PATHS.map((path) =>
@@ -42,7 +63,6 @@ export function PwaRegister() {
           );
         }
 
-        // Capture the current document into the page cache via SW.
         if (reg.active && navigator.onLine) {
           reg.active.postMessage("rapvault-skip-waiting");
         }

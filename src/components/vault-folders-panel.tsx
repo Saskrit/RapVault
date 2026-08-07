@@ -419,7 +419,7 @@ export function VaultFoldersPanel({
                 <button
                   type="button"
                   onClick={() => onDeleteFolder(folder.id)}
-                  className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted opacity-100 transition hover:bg-red-500/10 hover:text-red-400 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
+                  className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted opacity-100 transition hover:bg-red-500/10 hover:text-red-400 lg:h-8 lg:w-8 lg:rounded-lg lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
                   aria-label={`Delete ${folder.name}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />

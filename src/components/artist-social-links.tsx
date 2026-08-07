@@ -69,7 +69,7 @@ export function ArtistSocialLinks({
           href={links[item.key]}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background text-muted transition hover:border-accent hover:text-accent"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-muted transition hover:border-accent hover:text-accent"
           aria-label={item.label}
           title={item.label}
         >
