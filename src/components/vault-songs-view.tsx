@@ -355,15 +355,19 @@ export function VaultSongsView() {
                             />
                           ))}
                         {song.isCollaborator && !showTrash && (
-                          <UsersRound
-                            className="h-3.5 w-3.5 shrink-0 text-sky-500"
-                            aria-label="Collaboration"
+                          <span
+                            className="inline-flex"
                             title={
                               song.owner
                                 ? `Shared by ${song.owner.displayName}`
                                 : "Collaboration"
                             }
-                          />
+                          >
+                            <UsersRound
+                              className="h-3.5 w-3.5 shrink-0 text-sky-500"
+                              aria-label="Collaboration"
+                            />
+                          </span>
                         )}
                         {(song.collaborators?.length || 0) > 0 &&
                           song.isOwner !== false &&
