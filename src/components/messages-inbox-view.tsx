@@ -42,22 +42,20 @@ export function MessagesInboxView() {
 
   return (
     <VaultShell centerLabel="Messages">
-      <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <div className="mx-auto w-full max-w-3xl">
-          <div className="mb-6">
-            <p className="type-eyebrow text-muted">
-              Inbox
-            </p>
-            <h1 className="type-h1 mt-2 flex items-center gap-2">
-              <MessageSquare className="h-7 w-7 text-accent" />
-              Messages
-            </h1>
-            <p className="measure mt-2 text-sm text-muted">
-              Direct messages with other artists. Start a chat from an artist
-              profile.
-            </p>
-          </div>
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-border px-4 py-5 sm:px-6 lg:px-8">
+          <p className="type-eyebrow text-muted">Inbox</p>
+          <h1 className="type-h1 mt-2 flex items-center gap-2">
+            <MessageSquare className="h-7 w-7 text-accent" />
+            Messages
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            Direct messages with other artists. Start a chat from an artist
+            profile.
+          </p>
+        </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {loading ? (
             <p className="text-sm text-muted">Loading...</p>
           ) : conversations.length === 0 ? (

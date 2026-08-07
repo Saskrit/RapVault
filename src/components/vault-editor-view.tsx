@@ -2,7 +2,9 @@
 
 import {
   ArrowLeft,
+  CheckCircle2,
   ChevronDown,
+  CircleDashed,
   Download,
   Eye,
   Globe,
@@ -328,6 +330,38 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 />
               </button>
             )}
+            <button
+              type="button"
+              onClick={() =>
+                scheduleSave({
+                  status: song.status === "finished" ? "draft" : "finished",
+                })
+              }
+              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3 ${
+                song.status === "finished"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
+                  : ""
+              }`}
+              aria-label={
+                song.status === "finished"
+                  ? "Finished — click to mark as draft"
+                  : "Draft — click to mark as finished"
+              }
+              title={
+                song.status === "finished"
+                  ? "Finished — click to mark as draft"
+                  : "Draft — click to mark as finished"
+              }
+            >
+              {song.status === "finished" ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <CircleDashed className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+              <span className="hidden text-sm sm:inline">
+                {song.status === "finished" ? "Finished" : "Draft"}
+              </span>
+            </button>
             {isOwner && (
               <button
                 type="button"

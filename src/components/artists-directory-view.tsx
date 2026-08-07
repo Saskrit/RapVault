@@ -72,18 +72,9 @@ export function ArtistsDirectoryView() {
         >
           <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-accent/20 blur-3xl dark:bg-accent/25" />
           <div className="absolute right-0 top-16 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
-          <div
-            className="absolute inset-0 opacity-[0.35] dark:opacity-[0.2]"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0)",
-              backgroundSize: "22px 22px",
-            }}
-          />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        <div className="relative mx-auto grid w-full max-w-6xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] lg:gap-12 lg:px-8 lg:py-10">
+        <div className="relative mx-auto grid w-full max-w-6xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)] lg:gap-12 lg:px-8 lg:py-10">
           {/* Sticky intro rail */}
           <aside className="lg:sticky lg:top-6 lg:self-start">
             <div className="type-eyebrow inline-flex items-center gap-2 text-muted">
@@ -122,8 +113,8 @@ export function ArtistsDirectoryView() {
                 type="search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search name or @username"
-                className="w-full min-h-12 rounded-2xl border border-border bg-card/80 py-3 pl-11 pr-4 text-base outline-none backdrop-blur transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+                placeholder="Name or @username"
+                className="w-full min-h-12 rounded-2xl border border-border bg-card/80 py-3 pl-11 pr-4 text-sm outline-none backdrop-blur transition placeholder:truncate focus:border-accent focus:ring-2 focus:ring-accent/20 sm:text-base"
               />
             </div>
           </aside>
@@ -182,7 +173,7 @@ export function ArtistsDirectoryView() {
                         <div
                           className="absolute inset-0 opacity-90 transition duration-500 group-hover:scale-105"
                           style={{
-                            background: `linear-gradient(160deg, hsl(${hue} 70% 46% / 0.28), transparent 55%), linear-gradient(0deg, var(--card), transparent 45%)`,
+                            background: `hsl(${hue} 70% 46% / 0.22)`,
                           }}
                         />
                         <div className="relative z-[1] flex h-full w-full flex-col p-3.5 sm:p-4">

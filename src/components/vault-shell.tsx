@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, PanelLeftClose, X } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -209,22 +209,39 @@ export function VaultShell({
           onClick={toggleSidebar}
           className={`${iconBtn} hidden lg:flex`}
           aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
-          <PanelLeftClose
-            className={`h-4 w-4 transition ${sidebarOpen ? "" : "rotate-180"}`}
-          />
+          {sidebarOpen ? (
+            <PanelLeftClose className="h-4 w-4" />
+          ) : (
+            <PanelLeftOpen className="h-4 w-4" />
+          )}
         </button>
       </VaultHeader>
 
       <div className="hidden min-h-0 flex-1 lg:flex">
         <aside
           className={`flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-300 ${
-            sidebarOpen ? "w-60 xl:w-72" : "w-0 border-r-0"
+            sidebarOpen ? "w-60 xl:w-72" : "w-12"
           }`}
         >
-          <div className="flex h-full min-w-60 flex-col xl:min-w-72">
-            <VaultFoldersPanel {...folderPanelProps} />
-          </div>
+          {sidebarOpen ? (
+            <div className="flex h-full min-w-60 flex-col xl:min-w-72">
+              <VaultFoldersPanel {...folderPanelProps} />
+            </div>
+          ) : (
+            <div className="flex h-full flex-col items-center py-3">
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className={iconBtn}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {children}

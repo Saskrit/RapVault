@@ -307,25 +307,12 @@ export function ArtistProfileView({ username }: { username: string }) {
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
-            <aside className="relative shrink-0 overflow-hidden border-b border-border lg:h-full lg:border-b-0 lg:border-r">
+            <aside className="relative shrink-0 overflow-hidden border-b border-border bg-sidebar lg:h-full lg:border-b-0 lg:border-r">
               <div
                 aria-hidden
                 className="absolute inset-0"
                 style={{
-                  background: `
-                    radial-gradient(ellipse 90% 70% at 20% 0%, hsl(${hue} 75% 48% / 0.38), transparent 58%),
-                    radial-gradient(ellipse 70% 55% at 100% 80%, hsl(${(hue + 40) % 360} 70% 45% / 0.16), transparent 55%),
-                    linear-gradient(180deg, var(--sidebar), var(--background))
-                  `,
-                }}
-              />
-              <div
-                aria-hidden
-                className="absolute inset-0 opacity-25 dark:opacity-15"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0)",
-                  backgroundSize: "18px 18px",
+                  background: `hsl(${hue} 75% 48% / 0.18)`,
                 }}
               />
 

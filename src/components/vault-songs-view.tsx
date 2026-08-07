@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CircleDashed,
   Eye,
   FolderInput,
   Globe,
@@ -198,6 +200,21 @@ export function VaultSongsView() {
     }
   }
 
+  async function toggleStatus(song: Song) {
+    const nextStatus = song.status === "finished" ? "draft" : "finished";
+    const res = await fetch(`/api/songs/${song.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: nextStatus }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSongs((prev) =>
+        prev.map((item) => (item.id === song.id ? data.song : item)),
+      );
+    }
+  }
+
   async function restoreSong(song: Song) {
     const res = await fetch(`/api/songs/${song.id}`, {
       method: "PATCH",
@@ -342,18 +359,6 @@ export function VaultSongsView() {
                         {song.title || "Untitled"}
                       </span>
                       <div className="flex shrink-0 items-center gap-1.5">
-                        {!showTrash &&
-                          (song.isPublic ? (
-                            <Globe
-                              className="h-3.5 w-3.5 shrink-0 text-emerald-500"
-                              aria-label="Public"
-                            />
-                          ) : (
-                            <Lock
-                              className="h-3.5 w-3.5 shrink-0 text-amber-500"
-                              aria-label="Personal"
-                            />
-                          ))}
                         {song.isCollaborator && !showTrash && (
                           <span
                             className="inline-flex"
@@ -441,6 +446,31 @@ export function VaultSongsView() {
                             />
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => toggleStatus(song)}
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-card ${
+                            song.status === "finished"
+                              ? "text-emerald-500 hover:text-emerald-400"
+                              : "text-muted hover:text-accent"
+                          }`}
+                          aria-label={
+                            song.status === "finished"
+                              ? "Mark as draft"
+                              : "Mark as finished"
+                          }
+                          title={
+                            song.status === "finished"
+                              ? "Finished — click to mark draft"
+                              : "Draft — click to mark finished"
+                          }
+                        >
+                          {song.status === "finished" ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                          ) : (
+                            <CircleDashed className="h-3.5 w-3.5" aria-hidden />
+                          )}
+                        </button>
                         {song.isOwner !== false && (
                           <button
                             type="button"

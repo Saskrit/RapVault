@@ -115,14 +115,6 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-accent/20 blur-[120px]" />
         <div className="absolute -right-32 top-1/3 h-80 w-80 rounded-full bg-violet-600/10 blur-[100px]" />
-        <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
       </div>
 
       <header className="relative z-10 border-b border-border/60 bg-background/70 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
@@ -174,7 +166,7 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               <h1 className="type-h1">
                 Your bars.
                 <br />
-                <span className="bg-gradient-to-r from-accent to-accent-muted bg-clip-text text-transparent">
+                <span className="text-accent">
                   Locked in the vault.
                 </span>
               </h1>
@@ -227,7 +219,7 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
             </div>
 
             <div className="relative flex min-h-[26rem] w-full lg:min-h-full">
-              <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
+              <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-accent/15 blur-2xl" />
               <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
                 <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
                   <div className="h-3 w-3 rounded-full bg-red-500/80" />

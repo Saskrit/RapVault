@@ -89,7 +89,6 @@ export function StatsView() {
         >
           <div className="absolute left-10 top-0 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
           <div className="absolute right-16 top-8 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl" />
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
         </div>
 
         <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
