@@ -280,11 +280,6 @@ textarea {
   line-height: var(--leading-body);
 }
 
-/* Collaborator lyrics stay blue for every viewer (owner + invitee). */
-.lyric-editor [data-writer="collab"] {
-  color: #3b82f6 !important;
-}
-
 .lyric-editor p,
 .lyric-editor div {
   margin: 0;

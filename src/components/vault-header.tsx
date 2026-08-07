@@ -184,13 +184,13 @@ export function VaultHeader({
       )}
 
       <div
-        className={`items-center gap-2.5 px-3 py-3 lg:gap-3 lg:px-5 ${
+        className={`relative items-center gap-2.5 px-3 py-3 lg:gap-3 lg:px-5 ${
           showSearch && mobileSearchOpen ? "hidden" : "flex"
         }`}
       >
         {children}
 
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+        <div className="relative z-10 flex min-w-0 items-center gap-1.5 sm:gap-2">
           <Logo size={36} href="/vault" priority />
           <BrandWordmark height={18} href="/vault" priority />
         </div>
@@ -208,13 +208,21 @@ export function VaultHeader({
           </div>
         )}
 
-        {centerLabel && (
+        {centerLabel && !showSearch && (
+          <p className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-16 sm:px-24">
+            <span className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
+              {centerLabel}
+            </span>
+          </p>
+        )}
+
+        {centerLabel && showSearch && (
           <p className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-foreground lg:hidden">
             {centerLabel}
           </p>
         )}
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <div className="relative z-10 ml-auto flex shrink-0 items-center gap-1.5">
           {showSearch && (
             <button
               type="button"

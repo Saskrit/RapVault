@@ -84,8 +84,8 @@ Most rappers still dump bars in Notes, WhatsApp drafts, Google Docs, or random v
 | Feature | Details |
 |---------|---------|
 | Invite collaborators | Owner invites connected artists into a song |
-| Writer colors | Collaborators write in **blue**; owner keeps default color |
-| Visible to both | Owner sees blue collab text; both see who they’re writing with |
+| Writer colors | Collaborators pick **one** write color; owner stays on default |
+| Visible to both | Colored collab text stays visible to everyone |
 | Live-ish sync | Shared songs poll for the other writer’s saves while idle |
 | Public songs | Views + fire reactions on public tracks |
 
@@ -118,7 +118,7 @@ Most rappers still dump bars in Notes, WhatsApp drafts, Google Docs, or random v
 | Password | Change password, forgot / reset via email |
 | Recovery email | Optional recovery address |
 | Change email | With password confirmation when applicable |
-| Delete account | Settings → Account; password or `DELETE` confirm; removes lyrics & profile data |
+| Delete account | Settings → Security; password or `DELETE` confirm; removes lyrics & profile data |
 | Profile | Display name, username, bio, public toggle |
 | Theme | Light / dark |
 | Logout | Soft red button; confirm dialog + “don’t show again” |
@@ -324,7 +324,7 @@ RapVault/
 - **Auth:** HTTP-only JWT session cookie; passwords hashed with bcrypt; email signup stores a pending record until the verification code succeeds  
 - **Access control:** Song access for owner **or** collaborator (`song-access`)  
 - **Offline:** Consent-gated local caches + pending patch queue; flush when online  
-- **Collab colors:** Stored in HTML (`data-writer="collab"`) so blue text is visible to everyone  
+- **Collab colors:** Stored in HTML (`data-writer="collab"` + inline color); collaborators pick one palette color, owners use default  
 - **Collab sync:** Polling while the editor is idle (not full OT/CRDT yet)  
 - **Notifications:** Derived mainly from pending connection requests + `notificationsSeenAt`  
 - **Cookies:** Essential always on; preferences & offline require consent  

@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { CollaboratorsModal } from "@/components/collaborators-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { LyricRichEditor, COLLAB_WRITER_COLOR } from "@/components/lyric-rich-editor";
+import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
@@ -649,14 +649,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               onChange={(content) => scheduleSave({ content })}
               spellCheck={spellCheck}
               onSpellCheckChange={toggleSpellCheck}
-              writerColor={
-                song.isCollaborator ? COLLAB_WRITER_COLOR : null
-              }
+              canChooseWriterColor={Boolean(song.isCollaborator)}
               writerLabel={
                 song.isCollaborator
-                  ? "You write in blue"
+                  ? null
                   : (song.collaborators?.length ?? 0) > 0
-                    ? "Blue = collaborator · Your text = default"
+                    ? "Colored text = collaborator · Yours = default"
                     : null
               }
               toolbarStats={

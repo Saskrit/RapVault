@@ -9,7 +9,6 @@ import {
   ImagePlus,
   KeyRound,
   Link2,
-  Mail,
   Pencil,
   Save,
   Share2,
@@ -65,7 +64,6 @@ type ProfileUser = {
 type SettingsTab =
   | "profile"
   | "social"
-  | "account"
   | "security"
   | "connected"
   | "privacy";
@@ -87,7 +85,6 @@ const inputClass =
 const TABS: { id: SettingsTab; label: string; icon: typeof UserRound }[] = [
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "social", label: "Social Links", icon: Share2 },
-  { id: "account", label: "Account", icon: Mail },
   { id: "security", label: "Security", icon: KeyRound },
   { id: "connected", label: "Connected", icon: Link2 },
   { id: "privacy", label: "Privacy", icon: Cookie },
@@ -725,10 +722,10 @@ export function VaultSettingsView() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
-      <VaultHeader>
+      <VaultHeader centerLabel="Profile & settings">
         <Link
           href="/vault"
-          className="flex h-11 w-auto shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-foreground/25 hover:text-foreground"
+          className="relative z-10 flex h-11 w-auto shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-foreground/25 hover:text-foreground"
           aria-label="Back to library"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -757,13 +754,6 @@ export function VaultSettingsView() {
       )}
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
-        <div className="mb-4 sm:mb-5">
-          <p className="type-eyebrow text-muted">Account</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Profile &amp; settings
-          </h1>
-        </div>
-
         <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6">
           {/* Side profile card */}
           <aside className="flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start">
@@ -1158,11 +1148,110 @@ export function VaultSettingsView() {
               </section>
             )}
 
-            {tab === "account" && (
-              <>
-                <section className="rounded-3xl border border-border bg-card">
-                  <div className="border-b border-border px-5 py-5 sm:px-7">
-                    <h3 className="text-lg font-semibold tracking-tight">
+            {tab === "security" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <section className="flex flex-col rounded-3xl border border-border bg-card">
+                  <div className="border-b border-border px-5 py-4 sm:px-6">
+                    <h3 className="text-base font-semibold tracking-tight">
+                      {user.hasPassword
+                        ? "Change password"
+                        : "Create a password"}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {user.hasPassword
+                        ? "Update the password you use with email sign-in."
+                        : user.hasGoogle
+                          ? "Add a password so you can also sign in with email."
+                          : "Set a password for your account."}
+                    </p>
+                  </div>
+                  <form
+                    onSubmit={handlePasswordSubmit}
+                    className="flex flex-1 flex-col space-y-3 px-5 py-5 sm:px-6"
+                  >
+                    {user.hasPassword && (
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between gap-3">
+                          <label
+                            htmlFor="current-password"
+                            className="block text-sm font-medium"
+                          >
+                            Current password
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            disabled={forgotLoading || passwordLoading}
+                            className="text-xs font-medium text-accent transition hover:underline disabled:opacity-50"
+                          >
+                            {forgotLoading ? "Sending..." : "Forgot password?"}
+                          </button>
+                        </div>
+                        <input
+                          id="current-password"
+                          type="password"
+                          autoComplete="current-password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label
+                        htmlFor="new-password"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        {user.hasPassword ? "New password" : "Password"}
+                      </label>
+                      <input
+                        id="new-password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className={inputClass}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="confirm-password"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Confirm password
+                      </label>
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={inputClass}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <FieldMessage error={passwordError} />
+                    <button
+                      type="submit"
+                      disabled={passwordLoading}
+                      className="mt-auto min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      {passwordLoading
+                        ? "Saving..."
+                        : user.hasPassword
+                          ? "Update password"
+                          : "Create password"}
+                    </button>
+                  </form>
+                </section>
+
+                <section className="flex flex-col rounded-3xl border border-border bg-card">
+                  <div className="border-b border-border px-5 py-4 sm:px-6">
+                    <h3 className="text-base font-semibold tracking-tight">
                       Sign-in email
                     </h3>
                     <p className="mt-1 text-sm text-muted">
@@ -1174,7 +1263,7 @@ export function VaultSettingsView() {
                   </div>
                   <form
                     onSubmit={handleEmailSubmit}
-                    className="space-y-4 px-5 py-6 sm:px-7"
+                    className="flex flex-1 flex-col space-y-3 px-5 py-5 sm:px-6"
                   >
                     <div>
                       <label
@@ -1217,18 +1306,18 @@ export function VaultSettingsView() {
                     <button
                       type="submit"
                       disabled={emailLoading}
-                      className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                      className="mt-auto min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
                     >
                       {emailLoading ? "Saving..." : "Update email"}
                     </button>
                   </form>
                 </section>
 
-                <section className="rounded-3xl border border-border bg-card">
-                  <div className="border-b border-border px-5 py-5 sm:px-7">
+                <section className="flex flex-col rounded-3xl border border-border bg-card">
+                  <div className="border-b border-border px-5 py-4 sm:px-6">
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4 text-muted" />
-                      <h3 className="text-lg font-semibold tracking-tight">
+                      <h3 className="text-base font-semibold tracking-tight">
                         Recovery email
                       </h3>
                     </div>
@@ -1239,7 +1328,7 @@ export function VaultSettingsView() {
                   </div>
                   <form
                     onSubmit={handleRecoverySubmit}
-                    className="space-y-4 px-5 py-6 sm:px-7"
+                    className="flex flex-1 flex-col space-y-3 px-5 py-5 sm:px-6"
                   >
                     <div>
                       <label
@@ -1278,7 +1367,7 @@ export function VaultSettingsView() {
                       </div>
                     )}
                     <FieldMessage error={recoveryError} />
-                    <div className="flex flex-wrap gap-2">
+                    <div className="mt-auto flex flex-wrap gap-2">
                       <button
                         type="submit"
                         disabled={recoveryLoading}
@@ -1304,20 +1393,20 @@ export function VaultSettingsView() {
                   </form>
                 </section>
 
-                <section className="rounded-3xl border border-red-500/25 bg-card">
-                  <div className="border-b border-red-500/20 px-5 py-5 sm:px-7">
+                <section className="flex flex-col rounded-3xl border border-red-500/25 bg-card">
+                  <div className="border-b border-red-500/20 px-5 py-4 sm:px-6">
                     <div className="flex items-center gap-2">
                       <Trash2 className="h-4 w-4 text-red-400" />
-                      <h3 className="text-lg font-semibold tracking-tight text-red-400">
+                      <h3 className="text-base font-semibold tracking-tight text-red-400">
                         Delete account
                       </h3>
                     </div>
                     <p className="mt-1 text-sm text-muted">
-                      Permanently delete your account, lyrics, folders, messages,
-                      and profile. This cannot be undone.
+                      Permanently delete your account, lyrics, folders,
+                      messages, and profile. This cannot be undone.
                     </p>
                   </div>
-                  <div className="space-y-4 px-5 py-6 sm:px-7">
+                  <div className="flex flex-1 flex-col space-y-3 px-5 py-5 sm:px-6">
                     {!deleteOpen ? (
                       <button
                         type="button"
@@ -1327,14 +1416,14 @@ export function VaultSettingsView() {
                           setDeletePassword("");
                           setDeleteConfirm("");
                         }}
-                        className="min-h-11 rounded-xl border border-red-500/40 px-5 text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
+                        className="mt-auto min-h-11 rounded-xl border border-red-500/40 px-5 text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
                       >
                         Delete my account…
                       </button>
                     ) : (
                       <form
                         onSubmit={handleDeleteAccount}
-                        className="space-y-4"
+                        className="flex flex-1 flex-col space-y-3"
                       >
                         {user.hasPassword ? (
                           <div>
@@ -1349,7 +1438,9 @@ export function VaultSettingsView() {
                               type="password"
                               autoComplete="current-password"
                               value={deletePassword}
-                              onChange={(e) => setDeletePassword(e.target.value)}
+                              onChange={(e) =>
+                                setDeletePassword(e.target.value)
+                              }
                               className={inputClass}
                               required
                             />
@@ -1375,7 +1466,7 @@ export function VaultSettingsView() {
                           </div>
                         )}
                         <FieldMessage error={deleteError} />
-                        <div className="flex flex-wrap gap-2">
+                        <div className="mt-auto flex flex-wrap gap-2">
                           <button
                             type="submit"
                             disabled={deleteLoading}
@@ -1403,108 +1494,7 @@ export function VaultSettingsView() {
                     )}
                   </div>
                 </section>
-              </>
-            )}
-
-            {tab === "security" && (
-              <section className="rounded-3xl border border-border bg-card">
-                <div className="border-b border-border px-5 py-5 sm:px-7">
-                  <h3 className="text-lg font-semibold tracking-tight">
-                    {user.hasPassword ? "Change password" : "Create a password"}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {user.hasPassword
-                      ? "Update the password you use with email sign-in."
-                      : user.hasGoogle
-                        ? "Add a password so you can also sign in with email."
-                        : "Set a password for your account."}
-                  </p>
-                </div>
-                <form
-                  onSubmit={handlePasswordSubmit}
-                  className="space-y-4 px-5 py-6 sm:px-7"
-                >
-                  {user.hasPassword && (
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between gap-3">
-                        <label
-                          htmlFor="current-password"
-                          className="block text-sm font-medium"
-                        >
-                          Current password
-                        </label>
-                        <button
-                          type="button"
-                          onClick={handleForgotPassword}
-                          disabled={forgotLoading || passwordLoading}
-                          className="text-xs font-medium text-accent transition hover:underline disabled:opacity-50"
-                        >
-                          {forgotLoading ? "Sending..." : "Forgot password?"}
-                        </button>
-                      </div>
-                      <input
-                        id="current-password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className={inputClass}
-                        required
-                      />
-                    </div>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="new-password"
-                        className="mb-1.5 block text-sm font-medium"
-                      >
-                        {user.hasPassword ? "New password" : "Password"}
-                      </label>
-                      <input
-                        id="new-password"
-                        type="password"
-                        autoComplete="new-password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className={inputClass}
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="confirm-password"
-                        className="mb-1.5 block text-sm font-medium"
-                      >
-                        Confirm password
-                      </label>
-                      <input
-                        id="confirm-password"
-                        type="password"
-                        autoComplete="new-password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={inputClass}
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                  </div>
-                  <FieldMessage error={passwordError} />
-                  <button
-                    type="submit"
-                    disabled={passwordLoading}
-                    className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
-                  >
-                    {passwordLoading
-                      ? "Saving..."
-                      : user.hasPassword
-                        ? "Update password"
-                        : "Create password"}
-                  </button>
-                </form>
-              </section>
+              </div>
             )}
 
             {tab === "connected" && (

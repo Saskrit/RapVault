@@ -32,8 +32,13 @@ type LyricRichEditorProps = {
   spellCheck?: boolean;
   onSpellCheckChange?: (enabled: boolean) => void;
   toolbarStats?: ReactNode;
-  /** Hex color for this writer's new text. Collaborators use blue; owner leaves unset. */
+  /**
+   * Hex color for this writer's new text.
+   * Collaborators pick one; owners leave unset (default theme color).
+   */
   writerColor?: string | null;
+  /** When true, collaborator can pick one writing color from the palette. */
+  canChooseWriterColor?: boolean;
   /** Show a small “your color” hint when collaborating */
   writerLabel?: string | null;
 };
@@ -48,8 +53,22 @@ const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28] as const;
 const DEFAULT_FONT_SIZE = 16;
 const FONT_SIZE_KEY = "rapvault-lyric-font-size";
 
-/** Invited collaborators write in this blue */
+/** Default collaborator write color (first palette option). */
 export const COLLAB_WRITER_COLOR = "#3b82f6";
+
+/** Colors collaborators may choose (one at a time). Owners stay on default. */
+export const COLLAB_COLOR_OPTIONS = [
+  "#3b82f6", // blue
+  "#22c55e", // green
+  "#eab308", // amber
+  "#f97316", // orange
+  "#ef4444", // red
+  "#ec4899", // pink
+  "#a855f7", // purple
+  "#14b8a6", // teal
+] as const;
+
+const COLLAB_COLOR_KEY = "rapvault-collab-write-color";
 
 function escapeHtml(text: string) {
   return text
@@ -95,34 +114,75 @@ function parseCssColorToRgb(input: string): { r: number; g: number; b: number } 
   return { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) };
 }
 
-function isCollabBlueColor(color: string) {
-  const rgb = parseCssColorToRgb(color);
-  if (!rgb) return false;
-  const target = parseCssColorToRgb(COLLAB_WRITER_COLOR)!;
+function rgbToHex({ r, g, b }: { r: number; g: number; b: number }) {
+  return `#${[r, g, b]
+    .map((n) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function colorsClose(a: string, b: string, tolerance = 30) {
+  const left = parseCssColorToRgb(a);
+  const right = parseCssColorToRgb(b);
+  if (!left || !right) return false;
   return (
-    Math.abs(rgb.r - target.r) <= 25 &&
-    Math.abs(rgb.g - target.g) <= 25 &&
-    Math.abs(rgb.b - target.b) <= 25
+    Math.abs(left.r - right.r) <= tolerance &&
+    Math.abs(left.g - right.g) <= tolerance &&
+    Math.abs(left.b - right.b) <= tolerance
   );
 }
 
-/** Keep collaborator blue visible for every viewer (owner + invitee). */
+function matchCollabPaletteColor(color: string): string | null {
+  const match = COLLAB_COLOR_OPTIONS.find((option) =>
+    colorsClose(color, option),
+  );
+  return match ?? null;
+}
+
+function isCollabPaletteColor(color: string) {
+  return matchCollabPaletteColor(color) !== null;
+}
+
+function loadSavedCollabColor(): string {
+  const saved = preferenceStorageGet(COLLAB_COLOR_KEY);
+  if (saved && isCollabPaletteColor(saved)) {
+    return matchCollabPaletteColor(saved)!;
+  }
+  return COLLAB_WRITER_COLOR;
+}
+
+/** Keep collaborator-colored text visible for every viewer (owner + invitee). */
 function preserveCollabColors(root: HTMLElement) {
-  root.querySelectorAll("font[color], span[style*='color']").forEach((node) => {
-    const el = node as HTMLElement;
-    const raw =
-      el.getAttribute("color") ||
-      el.style.color ||
-      getComputedStyle(el).color;
-    if (!isCollabBlueColor(raw) && el.getAttribute("data-writer") !== "collab") {
-      return;
-    }
-    el.setAttribute("data-writer", "collab");
-    el.style.color = COLLAB_WRITER_COLOR;
-    if (el.tagName === "FONT") {
-      el.removeAttribute("color");
-    }
-  });
+  root
+    .querySelectorAll("font[color], span[style*='color'], [data-writer='collab']")
+    .forEach((node) => {
+      const el = node as HTMLElement;
+      if (el.getAttribute("data-writer") === "owner") return;
+
+      const raw =
+        el.style.color ||
+        el.getAttribute("color") ||
+        (el.getAttribute("data-writer") === "collab"
+          ? COLLAB_WRITER_COLOR
+          : "");
+      if (!raw) return;
+
+      const marked = el.getAttribute("data-writer") === "collab";
+      const palette = matchCollabPaletteColor(raw);
+      if (!marked && !palette) return;
+
+      const hex =
+        palette ||
+        (() => {
+          const rgb = parseCssColorToRgb(raw);
+          return rgb ? rgbToHex(rgb) : COLLAB_WRITER_COLOR;
+        })();
+
+      el.setAttribute("data-writer", "collab");
+      el.style.color = hex;
+      if (el.tagName === "FONT") {
+        el.removeAttribute("color");
+      }
+    });
 }
 
 function saveSelection(container: HTMLElement) {
@@ -233,18 +293,23 @@ export function LyricRichEditor({
   onSpellCheckChange,
   toolbarStats,
   writerColor = null,
+  canChooseWriterColor = false,
   writerLabel = null,
 }: LyricRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastHtml = useRef("");
   const emittedValue = useRef<string | null>(null);
-  const writerColorRef = useRef(writerColor);
+  const [pickedColor, setPickedColor] = useState(COLLAB_WRITER_COLOR);
+  const activeWriterColor = canChooseWriterColor
+    ? pickedColor
+    : writerColor;
+  const writerColorRef = useRef(activeWriterColor);
   const [showSyllables, setShowSyllables] = useState(false);
   const [showRhymes, setShowRhymes] = useState(false);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
 
-  writerColorRef.current = writerColor;
+  writerColorRef.current = activeWriterColor;
 
   function applyWriterColor() {
     const color = writerColorRef.current?.trim();
@@ -296,14 +361,25 @@ export function LyricRichEditor({
     if (FONT_SIZES.includes(savedSize as (typeof FONT_SIZES)[number])) {
       setFontSize(savedSize);
     }
-  }, []);
+
+    if (canChooseWriterColor) {
+      setPickedColor(loadSavedCollabColor());
+    }
+  }, [canChooseWriterColor]);
 
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || document.activeElement !== editor) return;
     applyWriterColor();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- apply when color changes while focused
-  }, [writerColor]);
+  }, [activeWriterColor]);
+
+  function chooseWriterColor(color: string) {
+    if (!canChooseWriterColor) return;
+    const next = matchCollabPaletteColor(color) || COLLAB_WRITER_COLOR;
+    setPickedColor(next);
+    preferenceStorageSet(COLLAB_COLOR_KEY, next);
+  }
 
   function changeFontSize(direction: -1 | 1) {
     setFontSize((current) => {
@@ -532,12 +608,46 @@ export function LyricRichEditor({
             </div>
           )}
 
-          {(writerColor || writerLabel) && (
+          {canChooseWriterColor && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
+              <span className="hidden text-[11px] text-muted sm:inline">
+                Your color
+              </span>
+              <div
+                className="flex items-center gap-1"
+                role="radiogroup"
+                aria-label="Collaborator writing color"
+              >
+                {COLLAB_COLOR_OPTIONS.map((color) => {
+                  const selected = colorsClose(pickedColor, color);
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      title={`Write in ${color}`}
+                      aria-label={`Write in ${color}`}
+                      onClick={() => chooseWriterColor(color)}
+                      className={`h-5 w-5 rounded-full border transition active:scale-95 ${
+                        selected
+                          ? "border-foreground ring-2 ring-foreground/25 ring-offset-1 ring-offset-background"
+                          : "border-border/80 hover:scale-110"
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {!canChooseWriterColor && (activeWriterColor || writerLabel) && (
             <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 text-[11px] text-muted">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{
-                  backgroundColor: writerColor || "var(--foreground)",
+                  backgroundColor: activeWriterColor || "var(--foreground)",
                 }}
               />
               <span className="hidden sm:inline">
