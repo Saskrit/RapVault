@@ -1,3 +1,6 @@
+import type { SocialLinks } from "@/lib/social-links";
+import { pickSocialLinks } from "@/lib/social-links";
+
 type UserLike = {
   id: string;
   email: string;
@@ -7,6 +10,11 @@ type UserLike = {
   bio: string;
   avatarUrl?: string | null;
   profilePublic: boolean;
+  youtubeUrl?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  spotifyUrl?: string | null;
+  appleMusicUrl?: string | null;
   recoveryEmail: string | null;
   password?: string | null;
   googleId?: string | null;
@@ -14,6 +22,7 @@ type UserLike = {
 };
 
 export function toPublicUser(user: UserLike) {
+  const social = pickSocialLinks(user as Partial<SocialLinks>);
   return {
     id: user.id,
     email: user.email,
@@ -23,6 +32,7 @@ export function toPublicUser(user: UserLike) {
     bio: user.bio,
     avatarUrl: user.avatarUrl || null,
     profilePublic: user.profilePublic,
+    ...social,
     recoveryEmail: user.recoveryEmail,
     hasPassword: Boolean(user.password),
     hasGoogle: Boolean(user.googleId),

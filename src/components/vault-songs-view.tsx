@@ -52,10 +52,10 @@ const VISIBILITY_FILTERS: { id: VisibilityFilter; label: string }[] = [
 ];
 
 function filterChipClass(active: boolean) {
-  return `rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+  return `rounded-md px-2.5 py-1 text-[11px] font-semibold tracking-wide transition ${
     active
-      ? "bg-accent/15 text-accent"
-      : "text-muted hover:bg-background hover:text-foreground"
+      ? "bg-foreground text-background shadow-sm"
+      : "text-muted hover:text-foreground"
   }`;
 }
 
@@ -336,93 +336,93 @@ export function VaultSongsView() {
   function renderSongList(className = "") {
     return (
       <section className={`flex min-h-0 min-w-0 flex-1 flex-col bg-background ${className}`}>
-        <div className="shrink-0 border-b border-border bg-card px-4 py-4 lg:px-6">
-          <div className="flex items-start justify-between gap-4">
+        <div className="shrink-0 border-b border-border bg-card px-4 py-3 lg:px-6">
+          <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="type-eyebrow text-muted">
-                {showTrash ? "Trash" : "Collection"}
-              </p>
-              <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                {folderLabel}
-              </h1>
-              {selectedFolder && !showTrash && (
-                <button
-                  type="button"
-                  onClick={() => setShowAddSongsModal(true)}
-                  className="mt-3 flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
-                >
-                  <FolderInput className="h-4 w-4 shrink-0" />
-                  <span>Add songs</span>
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                  {folderLabel}
+                </h1>
+                {selectedFolder && !showTrash && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSongsModal(true)}
+                    className="flex h-7 items-center gap-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                  >
+                    <FolderInput className="h-3.5 w-3.5 shrink-0" />
+                    <span>Add songs</span>
+                  </button>
+                )}
+              </div>
+
+              {!showTrash && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <div
+                    className="inline-flex items-center rounded-lg bg-background p-0.5 ring-1 ring-border"
+                    role="group"
+                    aria-label="Filter by status"
+                  >
+                    {STATUS_FILTERS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setStatusFilter(item.id)}
+                        className={filterChipClass(statusFilter === item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div
+                    className="inline-flex items-center rounded-lg bg-background p-0.5 ring-1 ring-border"
+                    role="group"
+                    aria-label="Filter by visibility"
+                  >
+                    {VISIBILITY_FILTERS.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setVisibilityFilter(item.id)}
+                        className={filterChipClass(visibilityFilter === item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  {filtersActive && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-muted transition hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                      Clear
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <p className="text-sm font-medium tabular-nums text-muted">
-                {filtersActive
-                  ? `${filteredSongs.length} of ${songs.length}`
-                  : `${songs.length} song${songs.length !== 1 ? "s" : ""}`}
-              </p>
-              {!showTrash && (
+            {!showTrash && (
+              <div className="flex shrink-0 items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  Total Songs
+                  <span className="ml-1.5 tabular-nums text-foreground">
+                    {filtersActive ? filteredSongs.length : songs.length}
+                  </span>
+                </p>
                 <button
                   type="button"
                   onClick={handleNewSong}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white transition hover:bg-accent/90 active:scale-95"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-white transition hover:bg-accent/90 active:scale-95"
                   aria-label="New song"
                   title="New song"
                 >
-                  <Plus className="h-5 w-5" />
+                  <Plus className="h-3.5 w-3.5" />
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-
-          {!showTrash && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div
-                className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-background p-0.5"
-                role="group"
-                aria-label="Filter by status"
-              >
-                {STATUS_FILTERS.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setStatusFilter(item.id)}
-                    className={filterChipClass(statusFilter === item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div
-                className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-background p-0.5"
-                role="group"
-                aria-label="Filter by visibility"
-              >
-                {VISIBILITY_FILTERS.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setVisibilityFilter(item.id)}
-                    className={filterChipClass(visibilityFilter === item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              {filtersActive && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-muted transition hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5">

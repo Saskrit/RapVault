@@ -18,6 +18,11 @@ model User {
   bio               String    @default("")
   avatarUrl         String?
   profilePublic     Boolean   @default(true)
+  youtubeUrl        String    @default("")
+  facebookUrl       String    @default("")
+  instagramUrl      String    @default("")
+  spotifyUrl        String    @default("")
+  appleMusicUrl     String    @default("")
   recoveryEmail     String?   @unique
   resetToken        String?   @unique
   resetTokenExpires DateTime?

@@ -21,10 +21,16 @@ import {
   useState,
 } from "react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { AvatarCropModal } from "@/components/avatar-crop-modal";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
-import { prepareAvatarFile } from "@/lib/prepare-avatar";
+import {
+  emptySocialLinks,
+  pickSocialLinks,
+  SOCIAL_LINK_META,
+  type SocialLinks,
+} from "@/lib/social-links";
 
 type ProfileUser = {
   id: string;
@@ -35,6 +41,11 @@ type ProfileUser = {
   bio: string;
   avatarUrl: string | null;
   profilePublic: boolean;
+  youtubeUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  spotifyUrl?: string;
+  appleMusicUrl?: string;
   recoveryEmail: string | null;
   hasPassword: boolean;
   hasGoogle: boolean;
@@ -95,39 +106,59 @@ export function VaultSettingsView() {
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [banner, setBanner] = useState<{ type: "success" | "error"; text: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   const [newEmail, setNewEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [emailSuccess, setEmailSuccess] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
 
   const [recoveryInput, setRecoveryInput] = useState("");
   const [recoveryPassword, setRecoveryPassword] = useState("");
   const [recoveryError, setRecoveryError] = useState("");
-  const [recoverySuccess, setRecoverySuccess] = useState("");
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [profilePublic, setProfilePublic] = useState(true);
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(emptySocialLinks());
   const [profileError, setProfileError] = useState("");
-  const [profileSuccess, setProfileSuccess] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(
+    null,
+  );
+  const [pendingRemoveAvatar, setPendingRemoveAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+
+  function showToast(type: "success" | "error", text: string) {
+    setToast({ type, text });
+  }
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingAvatarPreview) URL.revokeObjectURL(pendingAvatarPreview);
+    };
+  }, [pendingAvatarPreview]);
 
   const loadProfile = useCallback(async () => {
     const res = await fetch("/api/auth/me");
@@ -142,6 +173,7 @@ export function VaultSettingsView() {
     setUsername(data.user.username || "");
     setBio(data.user.bio || "");
     setProfilePublic(data.user.profilePublic !== false);
+    setSocialLinks(pickSocialLinks(data.user));
     setLoading(false);
   }, [router]);
 
@@ -151,7 +183,7 @@ export function VaultSettingsView() {
 
   useEffect(() => {
     if (searchParams.get("linked") === "1") {
-      setBanner({ type: "success", text: "Google account linked successfully." });
+      showToast("success", "Google account linked successfully.");
       setTab("connected");
       loadProfile();
       router.replace("/vault/settings");
@@ -160,64 +192,80 @@ export function VaultSettingsView() {
 
     const error = searchParams.get("error");
     if (error && GOOGLE_ERRORS[error]) {
-      setBanner({ type: "error", text: GOOGLE_ERRORS[error] });
+      showToast("error", GOOGLE_ERRORS[error]);
       setTab("connected");
       router.replace("/vault/settings");
     }
   }, [searchParams, router, loadProfile]);
 
-  async function handleAvatarChange(file: File | null) {
-    if (!file) return;
-    setAvatarError("");
-    setAvatarLoading(true);
-    try {
-      const prepared = await prepareAvatarFile(file);
-      const form = new FormData();
-      form.append("avatar", prepared);
-      const res = await fetch("/api/auth/avatar", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setAvatarError(data.error || "Could not upload photo.");
-        return;
-      }
-      if (data.user) setUser(data.user);
-      setBanner({ type: "success", text: "Profile photo updated." });
-    } catch {
-      setAvatarError("Network error. Try again.");
-    } finally {
-      setAvatarLoading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
+  function clearPendingAvatarPreview() {
+    setPendingAvatarPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   }
 
-  async function handleRemoveAvatar() {
+  function handleAvatarPick(file: File | null) {
+    if (!file) return;
     setAvatarError("");
-    setAvatarLoading(true);
-    try {
-      const res = await fetch("/api/auth/avatar", { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) {
-        setAvatarError(data.error || "Could not remove photo.");
-        return;
-      }
-      if (data.user) setUser(data.user);
-      setBanner({ type: "success", text: "Profile photo removed." });
-    } catch {
-      setAvatarError("Network error. Try again.");
-    } finally {
-      setAvatarLoading(false);
-    }
+    setCropFile(file);
+    setCropOpen(true);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function handleCropCancel() {
+    setCropOpen(false);
+    setCropFile(null);
+  }
+
+  function handleCropConfirm(cropped: File) {
+    setCropOpen(false);
+    setCropFile(null);
+    clearPendingAvatarPreview();
+    setPendingAvatarFile(cropped);
+    setPendingAvatarPreview(URL.createObjectURL(cropped));
+    setPendingRemoveAvatar(false);
+    setAvatarError("");
+  }
+
+  function handleRemoveAvatar() {
+    setAvatarError("");
+    clearPendingAvatarPreview();
+    setPendingAvatarFile(null);
+    setPendingRemoveAvatar(true);
   }
 
   async function handleProfileSubmit(event: FormEvent) {
     event.preventDefault();
     setProfileError("");
-    setProfileSuccess("");
+    setAvatarError("");
     setProfileLoading(true);
     try {
+      let nextUser = user;
+
+      if (pendingRemoveAvatar) {
+        const res = await fetch("/api/auth/avatar", { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setAvatarError(data.error || "Could not remove photo.");
+          return;
+        }
+        if (data.user) nextUser = data.user;
+      } else if (pendingAvatarFile) {
+        const form = new FormData();
+        form.append("avatar", pendingAvatarFile);
+        const res = await fetch("/api/auth/avatar", {
+          method: "POST",
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setAvatarError(data.error || "Could not upload photo.");
+          return;
+        }
+        if (data.user) nextUser = data.user;
+      }
+
       const res = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -226,16 +274,34 @@ export function VaultSettingsView() {
           username,
           bio,
           profilePublic,
+          ...socialLinks,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
         setProfileError(data.error || "Could not update profile.");
+        if (nextUser) setUser(nextUser);
         return;
       }
-      setProfileSuccess("Profile saved.");
-      if (data.user) setUser(data.user);
-      else await loadProfile();
+
+      clearPendingAvatarPreview();
+      setPendingAvatarFile(null);
+      setPendingRemoveAvatar(false);
+
+      if (data.user) {
+        setUser({
+          ...data.user,
+          avatarUrl:
+            data.user.avatarUrl ?? nextUser?.avatarUrl ?? user?.avatarUrl ?? null,
+        });
+        setSocialLinks(pickSocialLinks(data.user));
+      } else if (nextUser) {
+        setUser(nextUser);
+      } else {
+        await loadProfile();
+      }
+
+      showToast("success", "Profile saved.");
     } catch {
       setProfileError("Network error. Try again.");
     } finally {
@@ -246,7 +312,6 @@ export function VaultSettingsView() {
   async function handlePasswordSubmit(event: FormEvent) {
     event.preventDefault();
     setPasswordError("");
-    setPasswordSuccess("");
 
     if (newPassword.length < 6) {
       setPasswordError("Password must be at least 6 characters.");
@@ -282,7 +347,8 @@ export function VaultSettingsView() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordSuccess(
+      showToast(
+        "success",
         user?.hasPassword ? "Password updated." : "Password created.",
       );
       await loadProfile();
@@ -296,7 +362,6 @@ export function VaultSettingsView() {
   async function handleEmailSubmit(event: FormEvent) {
     event.preventDefault();
     setEmailError("");
-    setEmailSuccess("");
     setEmailLoading(true);
 
     try {
@@ -315,7 +380,7 @@ export function VaultSettingsView() {
       }
       setNewEmail("");
       setEmailPassword("");
-      setEmailSuccess("Sign-in email updated.");
+      showToast("success", "Sign-in email updated.");
       if (data.user) setUser({ ...data.user, avatarUrl: data.user.avatarUrl ?? user?.avatarUrl ?? null });
       else await loadProfile();
     } catch {
@@ -328,7 +393,6 @@ export function VaultSettingsView() {
   async function handleRecoverySubmit(event: FormEvent) {
     event.preventDefault();
     setRecoveryError("");
-    setRecoverySuccess("");
     setRecoveryLoading(true);
 
     try {
@@ -346,7 +410,8 @@ export function VaultSettingsView() {
         return;
       }
       setRecoveryPassword("");
-      setRecoverySuccess(
+      showToast(
+        "success",
         recoveryInput.trim() ? "Recovery email saved." : "Recovery email removed.",
       );
       if (data.user) {
@@ -367,7 +432,6 @@ export function VaultSettingsView() {
 
   async function handleClearRecovery() {
     setRecoveryError("");
-    setRecoverySuccess("");
     setRecoveryLoading(true);
     try {
       const res = await fetch("/api/auth/recovery-email", {
@@ -385,7 +449,7 @@ export function VaultSettingsView() {
       }
       setRecoveryPassword("");
       setRecoveryInput("");
-      setRecoverySuccess("Recovery email removed.");
+      showToast("success", "Recovery email removed.");
       if (data.user) {
         setUser({
           ...data.user,
@@ -412,16 +476,15 @@ export function VaultSettingsView() {
   if (!user) return null;
 
   const display =
-    user.displayName || user.name || user.email.split("@")[0] || "Artist";
-  const memberSince = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString(undefined, {
-        month: "long",
-        year: "numeric",
-      })
-    : null;
+    displayName || user.displayName || user.name || user.email.split("@")[0] || "Artist";
+  const avatarSrc = pendingRemoveAvatar
+    ? null
+    : pendingAvatarPreview || user.avatarUrl;
+  const hasAvatar = Boolean(avatarSrc);
+  const photoDirty = Boolean(pendingAvatarFile) || pendingRemoveAvatar;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
       <VaultHeader>
         <Link
           href="/vault"
@@ -433,40 +496,43 @@ export function VaultSettingsView() {
         </Link>
       </VaultHeader>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-20 sm:px-6 lg:py-10">
-        <div className="mb-8">
-          <p className="type-eyebrow text-muted">
-            Account
-          </p>
-          <h1 className="type-h1 mt-2">
+      {toast && (
+        <div
+          className={`pointer-events-none fixed left-1/2 top-[max(5rem,env(safe-area-inset-top))] z-[90] w-[min(24rem,calc(100vw-1.5rem))] -translate-x-1/2 rounded-2xl border px-4 py-3 text-sm shadow-lg ${
+            toast.type === "success"
+              ? "border-emerald-500/30 bg-card text-emerald-700 dark:text-emerald-400"
+              : "border-red-500/30 bg-card text-red-400"
+          }`}
+          role="status"
+        >
+          <div className="flex items-center gap-2">
+            {toast.type === "success" ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+            ) : (
+              <Shield className="h-4 w-4 shrink-0" />
+            )}
+            <span>{toast.text}</span>
+          </div>
+        </div>
+      )}
+
+      <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
+        <div className="mb-4 shrink-0 sm:mb-5">
+          <p className="type-eyebrow text-muted">Account</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
             Profile &amp; settings
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-muted sm:text-base">
-            Your public artist identity, sign-in details, and connected accounts.
-          </p>
         </div>
 
-        {banner && (
-          <div
-            className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
-              banner.type === "success"
-                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                : "border-red-500/25 bg-red-500/10 text-red-400"
-            }`}
-          >
-            {banner.text}
-          </div>
-        )}
-
-        <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-8">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6">
           {/* Side profile card */}
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto lg:overflow-visible">
             <div className="overflow-hidden rounded-3xl border border-border bg-card">
-              <div className="h-20 bg-sidebar" />
-              <div className="-mt-12 flex flex-col items-center px-5 pb-6 text-center">
+              <div className="h-14 bg-sidebar" />
+              <div className="-mt-10 flex flex-col items-center px-4 pb-4 text-center">
                 <div className="relative">
                   <UserAvatar
-                    src={user.avatarUrl}
+                    src={avatarSrc}
                     name={display}
                     size="xl"
                     className="ring-4 ring-card"
@@ -474,7 +540,7 @@ export function VaultSettingsView() {
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    disabled={avatarLoading}
+                    disabled={profileLoading}
                     className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
                     aria-label="Upload profile photo"
                     title="Upload photo"
@@ -487,54 +553,52 @@ export function VaultSettingsView() {
                     accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
                     className="hidden"
                     onChange={(e) =>
-                      handleAvatarChange(e.target.files?.[0] ?? null)
+                      handleAvatarPick(e.target.files?.[0] ?? null)
                     }
                   />
                 </div>
 
-                <h2 className="mt-4 truncate text-lg font-semibold tracking-tight">
+                <h2 className="mt-3 truncate text-base font-semibold tracking-tight">
                   {display}
                 </h2>
                 <p className="mt-0.5 text-sm text-muted">
-                  {user.username ? `@${user.username}` : user.email}
+                  {username ? `@${username}` : user.email}
                 </p>
-                {user.bio && (
-                  <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted">
-                    {user.bio}
-                  </p>
-                )}
 
-                <div className="mt-4 flex w-full flex-col gap-2">
+                <div className="mt-3 flex w-full flex-col gap-1.5">
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    disabled={avatarLoading}
-                    className="min-h-10 rounded-xl border border-border text-sm font-medium transition hover:border-foreground/25 hover:bg-background disabled:opacity-50"
+                    disabled={profileLoading}
+                    className="min-h-9 rounded-xl border border-border text-sm font-medium transition hover:border-foreground/25 hover:bg-background disabled:opacity-50"
                   >
-                    {avatarLoading ? "Uploading..." : "Change photo"}
+                    Change photo
                   </button>
-                  {user.avatarUrl && (
+                  {hasAvatar && (
                     <button
                       type="button"
                       onClick={handleRemoveAvatar}
-                      disabled={avatarLoading}
-                      className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-muted transition hover:text-red-400 disabled:opacity-50"
+                      disabled={profileLoading}
+                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-muted transition hover:text-red-400 disabled:opacity-50"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Remove photo
                     </button>
                   )}
                 </div>
+                {photoDirty && (
+                  <p className="mt-2 text-xs text-accent">
+                    Photo changes save with profile
+                  </p>
+                )}
                 {avatarError && (
                   <p className="mt-2 text-xs text-red-400">{avatarError}</p>
                 )}
-                <p className="mt-3 text-xs text-muted">
-                  JPG, PNG, or WebP · max 5MB
-                </p>
+                <p className="mt-2 text-xs text-muted">JPG, PNG, or WebP</p>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-border bg-card p-2">
+            <div className="rounded-3xl border border-border bg-card p-1.5">
               <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
                 {TABS.map((item) => {
                   const Icon = item.icon;
@@ -544,7 +608,7 @@ export function VaultSettingsView() {
                       key={item.id}
                       type="button"
                       onClick={() => setTab(item.id)}
-                      className={`flex min-h-11 shrink-0 items-center gap-2.5 rounded-2xl px-3.5 text-sm font-medium transition ${
+                      className={`flex min-h-10 shrink-0 items-center gap-2.5 rounded-2xl px-3 text-sm font-medium transition ${
                         active
                           ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                           : "text-muted hover:bg-background/70 hover:text-foreground"
@@ -557,36 +621,14 @@ export function VaultSettingsView() {
                 })}
               </nav>
             </div>
-
-            <div className="hidden rounded-3xl border border-border bg-card px-4 py-3 text-xs text-muted lg:block">
-              <p>
-                <span className="font-medium text-foreground">Email</span>
-                <br />
-                {user.email}
-              </p>
-              {memberSince && (
-                <p className="mt-3">
-                  <span className="font-medium text-foreground">Joined</span>
-                  <br />
-                  {memberSince}
-                </p>
-              )}
-              {user.username && (
-                <Link
-                  href={`/vault/artists/${user.username}`}
-                  className="mt-4 inline-flex font-medium text-accent hover:underline"
-                >
-                  View public profile
-                </Link>
-              )}
-            </div>
           </aside>
 
           {/* Panels */}
-          <div className="min-w-0 space-y-5">
+          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-4">
+            <div className="space-y-4">
             {tab === "profile" && (
               <section className="rounded-3xl border border-border bg-card">
-                <div className="border-b border-border px-5 py-5 sm:px-7">
+                <div className="border-b border-border px-5 py-4 sm:px-6">
                   <h3 className="text-lg font-semibold tracking-tight">
                     Artist profile
                   </h3>
@@ -596,9 +638,9 @@ export function VaultSettingsView() {
                 </div>
                 <form
                   onSubmit={handleProfileSubmit}
-                  className="space-y-5 px-5 py-6 sm:px-7"
+                  className="space-y-4 px-5 py-5 sm:px-6"
                 >
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label
                         htmlFor="display-name"
@@ -656,11 +698,11 @@ export function VaultSettingsView() {
                       </label>
                       <textarea
                         id="bio"
-                        rows={4}
+                        rows={2}
                         maxLength={280}
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
-                        className={`${inputClass} min-h-[7rem] resize-y`}
+                        className={`${inputClass} min-h-[4.5rem] resize-y`}
                         placeholder="Hooks, freestyles, unfinished verses…"
                       />
                       <p className="mt-1.5 text-right text-xs text-muted">
@@ -669,7 +711,7 @@ export function VaultSettingsView() {
                     </div>
                   </div>
 
-                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background px-4 py-3.5">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background px-4 py-3">
                     <input
                       type="checkbox"
                       checked={profilePublic}
@@ -686,7 +728,41 @@ export function VaultSettingsView() {
                     </span>
                   </label>
 
-                  <FieldMessage error={profileError} success={profileSuccess} />
+                  <div className="space-y-3 rounded-2xl border border-border bg-background px-4 py-4">
+                    <div>
+                      <p className="text-sm font-medium">Social & streaming</p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        Optional links shown on your public artist profile.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {SOCIAL_LINK_META.map((item) => (
+                        <div key={item.key}>
+                          <label
+                            htmlFor={item.key}
+                            className="mb-1.5 block text-xs font-medium text-muted"
+                          >
+                            {item.label}
+                          </label>
+                          <input
+                            id={item.key}
+                            type="url"
+                            value={socialLinks[item.key]}
+                            onChange={(e) =>
+                              setSocialLinks((prev) => ({
+                                ...prev,
+                                [item.key]: e.target.value,
+                              }))
+                            }
+                            placeholder={item.placeholder}
+                            className={inputClass}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <FieldMessage error={profileError} />
 
                   <div className="flex flex-wrap gap-2 pt-1">
                     <button
@@ -764,7 +840,7 @@ export function VaultSettingsView() {
                         />
                       </div>
                     )}
-                    <FieldMessage error={emailError} success={emailSuccess} />
+                    <FieldMessage error={emailError} />
                     <button
                       type="submit"
                       disabled={emailLoading}
@@ -828,10 +904,7 @@ export function VaultSettingsView() {
                         />
                       </div>
                     )}
-                    <FieldMessage
-                      error={recoveryError}
-                      success={recoverySuccess}
-                    />
+                    <FieldMessage error={recoveryError} />
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="submit"
@@ -935,10 +1008,7 @@ export function VaultSettingsView() {
                       />
                     </div>
                   </div>
-                  <FieldMessage
-                    error={passwordError}
-                    success={passwordSuccess}
-                  />
+                  <FieldMessage error={passwordError} />
                   <button
                     type="submit"
                     disabled={passwordLoading}
@@ -986,9 +1056,17 @@ export function VaultSettingsView() {
                 </div>
               </section>
             )}
+            </div>
           </div>
         </div>
       </main>
+
+      <AvatarCropModal
+        open={cropOpen}
+        file={cropFile}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }

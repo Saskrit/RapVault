@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
+import { ArtistSocialLinks } from "@/components/artist-social-links";
 import { VaultShell } from "@/components/vault-shell";
 import type { ConnectionRelation } from "@/types";
 
@@ -26,6 +27,11 @@ type ArtistProfile = {
   displayName: string;
   bio: string;
   avatarUrl: string | null;
+  youtubeUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  spotifyUrl?: string;
+  appleMusicUrl?: string;
   isSelf: boolean;
   connectionRelation: ConnectionRelation;
   connectionId: string | null;
@@ -351,6 +357,16 @@ export function ArtistProfileView({ username }: { username: string }) {
                         {artist.bio}
                       </p>
                     )}
+                    <ArtistSocialLinks
+                      className="mt-3"
+                      links={{
+                        youtubeUrl: artist.youtubeUrl,
+                        facebookUrl: artist.facebookUrl,
+                        instagramUrl: artist.instagramUrl,
+                        spotifyUrl: artist.spotifyUrl,
+                        appleMusicUrl: artist.appleMusicUrl,
+                      }}
+                    />
                   </div>
                 </div>
 

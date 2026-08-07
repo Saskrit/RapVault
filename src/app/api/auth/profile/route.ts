@@ -3,6 +3,11 @@ import { createSession, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toPublicUser } from "@/lib/public-user";
 import {
+  normalizeSocialUrl,
+  SOCIAL_LINK_KEYS,
+  type SocialLinkKey,
+} from "@/lib/social-links";
+import {
   isValidUsername,
   normalizeDisplayName,
   normalizeUsername,
@@ -21,7 +26,7 @@ export async function PATCH(request: Request) {
       username?: string;
       bio?: string;
       profilePublic?: boolean;
-    } = {};
+    } & Partial<Record<SocialLinkKey, string>> = {};
 
     if (body.displayName !== undefined) {
       const displayName = normalizeDisplayName(body.displayName);
@@ -65,6 +70,19 @@ export async function PATCH(request: Request) {
 
     if (body.profilePublic !== undefined) {
       data.profilePublic = Boolean(body.profilePublic);
+    }
+
+    for (const key of SOCIAL_LINK_KEYS) {
+      if (body[key] !== undefined) {
+        const normalized = normalizeSocialUrl(body[key]);
+        if (normalized === null) {
+          return NextResponse.json(
+            { error: `Enter a valid ${key.replace("Url", "")} URL` },
+            { status: 400 },
+          );
+        }
+        data[key] = normalized;
+      }
     }
 
     if (Object.keys(data).length === 0) {
