@@ -1,13 +1,12 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultSongsView } from "@/components/vault-songs-view";
-import { getSession } from "@/lib/auth";
 
-export default async function VaultPage() {
-  const user = await getSession();
-  if (!user) redirect("/login");
-
+/**
+ * Auth is enforced by middleware. Keeping this page free of server session
+ * fetches makes it easier for the service worker to cache and reopen offline.
+ */
+export default function VaultPage() {
   return (
     <Suspense fallback={<RapVaultLoading fullScreen label="Loading..." />}>
       <VaultSongsView />

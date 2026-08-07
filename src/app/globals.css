@@ -330,6 +330,41 @@ textarea {
   animation: hero-auth-mode-fade 0.35s ease-in-out both;
 }
 
+@keyframes hero-type-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.hero-type-caret {
+  animation: hero-type-caret 1s steps(1, end) infinite;
+}
+
+@keyframes hero-beat-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.hero-beat-bar {
+  animation: hero-beat-bar 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-type-caret,
+  .hero-beat-bar {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-auth-enter,
   .hero-auth-exit,

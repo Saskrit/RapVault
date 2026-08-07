@@ -45,10 +45,10 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
   }
 
   return (
-    <div className="hero-auth-mode flex h-full min-h-0 w-full flex-col justify-center gap-4 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">
-      <form onSubmit={handleSubmit} className="space-y-3.5">
+    <div className="hero-auth-mode flex h-full min-h-0 w-full flex-col justify-center gap-4 overflow-y-auto overscroll-contain px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
+      <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
         <div>
-          <label className="mb-1 block text-sm text-muted">Email</label>
+          <label className="mb-1.5 block text-sm text-muted">Email</label>
           <input
             type="email"
             required
@@ -60,7 +60,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         </div>
 
         <div>
-          <div className="mb-1 flex items-center justify-between">
+          <div className="mb-1.5 flex items-center justify-between">
             <label className="text-sm text-muted">Password</label>
             {mode === "login" && (
               <Link
@@ -101,7 +101,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         </button>
       </form>
 
-      <div className="relative">
+      <div className="relative py-0.5">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
@@ -115,7 +115,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         className="min-h-11 gap-2 rounded-xl px-3 py-2.5 text-sm"
       />
 
-      <p className="text-center text-sm text-muted">
+      <p className="pt-0.5 text-center text-sm text-muted">
         {mode === "login" ? (
           <>
             New here?{" "}
