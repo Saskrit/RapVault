@@ -24,6 +24,7 @@ export class GoogleLinkError extends Error {
 export async function linkGoogleToUser(userId: string, profile: GoogleUserInfo) {
   const googleId = profile.sub;
   const email = profile.email.toLowerCase().trim();
+  const picture = profile.picture?.trim() || null;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new GoogleLinkError("USER_NOT_FOUND");
@@ -45,6 +46,8 @@ export async function linkGoogleToUser(userId: string, profile: GoogleUserInfo) 
       name: user.name ?? profile.name?.trim() ?? null,
       displayName:
         user.displayName ?? profile.name?.trim() ?? user.name ?? null,
+      // Only fill avatar from Google when the user has none yet.
+      ...(user.avatarUrl || !picture ? {} : { avatarUrl: picture }),
     },
   });
 }
@@ -53,6 +56,7 @@ export async function findOrCreateGoogleUser(profile: GoogleUserInfo) {
   const email = profile.email.toLowerCase().trim();
   const googleId = profile.sub;
   const name = profile.name?.trim() || null;
+  const picture = profile.picture?.trim() || null;
 
   let user = await prisma.user.findUnique({ where: { googleId } });
 
@@ -71,6 +75,9 @@ export async function findOrCreateGoogleUser(profile: GoogleUserInfo) {
           displayName:
             existingByEmail.displayName ?? name ?? existingByEmail.name,
           username,
+          ...(existingByEmail.avatarUrl || !picture
+            ? {}
+            : { avatarUrl: picture }),
         },
       });
     } else {
@@ -84,6 +91,7 @@ export async function findOrCreateGoogleUser(profile: GoogleUserInfo) {
           name,
           displayName: name || email.split("@")[0] || "Artist",
           username,
+          avatarUrl: picture,
         },
       });
       await seedDefaultFolders(user.id);
