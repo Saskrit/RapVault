@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -229,19 +229,6 @@ export function VaultShell({
         >
           <Menu className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className={`${iconBtn} hidden lg:flex`}
-          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-        >
-          {sidebarOpen ? (
-            <PanelLeftClose className="h-4 w-4" />
-          ) : (
-            <PanelLeftOpen className="h-4 w-4" />
-          )}
-        </button>
       </VaultHeader>
 
       <div className="hidden min-h-0 flex-1 lg:flex">
@@ -252,10 +239,17 @@ export function VaultShell({
         >
           {sidebarOpen ? (
             <div className="flex h-full min-w-60 flex-col xl:min-w-72">
-              <VaultFoldersPanel {...folderPanelProps} />
+              <VaultFoldersPanel
+                {...folderPanelProps}
+                onToggleCollapse={toggleSidebar}
+              />
             </div>
           ) : (
-            <VaultFoldersPanel {...folderPanelProps} collapsed />
+            <VaultFoldersPanel
+              {...folderPanelProps}
+              collapsed
+              onToggleCollapse={toggleSidebar}
+            />
           )}
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

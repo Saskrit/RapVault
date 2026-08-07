@@ -317,20 +317,18 @@ export function ArtistProfileView({ username }: { username: string }) {
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Header */}
             <section className="shrink-0 border-b border-border bg-background">
-              <div className="relative">
-                <div className="h-36 w-full overflow-hidden bg-sidebar sm:h-44 lg:h-52">
-                  {artist.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={artist.coverUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
+              <div className="relative h-36 overflow-hidden bg-sidebar sm:h-44 lg:h-48">
+                {artist.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={artist.coverUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
                 <Link
                   href="/vault/artists"
-                  className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/85 px-2.5 py-1 text-xs font-medium text-muted backdrop-blur transition hover:text-foreground sm:left-6 lg:left-8"
+                  className="absolute left-4 top-4 z-[1] inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/90 px-2.5 py-1.5 text-xs font-medium text-muted transition hover:text-foreground sm:left-6 lg:left-8"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Artists
@@ -338,27 +336,22 @@ export function ArtistProfileView({ username }: { username: string }) {
               </div>
 
               <div className="mx-auto w-full max-w-5xl px-4 pb-6 sm:px-6 lg:px-8">
-                <div className="-mt-12 flex items-end gap-4 sm:-mt-14 sm:gap-6">
+                <div className="relative z-[1] -mt-10 flex items-start gap-4 sm:-mt-12 sm:gap-5">
                   <UserAvatar
                     src={artist.avatarUrl}
                     name={artist.displayName}
                     size="xl"
-                    className="h-32 w-32 shrink-0 border-4 border-background text-4xl shadow-md sm:h-40 sm:w-40 sm:text-5xl"
+                    className="h-28 w-28 shrink-0 border-4 border-background text-3xl shadow-md sm:h-36 sm:w-36 sm:text-4xl"
                   />
 
-                  <div className="min-w-0 flex-1 pb-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        Artist
-                      </p>
-                      {artist.connectionRelation === "connected" && (
-                        <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
-                          Connected
-                        </span>
-                      )}
-                    </div>
+                  <div className="min-w-0 flex-1 pt-1.5 sm:pt-2">
+                    {artist.connectionRelation === "connected" && (
+                      <span className="mb-1.5 inline-flex rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
+                        Connected
+                      </span>
+                    )}
 
-                    <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl lg:leading-[1.15]">
+                    <h1 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl lg:leading-[1.15]">
                       {artist.displayName}
                     </h1>
                     <p className="mt-0.5 text-sm text-muted">@{artist.username}</p>

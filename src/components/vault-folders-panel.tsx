@@ -7,6 +7,8 @@ import {
   ListMusic,
   MessageSquare,
   Network,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Recycle,
   Star,
@@ -30,6 +32,7 @@ type VaultFoldersPanelProps = {
   showCollaborations?: boolean;
   trashCount?: number;
   collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onSelectAll: () => void;
   onSelectFavorites: () => void;
   onSelectTrash: () => void;
@@ -58,6 +61,7 @@ export function VaultFoldersPanel({
   showCollaborations = false,
   trashCount = 0,
   collapsed = false,
+  onToggleCollapse,
   onSelectAll,
   onSelectFavorites,
   onSelectTrash,
@@ -134,6 +138,20 @@ export function VaultFoldersPanel({
             <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
           )}
         </button>
+
+        <div className="my-1.5 h-px w-6 bg-border" />
+
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className={collapsedBtn}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        )}
 
         <div className="my-1.5 h-px w-6 bg-border" />
 
@@ -225,7 +243,7 @@ export function VaultFoldersPanel({
 
   return (
     <>
-      <div className="border-b border-border px-3 pb-3 py-4">
+      <div className="px-3 pb-3 py-4">
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
           Library
         </p>
@@ -271,6 +289,24 @@ export function VaultFoldersPanel({
           </button>
         </div>
       </div>
+
+      {onToggleCollapse ? (
+        <div className="relative flex items-center px-3 py-1">
+          <div className="h-px flex-1 bg-border" />
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="mx-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-sidebar text-muted transition hover:border-foreground/25 hover:bg-background hover:text-foreground"
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+          >
+            <PanelLeftClose className="h-3.5 w-3.5" />
+          </button>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+      ) : (
+        <div className="mx-3 h-px bg-border" />
+      )}
 
       <div className="border-b border-border px-3 py-3">
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
