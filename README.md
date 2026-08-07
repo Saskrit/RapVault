@@ -263,7 +263,11 @@ Copy from `.env.example`. **Never commit real secrets.**
 1. Import the repo at [vercel.com/new](https://vercel.com/new)
 2. Attach a **Neon** Postgres database (or set DB URLs manually)
 3. Add the environment variables above
-4. Deploy — build runs `prisma generate && prisma migrate deploy && next build`
+4. Deploy — build runs `prisma generate`, then `migrate deploy` **with retries** (handles Neon P1002 advisory-lock timeouts), then `next build`
+
+Make sure **`DIRECT_DATABASE_URL`** is set in Vercel to Neon’s **direct** (non-`-pooler`) connection string. Pooled URLs often cause migration lock timeouts.
+
+If a deploy still fails after retries, wait ~30s and redeploy, or check Neon for a stuck session holding Prisma’s advisory lock (`objid = 72707369`).
 
 Custom domain: add the matching Google OAuth redirect URI for that domain.
 
@@ -272,12 +276,13 @@ Custom domain: add the matching Google OAuth redirect URI for that domain.
 ## Scripts
 
 ```bash
-npm run dev          # Development server
-npm run build        # Migrate + production build
-npm run start        # Run production build locally
-npm run db:migrate   # Create / apply migrations (dev)
-npm run db:push      # Push schema without migration files
-npm run lint         # ESLint
+npm run dev               # Development server
+npm run build             # Generate + migrate (retry) + production build
+npm run start             # Run production build locally
+npm run db:migrate        # Create / apply migrations (dev)
+npm run db:migrate:deploy # Apply migrations with retries (CI/Vercel)
+npm run db:push           # Push schema without migration files
+npm run lint              # ESLint
 ```
 
 ---
