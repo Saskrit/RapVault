@@ -20,6 +20,7 @@ export async function GET() {
                   id: true,
                   username: true,
                   displayName: true,
+                  avatarUrl: true,
                 },
               },
             },
@@ -53,6 +54,7 @@ export async function GET() {
               id: other.id,
               username: other.username,
               displayName: other.displayName || other.username || "Artist",
+              avatarUrl: other.avatarUrl,
             }
           : null,
         lastMessage: last

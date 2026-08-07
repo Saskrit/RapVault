@@ -16,6 +16,7 @@ model User {
   displayName       String?
   username          String?   @unique
   bio               String    @default("")
+  avatarUrl         String?
   profilePublic     Boolean   @default(true)
   recoveryEmail     String?   @unique
   resetToken        String?   @unique

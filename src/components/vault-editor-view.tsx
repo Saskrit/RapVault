@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, Download, Eye, Globe, Star, Trash2, Music2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Download, Eye, Star, Trash2, Music2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
@@ -284,15 +284,23 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               onClick={() =>
                 scheduleSave({ isPublic: !Boolean(song.isPublic) })
               }
-              className={`${iconBtn} ${
+              className={`${iconBtn} text-base leading-none ${
                 song.isPublic
-                  ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                  : ""
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
               }`}
-              aria-label={song.isPublic ? "Make private" : "Make public"}
-              title={song.isPublic ? "Public — click to make private" : "Make public"}
+              aria-label={
+                song.isPublic
+                  ? "Public — click to make personal"
+                  : "Personal — click to make public"
+              }
+              title={
+                song.isPublic
+                  ? "Public — click to make personal"
+                  : "Personal — click to make public"
+              }
             >
-              <Globe className="h-4 w-4" />
+              <span aria-hidden>{song.isPublic ? "🌐" : "🔒"}</span>
             </button>
             {song.isPublic && (
               <Link
@@ -302,7 +310,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 aria-label="Open public view"
               >
                 <Eye className="h-4 w-4 shrink-0" />
-                <span className="hidden text-sm sm:inline">Public</span>
+                <span className="hidden text-sm sm:inline">Public view</span>
               </Link>
             )}
             <div ref={downloadMenuRef} className="relative">

@@ -3,6 +3,7 @@
 import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
 
 type ConversationRow = {
@@ -12,6 +13,7 @@ type ConversationRow = {
     id: string;
     username: string | null;
     displayName: string;
+    avatarUrl: string | null;
   } | null;
   lastMessage: {
     id: string;
@@ -73,11 +75,11 @@ export function MessagesInboxView() {
                   href={`/vault/messages/${c.id}`}
                   className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-foreground/15"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-sidebar text-sm font-bold">
-                    {(c.other?.displayName || "?")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
+                  <UserAvatar
+                    src={c.other?.avatarUrl}
+                    name={c.other?.displayName || "Artist"}
+                    size="md"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="truncate font-semibold">

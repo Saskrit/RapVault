@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader, iconBtn } from "@/components/vault-header";
 
 type ChatMessage = {
@@ -19,6 +20,7 @@ type Thread = {
     id: string;
     username: string | null;
     displayName: string;
+    avatarUrl: string | null;
   } | null;
   messages: ChatMessage[];
 };
@@ -109,18 +111,25 @@ export function MessageThreadView({ conversationId }: { conversationId: string }
         </Link>
       </VaultHeader>
 
-      <div className="border-b border-border bg-card px-4 py-3">
-        <p className="font-semibold">
-          {thread.other?.displayName || "Artist"}
-        </p>
-        {thread.other?.username && (
-          <Link
-            href={`/vault/artists/${thread.other.username}`}
-            className="text-xs text-muted hover:text-accent"
-          >
-            @{thread.other.username}
-          </Link>
-        )}
+      <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
+        <UserAvatar
+          src={thread.other?.avatarUrl}
+          name={thread.other?.displayName || "Artist"}
+          size="sm"
+        />
+        <div className="min-w-0">
+          <p className="truncate font-semibold">
+            {thread.other?.displayName || "Artist"}
+          </p>
+          {thread.other?.username && (
+            <Link
+              href={`/vault/artists/${thread.other.username}`}
+              className="text-xs text-muted hover:text-accent"
+            >
+              @{thread.other.username}
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">

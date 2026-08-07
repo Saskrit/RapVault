@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSession, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { toPublicUser } from "@/lib/public-user";
 import {
   isValidUsername,
   normalizeDisplayName,
@@ -82,20 +83,7 @@ export async function PATCH(request: Request) {
     });
 
     return NextResponse.json({
-      user: {
-        id: updated.id,
-        email: updated.email,
-        name: updated.name,
-        displayName: updated.displayName,
-        username: updated.username,
-        bio: updated.bio,
-        profilePublic: updated.profilePublic,
-        recoveryEmail: updated.recoveryEmail,
-        hasPassword: Boolean(updated.password),
-        hasGoogle: Boolean(updated.googleId),
-        createdAt: updated.createdAt.toISOString(),
-        needsUsername: !updated.username,
-      },
+      user: toPublicUser(updated),
     });
   } catch {
     return NextResponse.json(

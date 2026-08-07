@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, MessageSquare, Search, Settings, Users, X } from "lucide-react";
+import { LogOut, MessageSquare, Search, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -76,27 +76,23 @@ export function VaultHeader({
       >
         {children}
 
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <Logo size={34} href="/vault" priority />
-          <BrandWordmark height={18} className="hidden sm:inline-flex" href="/vault" priority />
-        </div>
-
-        <nav className="ml-1 hidden items-center gap-1 md:flex">
-          <Link
-            href="/vault/artists"
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-muted transition hover:bg-background hover:text-foreground"
-          >
-            <Users className="h-4 w-4" />
-            Artists
-          </Link>
+          <BrandWordmark
+            height={18}
+            className="hidden sm:inline-flex"
+            href="/vault"
+            priority
+          />
           <Link
             href="/vault/messages"
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-muted transition hover:bg-background hover:text-foreground"
+            className={`${iconBtn} h-9 w-9 border-transparent bg-transparent hover:border-border hover:bg-background`}
+            aria-label="Messages"
+            title="Messages"
           >
             <MessageSquare className="h-4 w-4" />
-            Messages
           </Link>
-        </nav>
+        </div>
 
         {showSearch && (
           <div className="relative mx-auto hidden min-w-0 max-w-lg flex-1 lg:block">
@@ -118,22 +114,6 @@ export function VaultHeader({
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <Link
-            href="/vault/artists"
-            className={`${iconBtn} md:hidden`}
-            aria-label="Artists"
-            title="Artists"
-          >
-            <Users className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/vault/messages"
-            className={`${iconBtn} md:hidden`}
-            aria-label="Messages"
-            title="Messages"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </Link>
           {showSearch && (
             <button
               type="button"

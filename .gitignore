@@ -24,6 +24,9 @@
 *.db
 *.db-journal
 /data/uploads
+/public/uploads/avatars/*
+!/public/uploads/avatars/.gitkeep
+
 
 # misc
 .DS_Store

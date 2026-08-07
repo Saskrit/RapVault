@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Eye,
   FolderInput,
-  Globe,
   PanelLeftClose,
   Plus,
   RotateCcw,
@@ -201,6 +200,20 @@ export function VaultSongsView() {
     if (res.ok) {
       const data = await res.json();
       setSongs((prev) => prev.map((item) => (item.id === song.id ? data.song : item)));
+    }
+  }
+
+  async function togglePublic(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: !Boolean(song.isPublic) }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSongs((prev) =>
+        prev.map((item) => (item.id === song.id ? data.song : item)),
+      );
     }
   }
 
@@ -422,12 +435,17 @@ export function VaultSongsView() {
                         {song.title || "Untitled"}
                       </span>
                       <div className="flex shrink-0 items-center gap-1.5">
-                        {song.isPublic && !showTrash && (
-                          <span className="inline-flex items-center gap-0.5 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-                            <Globe className="h-2.5 w-2.5" />
+                        {song.isPublic && !showTrash ? (
+                          <span className="inline-flex items-center gap-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
+                            <span aria-hidden>🌐</span>
                             Public
                           </span>
-                        )}
+                        ) : !showTrash ? (
+                          <span className="inline-flex items-center gap-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-500">
+                            <span aria-hidden>🔒</span>
+                            Personal
+                          </span>
+                        ) : null}
                         {song.folder && (
                           <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
                             {song.folder.name}
@@ -484,6 +502,27 @@ export function VaultSongsView() {
                               song.isFavorite ? "fill-amber-400 text-amber-400" : ""
                             }`}
                           />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => togglePublic(song)}
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg text-base leading-none transition hover:bg-card ${
+                            song.isPublic
+                              ? "text-emerald-500 hover:text-emerald-400"
+                              : "text-amber-500 hover:text-amber-400"
+                          }`}
+                          aria-label={
+                            song.isPublic ? "Make personal" : "Make public"
+                          }
+                          title={
+                            song.isPublic
+                              ? "Public — click to make personal"
+                              : "Personal — click to make public"
+                          }
+                        >
+                          <span aria-hidden>
+                            {song.isPublic ? "🌐" : "🔒"}
+                          </span>
                         </button>
                         {song.isPublic && (
                           <button

@@ -4,6 +4,7 @@ import { MessageSquare, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
 import type { ArtistSummary } from "@/types";
 
@@ -92,11 +93,11 @@ export function ArtistsDirectoryView() {
                   href={`/vault/artists/${artist.username}`}
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-sidebar text-sm font-bold">
-                    {(artist.displayName || artist.username)
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
+                  <UserAvatar
+                    src={artist.avatarUrl}
+                    name={artist.displayName}
+                    size="md"
+                  />
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{artist.displayName}</p>
                     <p className="truncate text-sm text-muted">

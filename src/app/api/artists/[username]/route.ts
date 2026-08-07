@@ -21,6 +21,7 @@ export async function GET(_request: Request, context: RouteContext) {
       username: true,
       displayName: true,
       bio: true,
+      avatarUrl: true,
       profilePublic: true,
       createdAt: true,
       songs: {
@@ -48,6 +49,7 @@ export async function GET(_request: Request, context: RouteContext) {
       username: artist.username,
       displayName: artist.displayName || artist.username,
       bio: artist.bio,
+      avatarUrl: artist.avatarUrl,
       isSelf: artist.id === session.id,
       createdAt: artist.createdAt.toISOString(),
       songs: artist.songs.map((s) => ({

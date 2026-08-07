@@ -30,7 +30,7 @@ export async function GET(_request: Request, context: RouteContext) {
       participants: {
         include: {
           user: {
-            select: { id: true, username: true, displayName: true },
+            select: { id: true, username: true, displayName: true, avatarUrl: true },
           },
         },
       },
@@ -63,6 +63,7 @@ export async function GET(_request: Request, context: RouteContext) {
             id: other.id,
             username: other.username,
             displayName: other.displayName || other.username || "Artist",
+            avatarUrl: other.avatarUrl,
           }
         : null,
       messages: conversation.messages.map((m) => ({

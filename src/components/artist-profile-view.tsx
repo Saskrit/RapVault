@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Flame, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader, iconBtn } from "@/components/vault-header";
 
 type ArtistProfile = {
@@ -11,6 +12,7 @@ type ArtistProfile = {
   username: string;
   displayName: string;
   bio: string;
+  avatarUrl: string | null;
   isSelf: boolean;
   songs: Array<{
     id: string;
@@ -95,12 +97,14 @@ export function ArtistProfileView({ username }: { username: string }) {
       </VaultHeader>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
-        <section className="mb-8 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <section className="mb-8 rounded-3xl border border-border bg-card p-5 sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-sidebar text-xl font-bold">
-                {artist.displayName.slice(0, 2).toUpperCase()}
-              </div>
+              <UserAvatar
+                src={artist.avatarUrl}
+                name={artist.displayName}
+                size="lg"
+              />
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">
                   {artist.displayName}

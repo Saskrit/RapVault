@@ -29,5 +29,6 @@ export type ArtistSummary = {
   username: string;
   displayName: string;
   bio: string;
+  avatarUrl: string | null;
   publicSongCount: number;
 };

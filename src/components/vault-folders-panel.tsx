@@ -4,11 +4,15 @@ import {
   Folder,
   FolderPlus,
   ListMusic,
+  MessageSquare,
   Plus,
   Recycle,
   Star,
   Trash2,
+  Users,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { Folder as FolderType } from "@/types";
 
 type VaultFoldersPanelProps = {
@@ -45,6 +49,10 @@ export function VaultFoldersPanel({
   onNewSong,
   onNavigate,
 }: VaultFoldersPanelProps) {
+  const pathname = usePathname();
+  const onArtists = pathname.startsWith("/vault/artists");
+  const onMessages = pathname.startsWith("/vault/messages");
+
   function wrap(action: () => void) {
     return () => {
       action();
@@ -97,6 +105,30 @@ export function VaultFoldersPanel({
         </div>
       </div>
 
+      <div className="border-b border-border px-3 py-3">
+        <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+          Community
+        </p>
+        <div className="space-y-1">
+          <Link
+            href="/vault/artists"
+            onClick={() => onNavigate?.()}
+            className={`${navBtn} ${itemClass(onArtists)}`}
+          >
+            <Users className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Artists</span>
+          </Link>
+          <Link
+            href="/vault/messages"
+            onClick={() => onNavigate?.()}
+            className={`${navBtn} ${itemClass(onMessages)}`}
+          >
+            <MessageSquare className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">Messages</span>
+          </Link>
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto px-3 py-4">
         <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
           Folders
@@ -108,7 +140,9 @@ export function VaultFoldersPanel({
               <div
                 key={folder.id}
                 className={`group flex items-center gap-0.5 rounded-xl transition ${
-                  active ? "border border-accent/30 bg-accent/10" : "border border-transparent hover:bg-background"
+                  active
+                    ? "border border-accent/30 bg-accent/10"
+                    : "border border-transparent hover:bg-background"
                 }`}
               >
                 <button

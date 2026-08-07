@@ -2,18 +2,27 @@
 
 import {
   ArrowLeft,
+  Camera,
   CheckCircle2,
   KeyRound,
   Link2,
   Mail,
   Shield,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { Logo, BrandWordmark } from "@/components/logo";
+import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
 
 type ProfileUser = {
@@ -23,12 +32,15 @@ type ProfileUser = {
   displayName: string | null;
   username: string | null;
   bio: string;
+  avatarUrl: string | null;
   profilePublic: boolean;
   recoveryEmail: string | null;
   hasPassword: boolean;
   hasGoogle: boolean;
   createdAt?: string;
 };
+
+type SettingsTab = "profile" | "account" | "security" | "connected";
 
 const GOOGLE_ERRORS: Record<string, string> = {
   google_config: "Google sign-in is not configured yet.",
@@ -42,9 +54,14 @@ const GOOGLE_ERRORS: Record<string, string> = {
 };
 
 const inputClass =
-  "w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition focus:border-accent";
+  "w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-foreground/30";
 
-const sectionClass = "rounded-2xl border border-border bg-card";
+const TABS: { id: SettingsTab; label: string; icon: typeof UserRound }[] = [
+  { id: "profile", label: "Profile", icon: UserRound },
+  { id: "account", label: "Account", icon: Mail },
+  { id: "security", label: "Security", icon: KeyRound },
+  { id: "connected", label: "Connected", icon: Link2 },
+];
 
 function FieldMessage({
   error,
@@ -55,14 +72,14 @@ function FieldMessage({
 }) {
   if (error) {
     return (
-      <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+      <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
         {error}
       </p>
     );
   }
   if (success) {
     return (
-      <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-500 dark:text-emerald-400">
+      <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
         {success}
       </p>
     );
@@ -73,6 +90,8 @@ function FieldMessage({
 export function VaultSettingsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<SettingsTab>("profile");
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState<{ type: "success" | "error"; text: string } | null>(
@@ -106,6 +125,9 @@ export function VaultSettingsView() {
   const [profileSuccess, setProfileSuccess] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
 
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+
   const loadProfile = useCallback(async () => {
     const res = await fetch("/api/auth/me");
     if (!res.ok) {
@@ -129,6 +151,7 @@ export function VaultSettingsView() {
   useEffect(() => {
     if (searchParams.get("linked") === "1") {
       setBanner({ type: "success", text: "Google account linked successfully." });
+      setTab("connected");
       loadProfile();
       router.replace("/vault/settings");
       return;
@@ -137,9 +160,55 @@ export function VaultSettingsView() {
     const error = searchParams.get("error");
     if (error && GOOGLE_ERRORS[error]) {
       setBanner({ type: "error", text: GOOGLE_ERRORS[error] });
+      setTab("connected");
       router.replace("/vault/settings");
     }
   }, [searchParams, router, loadProfile]);
+
+  async function handleAvatarChange(file: File | null) {
+    if (!file) return;
+    setAvatarError("");
+    setAvatarLoading(true);
+    try {
+      const form = new FormData();
+      form.append("avatar", file);
+      const res = await fetch("/api/auth/avatar", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAvatarError(data.error || "Could not upload photo.");
+        return;
+      }
+      if (data.user) setUser(data.user);
+      setBanner({ type: "success", text: "Profile photo updated." });
+    } catch {
+      setAvatarError("Network error. Try again.");
+    } finally {
+      setAvatarLoading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setAvatarError("");
+    setAvatarLoading(true);
+    try {
+      const res = await fetch("/api/auth/avatar", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setAvatarError(data.error || "Could not remove photo.");
+        return;
+      }
+      if (data.user) setUser(data.user);
+      setBanner({ type: "success", text: "Profile photo removed." });
+    } catch {
+      setAvatarError("Network error. Try again.");
+    } finally {
+      setAvatarLoading(false);
+    }
+  }
 
   async function handleProfileSubmit(event: FormEvent) {
     event.preventDefault();
@@ -162,7 +231,7 @@ export function VaultSettingsView() {
         setProfileError(data.error || "Could not update profile.");
         return;
       }
-      setProfileSuccess("Profile updated.");
+      setProfileSuccess("Profile saved.");
       if (data.user) setUser(data.user);
       else await loadProfile();
     } catch {
@@ -245,7 +314,7 @@ export function VaultSettingsView() {
       setNewEmail("");
       setEmailPassword("");
       setEmailSuccess("Sign-in email updated.");
-      if (data.user) setUser(data.user);
+      if (data.user) setUser({ ...data.user, avatarUrl: data.user.avatarUrl ?? user?.avatarUrl ?? null });
       else await loadProfile();
     } catch {
       setEmailError("Network error. Try again.");
@@ -279,7 +348,10 @@ export function VaultSettingsView() {
         recoveryInput.trim() ? "Recovery email saved." : "Recovery email removed.",
       );
       if (data.user) {
-        setUser(data.user);
+        setUser({
+          ...data.user,
+          avatarUrl: data.user.avatarUrl ?? user?.avatarUrl ?? null,
+        });
         setRecoveryInput(data.user.recoveryEmail || "");
       } else {
         await loadProfile();
@@ -292,7 +364,6 @@ export function VaultSettingsView() {
   }
 
   async function handleClearRecovery() {
-    setRecoveryInput("");
     setRecoveryError("");
     setRecoverySuccess("");
     setRecoveryLoading(true);
@@ -311,10 +382,13 @@ export function VaultSettingsView() {
         return;
       }
       setRecoveryPassword("");
+      setRecoveryInput("");
       setRecoverySuccess("Recovery email removed.");
       if (data.user) {
-        setUser(data.user);
-        setRecoveryInput("");
+        setUser({
+          ...data.user,
+          avatarUrl: data.user.avatarUrl ?? user?.avatarUrl ?? null,
+        });
       }
     } catch {
       setRecoveryError("Network error. Try again.");
@@ -335,16 +409,11 @@ export function VaultSettingsView() {
 
   if (!user) return null;
 
-  const initials = (user.displayName || user.name || user.email)
-    .split(/[\s@]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
-
+  const display =
+    user.displayName || user.name || user.email.split("@")[0] || "Artist";
   const memberSince = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString(undefined, {
-        month: "short",
+        month: "long",
         year: "numeric",
       })
     : null;
@@ -354,7 +423,7 @@ export function VaultSettingsView() {
       <VaultHeader>
         <Link
           href="/vault"
-          className="flex h-11 w-auto shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-accent hover:text-accent"
+          className="flex h-11 w-auto shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-foreground/25 hover:text-foreground"
           aria-label="Back to library"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -362,26 +431,24 @@ export function VaultSettingsView() {
         </Link>
       </VaultHeader>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 pb-16 sm:px-6 lg:py-10">
-        <div className="mb-8 flex flex-col gap-6 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              Account
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Profile &amp; settings
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-muted sm:text-base">
-              Manage your artist profile, sign-in, recovery, and connected accounts.
-            </p>
-          </div>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-20 sm:px-6 lg:py-10">
+        <div className="mb-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            Account
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            Profile &amp; settings
+          </h1>
+          <p className="mt-2 max-w-xl text-sm text-muted sm:text-base">
+            Your public artist identity, sign-in details, and connected accounts.
+          </p>
         </div>
 
         {banner && (
           <div
             className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
               banner.type === "success"
-                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                 : "border-red-500/25 bg-red-500/10 text-red-400"
             }`}
           >
@@ -389,389 +456,535 @@ export function VaultSettingsView() {
           </div>
         )}
 
-        {/* Profile summary */}
-        <section className={`${sectionClass} mb-4 overflow-hidden sm:mb-5`}>
-          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border bg-sidebar text-xl font-bold tracking-tight text-foreground">
-              {initials || <UserRound className="h-7 w-7 text-muted" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-semibold">
-                {user.displayName || user.name || user.email.split("@")[0]}
-              </p>
-              <p className="mt-0.5 truncate text-sm text-muted">
-                {user.username ? `@${user.username}` : user.email}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted">
-                  <Mail className="h-3 w-3" />
-                  {user.email}
-                </span>
-                {user.hasGoogle && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted">
-                    <Link2 className="h-3 w-3" />
-                    Google linked
-                  </span>
-                )}
-                {user.recoveryEmail && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted">
-                    <Shield className="h-3 w-3" />
-                    Recovery set
-                  </span>
-                )}
-                {memberSince && (
-                  <span className="inline-flex items-center rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted">
-                    Since {memberSince}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid gap-4 sm:gap-5">
-          {/* Artist profile */}
-          <section className={sectionClass}>
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <UserRound className="h-4 w-4 text-accent" />
-                Artist profile
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                Your public name and @username on Artists and song pages.
-              </p>
-            </div>
-            <form onSubmit={handleProfileSubmit} className="space-y-3 p-5 sm:p-6">
-              <div>
-                <label htmlFor="display-name" className="mb-1 block text-sm text-muted">
-                  Display name
-                </label>
-                <input
-                  id="display-name"
-                  type="text"
-                  maxLength={60}
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className={inputClass}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="username" className="mb-1 block text-sm text-muted">
-                  Username
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted">@</span>
-                  <input
-                    id="username"
-                    type="text"
-                    minLength={3}
-                    maxLength={20}
-                    value={username}
-                    onChange={(e) =>
-                      setUsername(
-                        e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
-                      )
-                    }
-                    className={inputClass}
-                    required
-                    pattern="[a-z0-9_]{3,20}"
+        <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-8">
+          {/* Side profile card */}
+          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+            <div className="overflow-hidden rounded-3xl border border-border bg-card">
+              <div className="h-20 bg-sidebar" />
+              <div className="-mt-12 flex flex-col items-center px-5 pb-6 text-center">
+                <div className="relative">
+                  <UserAvatar
+                    src={user.avatarUrl}
+                    name={display}
+                    size="xl"
+                    className="ring-4 ring-card"
                   />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="bio" className="mb-1 block text-sm text-muted">
-                  Bio
-                </label>
-                <textarea
-                  id="bio"
-                  rows={3}
-                  maxLength={280}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className={`${inputClass} min-h-[5rem] resize-y`}
-                  placeholder="A short line about your writing..."
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-muted">
-                <input
-                  type="checkbox"
-                  checked={profilePublic}
-                  onChange={(e) => setProfilePublic(e.target.checked)}
-                  className="h-4 w-4 rounded border-border"
-                />
-                Show me on the Artists directory
-              </label>
-              <FieldMessage error={profileError} success={profileSuccess} />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="submit"
-                  disabled={profileLoading}
-                  className="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
-                >
-                  {profileLoading ? "Saving..." : "Save profile"}
-                </button>
-                {user.username && (
-                  <Link
-                    href={`/vault/artists/${user.username}`}
-                    className="inline-flex min-h-11 items-center rounded-xl border border-border px-5 text-sm font-medium transition hover:border-accent hover:text-accent"
-                  >
-                    View public profile
-                  </Link>
-                )}
-              </div>
-            </form>
-          </section>
-
-          {/* Change email */}
-          <section className={sectionClass}>
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <Mail className="h-4 w-4 text-accent" />
-                Change email
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                Current sign-in email:{" "}
-                <span className="font-medium text-foreground">{user.email}</span>
-              </p>
-            </div>
-            <form onSubmit={handleEmailSubmit} className="space-y-3 p-5 sm:p-6">
-              <div>
-                <label htmlFor="new-email" className="mb-1 block text-sm text-muted">
-                  New email
-                </label>
-                <input
-                  id="new-email"
-                  type="email"
-                  autoComplete="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  className={inputClass}
-                  placeholder="new@example.com"
-                  required
-                />
-              </div>
-              {user.hasPassword && (
-                <div>
-                  <label
-                    htmlFor="email-password"
-                    className="mb-1 block text-sm text-muted"
-                  >
-                    Current password
-                  </label>
-                  <input
-                    id="email-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={emailPassword}
-                    onChange={(e) => setEmailPassword(e.target.value)}
-                    className={inputClass}
-                    required
-                  />
-                </div>
-              )}
-              <FieldMessage error={emailError} success={emailSuccess} />
-              <button
-                type="submit"
-                disabled={emailLoading}
-                className="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
-              >
-                {emailLoading ? "Saving..." : "Update email"}
-              </button>
-            </form>
-          </section>
-
-          {/* Recovery email */}
-          <section className={sectionClass}>
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <Shield className="h-4 w-4 text-accent" />
-                Recovery email
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                A backup address for password reset if you lose access to your
-                main inbox. Use either email on the forgot-password page.
-              </p>
-            </div>
-            <form onSubmit={handleRecoverySubmit} className="space-y-3 p-5 sm:p-6">
-              <div>
-                <label
-                  htmlFor="recovery-email"
-                  className="mb-1 block text-sm text-muted"
-                >
-                  Recovery email
-                </label>
-                <input
-                  id="recovery-email"
-                  type="email"
-                  autoComplete="email"
-                  value={recoveryInput}
-                  onChange={(e) => setRecoveryInput(e.target.value)}
-                  className={inputClass}
-                  placeholder="backup@example.com"
-                />
-              </div>
-              {user.hasPassword && (
-                <div>
-                  <label
-                    htmlFor="recovery-password"
-                    className="mb-1 block text-sm text-muted"
-                  >
-                    Current password
-                  </label>
-                  <input
-                    id="recovery-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={recoveryPassword}
-                    onChange={(e) => setRecoveryPassword(e.target.value)}
-                    className={inputClass}
-                    required
-                  />
-                </div>
-              )}
-              <FieldMessage error={recoveryError} success={recoverySuccess} />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="submit"
-                  disabled={recoveryLoading}
-                  className="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
-                >
-                  {recoveryLoading
-                    ? "Saving..."
-                    : user.recoveryEmail
-                      ? "Update recovery email"
-                      : "Save recovery email"}
-                </button>
-                {user.recoveryEmail && (
                   <button
                     type="button"
-                    onClick={handleClearRecovery}
-                    disabled={recoveryLoading}
-                    className="min-h-11 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground disabled:opacity-50"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={avatarLoading}
+                    className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
+                    aria-label="Upload profile photo"
+                    title="Upload photo"
                   >
-                    Remove
+                    <Camera className="h-4 w-4" />
                   </button>
-                )}
-              </div>
-            </form>
-          </section>
-
-          {/* Password */}
-          <section className={sectionClass}>
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <KeyRound className="h-4 w-4 text-accent" />
-                {user.hasPassword ? "Change password" : "Create a password"}
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                {user.hasPassword
-                  ? "Update the password you use to sign in with email."
-                  : user.hasGoogle
-                    ? "Add a password so you can also sign in with email."
-                    : "Set a password for your account."}
-              </p>
-            </div>
-            <form onSubmit={handlePasswordSubmit} className="space-y-3 p-5 sm:p-6">
-              {user.hasPassword && (
-                <div>
-                  <label
-                    htmlFor="current-password"
-                    className="mb-1 block text-sm text-muted"
-                  >
-                    Current password
-                  </label>
                   <input
-                    id="current-password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className={inputClass}
-                    required
+                    ref={fileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleAvatarChange(e.target.files?.[0] ?? null)
+                    }
                   />
                 </div>
-              )}
-              <div>
-                <label
-                  htmlFor="new-password"
-                  className="mb-1 block text-sm text-muted"
-                >
-                  {user.hasPassword ? "New password" : "Password"}
-                </label>
-                <input
-                  id="new-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className={inputClass}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="confirm-password"
-                  className="mb-1 block text-sm text-muted"
-                >
-                  Confirm password
-                </label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={inputClass}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <FieldMessage error={passwordError} success={passwordSuccess} />
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                className="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-50"
-              >
-                {passwordLoading
-                  ? "Saving..."
-                  : user.hasPassword
-                    ? "Update password"
-                    : "Create password"}
-              </button>
-            </form>
-          </section>
 
-          {/* Google */}
-          <section className={sectionClass}>
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <Link2 className="h-4 w-4 text-accent" />
-                Google account
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                {user.hasGoogle
-                  ? "You can sign in with Google or email."
-                  : "Link Google for faster sign-in. Google email must match your RapVault email."}
-              </p>
+                <h2 className="mt-4 truncate text-lg font-semibold tracking-tight">
+                  {display}
+                </h2>
+                <p className="mt-0.5 text-sm text-muted">
+                  {user.username ? `@${user.username}` : user.email}
+                </p>
+                {user.bio && (
+                  <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted">
+                    {user.bio}
+                  </p>
+                )}
+
+                <div className="mt-4 flex w-full flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={avatarLoading}
+                    className="min-h-10 rounded-xl border border-border text-sm font-medium transition hover:border-foreground/25 hover:bg-background disabled:opacity-50"
+                  >
+                    {avatarLoading ? "Uploading..." : "Change photo"}
+                  </button>
+                  {user.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      disabled={avatarLoading}
+                      className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-muted transition hover:text-red-400 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove photo
+                    </button>
+                  )}
+                </div>
+                {avatarError && (
+                  <p className="mt-2 text-xs text-red-400">{avatarError}</p>
+                )}
+                <p className="mt-3 text-[11px] text-muted">
+                  JPG, PNG, or WebP · max 2MB
+                </p>
+              </div>
             </div>
-            <div className="p-5 sm:p-6">
-              {user.hasGoogle ? (
-                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  Google account connected
-                </div>
-              ) : (
-                <div className="max-w-sm">
-                  <GoogleSignInButton
-                    href="/api/auth/google/link"
-                    label="Link Google account"
-                  />
-                </div>
+
+            <div className="rounded-3xl border border-border bg-card p-2">
+              <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+                {TABS.map((item) => {
+                  const Icon = item.icon;
+                  const active = tab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setTab(item.id)}
+                      className={`flex min-h-11 shrink-0 items-center gap-2.5 rounded-2xl px-3.5 text-sm font-medium transition ${
+                        active
+                          ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                          : "text-muted hover:bg-background/70 hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="hidden rounded-3xl border border-border bg-card px-4 py-3 text-xs text-muted lg:block">
+              <p>
+                <span className="font-medium text-foreground">Email</span>
+                <br />
+                {user.email}
+              </p>
+              {memberSince && (
+                <p className="mt-3">
+                  <span className="font-medium text-foreground">Joined</span>
+                  <br />
+                  {memberSince}
+                </p>
+              )}
+              {user.username && (
+                <Link
+                  href={`/vault/artists/${user.username}`}
+                  className="mt-4 inline-flex font-medium text-accent hover:underline"
+                >
+                  View public profile
+                </Link>
               )}
             </div>
-          </section>
+          </aside>
+
+          {/* Panels */}
+          <div className="min-w-0 space-y-5">
+            {tab === "profile" && (
+              <section className="rounded-3xl border border-border bg-card">
+                <div className="border-b border-border px-5 py-5 sm:px-7">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    Artist profile
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    How you appear on Artists, public songs, and messages.
+                  </p>
+                </div>
+                <form
+                  onSubmit={handleProfileSubmit}
+                  className="space-y-5 px-5 py-6 sm:px-7"
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label
+                        htmlFor="display-name"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Display name
+                      </label>
+                      <input
+                        id="display-name"
+                        type="text"
+                        maxLength={60}
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className={inputClass}
+                        required
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label
+                        htmlFor="username"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Username
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted">@</span>
+                        <input
+                          id="username"
+                          type="text"
+                          minLength={3}
+                          maxLength={20}
+                          value={username}
+                          onChange={(e) =>
+                            setUsername(
+                              e.target.value
+                                .toLowerCase()
+                                .replace(/[^a-z0-9_]/g, ""),
+                            )
+                          }
+                          className={inputClass}
+                          required
+                          pattern="[a-z0-9_]{3,20}"
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted">
+                        3–20 characters · lowercase letters, numbers, underscores
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label
+                        htmlFor="bio"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Bio
+                      </label>
+                      <textarea
+                        id="bio"
+                        rows={4}
+                        maxLength={280}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        className={`${inputClass} min-h-[7rem] resize-y`}
+                        placeholder="Hooks, freestyles, unfinished verses…"
+                      />
+                      <p className="mt-1.5 text-right text-xs text-muted">
+                        {bio.length}/280
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background px-4 py-3.5">
+                    <input
+                      type="checkbox"
+                      checked={profilePublic}
+                      onChange={(e) => setProfilePublic(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-border"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">
+                        Show on Artists directory
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted">
+                        Others can find your profile and public songs.
+                      </span>
+                    </span>
+                  </label>
+
+                  <FieldMessage error={profileError} success={profileSuccess} />
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={profileLoading}
+                      className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      {profileLoading ? "Saving..." : "Save profile"}
+                    </button>
+                    {user.username && (
+                      <Link
+                        href={`/vault/artists/${user.username}`}
+                        className="inline-flex min-h-11 items-center rounded-xl border border-border px-5 text-sm font-medium transition hover:border-foreground/25"
+                      >
+                        Preview profile
+                      </Link>
+                    )}
+                  </div>
+                </form>
+              </section>
+            )}
+
+            {tab === "account" && (
+              <>
+                <section className="rounded-3xl border border-border bg-card">
+                  <div className="border-b border-border px-5 py-5 sm:px-7">
+                    <h3 className="text-lg font-semibold tracking-tight">
+                      Sign-in email
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      Current:{" "}
+                      <span className="font-medium text-foreground">
+                        {user.email}
+                      </span>
+                    </p>
+                  </div>
+                  <form
+                    onSubmit={handleEmailSubmit}
+                    className="space-y-4 px-5 py-6 sm:px-7"
+                  >
+                    <div>
+                      <label
+                        htmlFor="new-email"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        New email
+                      </label>
+                      <input
+                        id="new-email"
+                        type="email"
+                        autoComplete="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        className={inputClass}
+                        placeholder="new@example.com"
+                        required
+                      />
+                    </div>
+                    {user.hasPassword && (
+                      <div>
+                        <label
+                          htmlFor="email-password"
+                          className="mb-1.5 block text-sm font-medium"
+                        >
+                          Current password
+                        </label>
+                        <input
+                          id="email-password"
+                          type="password"
+                          autoComplete="current-password"
+                          value={emailPassword}
+                          onChange={(e) => setEmailPassword(e.target.value)}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                    )}
+                    <FieldMessage error={emailError} success={emailSuccess} />
+                    <button
+                      type="submit"
+                      disabled={emailLoading}
+                      className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                    >
+                      {emailLoading ? "Saving..." : "Update email"}
+                    </button>
+                  </form>
+                </section>
+
+                <section className="rounded-3xl border border-border bg-card">
+                  <div className="border-b border-border px-5 py-5 sm:px-7">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted" />
+                      <h3 className="text-lg font-semibold tracking-tight">
+                        Recovery email
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-sm text-muted">
+                      Backup address for password reset if you lose your main
+                      inbox.
+                    </p>
+                  </div>
+                  <form
+                    onSubmit={handleRecoverySubmit}
+                    className="space-y-4 px-5 py-6 sm:px-7"
+                  >
+                    <div>
+                      <label
+                        htmlFor="recovery-email"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Recovery email
+                      </label>
+                      <input
+                        id="recovery-email"
+                        type="email"
+                        autoComplete="email"
+                        value={recoveryInput}
+                        onChange={(e) => setRecoveryInput(e.target.value)}
+                        className={inputClass}
+                        placeholder="backup@example.com"
+                      />
+                    </div>
+                    {user.hasPassword && (
+                      <div>
+                        <label
+                          htmlFor="recovery-password"
+                          className="mb-1.5 block text-sm font-medium"
+                        >
+                          Current password
+                        </label>
+                        <input
+                          id="recovery-password"
+                          type="password"
+                          autoComplete="current-password"
+                          value={recoveryPassword}
+                          onChange={(e) => setRecoveryPassword(e.target.value)}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                    )}
+                    <FieldMessage
+                      error={recoveryError}
+                      success={recoverySuccess}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        disabled={recoveryLoading}
+                        className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        {recoveryLoading
+                          ? "Saving..."
+                          : user.recoveryEmail
+                            ? "Update recovery email"
+                            : "Save recovery email"}
+                      </button>
+                      {user.recoveryEmail && (
+                        <button
+                          type="button"
+                          onClick={handleClearRecovery}
+                          disabled={recoveryLoading}
+                          className="min-h-11 rounded-xl border border-border px-5 text-sm font-medium text-muted transition hover:text-foreground disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                </section>
+              </>
+            )}
+
+            {tab === "security" && (
+              <section className="rounded-3xl border border-border bg-card">
+                <div className="border-b border-border px-5 py-5 sm:px-7">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    {user.hasPassword ? "Change password" : "Create a password"}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    {user.hasPassword
+                      ? "Update the password you use with email sign-in."
+                      : user.hasGoogle
+                        ? "Add a password so you can also sign in with email."
+                        : "Set a password for your account."}
+                  </p>
+                </div>
+                <form
+                  onSubmit={handlePasswordSubmit}
+                  className="space-y-4 px-5 py-6 sm:px-7"
+                >
+                  {user.hasPassword && (
+                    <div>
+                      <label
+                        htmlFor="current-password"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Current password
+                      </label>
+                      <input
+                        id="current-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className={inputClass}
+                        required
+                      />
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="new-password"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        {user.hasPassword ? "New password" : "Password"}
+                      </label>
+                      <input
+                        id="new-password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className={inputClass}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="confirm-password"
+                        className="mb-1.5 block text-sm font-medium"
+                      >
+                        Confirm password
+                      </label>
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={inputClass}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+                  <FieldMessage
+                    error={passwordError}
+                    success={passwordSuccess}
+                  />
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    {passwordLoading
+                      ? "Saving..."
+                      : user.hasPassword
+                        ? "Update password"
+                        : "Create password"}
+                  </button>
+                </form>
+              </section>
+            )}
+
+            {tab === "connected" && (
+              <section className="rounded-3xl border border-border bg-card">
+                <div className="border-b border-border px-5 py-5 sm:px-7">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    Google account
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    {user.hasGoogle
+                      ? "You can sign in with Google or email."
+                      : "Link Google for faster sign-in. Google email must match your RapVault email."}
+                  </p>
+                </div>
+                <div className="px-5 py-6 sm:px-7">
+                  {user.hasGoogle ? (
+                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3.5 text-sm text-emerald-700 dark:text-emerald-400">
+                      <CheckCircle2 className="h-5 w-5 shrink-0" />
+                      <div>
+                        <p className="font-medium">Google connected</p>
+                        <p className="text-xs opacity-80">{user.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="max-w-sm">
+                      <GoogleSignInButton
+                        href="/api/auth/google/link"
+                        label="Link Google account"
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </main>
     </div>
