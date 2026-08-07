@@ -26,14 +26,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const authPages = [
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
-  ];
+  const authPages = ["/login", "/register", "/forgot-password"];
 
-  if (authPages.some((p) => pathname === p || pathname.startsWith(`${p}/`)) && authed) {
+  if (
+    authPages.some((p) => pathname === p || pathname.startsWith(`${p}/`)) &&
+    authed
+  ) {
+    // Password reset from Settings keeps the session; land on Security with a success note.
+    if (
+      pathname === "/login" &&
+      request.nextUrl.searchParams.get("reset") === "success"
+    ) {
+      return NextResponse.redirect(
+        new URL("/vault/settings?reset=success", request.url),
+      );
+    }
     return NextResponse.redirect(new URL("/vault", request.url));
   }
 

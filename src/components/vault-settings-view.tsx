@@ -271,6 +271,14 @@ export function VaultSettingsView() {
       return;
     }
 
+    if (searchParams.get("reset") === "success") {
+      showToast("success", "Password updated. You can sign in with it anytime.");
+      setTab("security");
+      loadProfile();
+      router.replace("/vault/settings");
+      return;
+    }
+
     const error = searchParams.get("error");
     if (error && GOOGLE_ERRORS[error]) {
       showToast("error", GOOGLE_ERRORS[error]);
@@ -557,7 +565,7 @@ export function VaultSettingsView() {
       }
       showToast(
         "success",
-        data.message || "Password reset link sent to your email.",
+        `Reset link sent to ${user.email}. Open it to choose a new password.`,
       );
     } catch {
       setPasswordError("Network error. Try again.");

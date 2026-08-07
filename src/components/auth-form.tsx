@@ -130,20 +130,20 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
-      <div className="mb-8 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <Logo size={56} priority />
-          <BrandWordmark height={22} priority />
+    <div className="w-full rounded-2xl border border-border bg-card p-4 shadow-xl sm:p-6">
+      <div className="mb-5 text-center sm:mb-6">
+        <div className="flex flex-col items-center gap-2">
+          <Logo size={44} priority />
+          <BrandWordmark height={18} priority />
         </div>
-        <h1 className="type-h2 mt-5 text-foreground">
+        <h1 className="type-h2 mt-3 text-foreground sm:mt-4">
           {mode === "login"
             ? "Sign in"
             : awaitingCode
               ? "Verify your email"
               : "Create your vault"}
         </h1>
-        <p className="measure mx-auto mt-2 text-sm text-muted">
+        <p className="measure mx-auto mt-1.5 text-sm text-muted">
           {mode === "login"
             ? "Sign in to access your lyrics."
             : awaitingCode
@@ -160,7 +160,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             }
           />
 
-          <div className="relative my-6">
+          <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
             </div>
@@ -171,7 +171,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         </>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {!(mode === "register" && awaitingCode) && (
           <>
             <div>

@@ -215,7 +215,7 @@ export function LandingPage({
           {/* Left copy + right box — lightly centered in the viewport */}
           <div className="flex min-h-0 flex-1 items-center py-4 sm:py-5 lg:py-6">
             <div className="grid w-full grid-cols-1 items-stretch gap-5 sm:gap-6 lg:grid-cols-[0.9fr_1.15fr] lg:gap-0 xl:gap-1">
-              <div className="flex min-h-0 flex-col justify-center gap-6 sm:min-h-0 sm:gap-8 lg:min-h-[34rem] lg:pr-0">
+              <div className="flex min-h-0 flex-col justify-center gap-6 sm:min-h-0 sm:gap-8 lg:min-h-[26rem] lg:pr-0">
                 <p className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-widest text-accent sm:text-xs">
                   <Cloud className="h-3.5 w-3.5" />
                   Private lyrics cloud
@@ -282,8 +282,8 @@ export function LandingPage({
                 id="auth-box"
                 className={`relative flex w-full scroll-mt-[4.75rem] lg:scroll-mt-24 ${
                   authOpen
-                    ? "min-h-[min(85dvh,42rem)] sm:min-h-[36rem] lg:min-h-[34rem]"
-                    : "min-h-[22rem] sm:min-h-[28rem] lg:min-h-[34rem]"
+                    ? "min-h-[min(62dvh,26rem)] sm:min-h-[24rem] lg:min-h-[26rem]"
+                    : "min-h-[17rem] sm:min-h-[20rem] lg:min-h-[26rem]"
                 }`}
               >
                 <div className="pointer-events-none absolute -inset-3 rounded-3xl bg-accent/12 blur-2xl" />
@@ -296,17 +296,17 @@ export function LandingPage({
                 >
                   {authOpen ? (
                     <>
-                      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3 sm:px-5">
-                        <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
-                        <span className="ml-1.5 min-w-0 flex-1 truncate text-xs text-muted sm:text-sm">
+                      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3 py-2 sm:px-4 sm:py-2.5">
+                        <div className="h-2 w-2 rounded-full bg-red-500/80" />
+                        <div className="h-2 w-2 rounded-full bg-amber-400/80" />
+                        <div className="h-2 w-2 rounded-full bg-green-500/80" />
+                        <span className="ml-1 min-w-0 flex-1 truncate text-xs text-muted">
                           {authMode === "login" ? "Sign in" : "Get started"}
                         </span>
                         <button
                           type="button"
                           onClick={closeAuth}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
                           aria-label="Close"
                         >
                           <X className="h-4 w-4" />
