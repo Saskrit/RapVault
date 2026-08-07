@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+/** Versioned so browsers / SW / CDN pick up the circular mark after past bad caches. */
+const MARK_SRC = "/rapvault-mark.png?v=3";
+const WORDMARK_SRC = "/rvtxt.png?v=3";
+
 type LogoProps = {
   size?: number;
   href?: string | null;
@@ -16,11 +20,12 @@ export function Logo({
 }: LogoProps) {
   const image = (
     <Image
-      src="/rapvault-mark.png"
+      src={MARK_SRC}
       alt="RapVault"
       width={size}
       height={size}
       priority={priority}
+      unoptimized
       className={`rounded-full object-cover ${className}`}
     />
   );
@@ -43,7 +48,7 @@ type BrandWordmarkProps = {
   href?: string | null;
 };
 
-/** Text wordmark (rvtxt.png) — for marketing/auth splash only, not site headers. */
+/** Text wordmark — shown next to the circular mark in headers. */
 export function BrandWordmark({
   height = 22,
   className = "",
@@ -53,11 +58,12 @@ export function BrandWordmark({
   const width = Math.round(height * (1024 / 134));
   const image = (
     <Image
-      src="/rvtxt.png"
+      src={WORDMARK_SRC}
       alt="Rap Vault"
       width={width}
       height={height}
       priority={priority}
+      unoptimized
       className="object-contain"
     />
   );

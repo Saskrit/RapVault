@@ -1,5 +1,5 @@
 /* RapVault service worker — cache app shell so /vault works offline. */
-const CACHE_VERSION = "rapvault-shell-v2";
+const CACHE_VERSION = "rapvault-shell-v3";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
