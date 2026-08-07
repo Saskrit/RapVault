@@ -40,6 +40,19 @@ model User {
   connectionsReceived Connection[] @relation("ConnectionAddressee")
 }
 
+model PendingSignup {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  codeHash     String
+  expiresAt    DateTime
+  attempts     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
 model Connection {
   id          String   @id @default(cuid())
   requesterId String

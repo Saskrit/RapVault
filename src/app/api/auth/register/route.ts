@@ -1,16 +1,28 @@
+import { createHash, randomInt } from "crypto";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import {
-  createSession,
-  hashPassword,
-  seedDefaultFolders,
-} from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
 import {
   isValidEmail,
   normalizeEmail,
   validatePassword,
 } from "@/lib/auth-validation";
+import { sendSignupVerificationEmail } from "@/lib/email";
+import { prisma } from "@/lib/prisma";
 
+const CODE_TTL_MS = 15 * 60 * 1000;
+
+function hashCode(email: string, code: string) {
+  const secret = process.env.AUTH_SECRET || "rapvault";
+  return createHash("sha256")
+    .update(`${email}:${code}:${secret}`)
+    .digest("hex");
+}
+
+function generateCode() {
+  return String(randomInt(100000, 1000000));
+}
+
+/** Step 1: validate credentials, email a 6-digit code, do not create User yet. */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -54,41 +66,51 @@ export async function POST(request: Request) {
       );
     }
 
-    const hashed = await hashPassword(password);
-    const { allocateUniqueUsername } = await import("@/lib/allocate-username");
-    const { suggestUsernameFromEmail } = await import("@/lib/username");
-    const username = await allocateUniqueUsername(
-      suggestUsernameFromEmail(email),
-    );
-    const displayName = email.split("@")[0] || "Artist";
+    const code = generateCode();
+    const passwordHash = await hashPassword(password);
+    const codeHash = hashCode(email, code);
+    const expiresAt = new Date(Date.now() + CODE_TTL_MS);
 
-    const user = await prisma.user.create({
-      data: {
+    await prisma.pendingSignup.upsert({
+      where: { email },
+      create: {
         email,
-        password: hashed,
-        username,
-        displayName,
+        passwordHash,
+        codeHash,
+        expiresAt,
+        attempts: 0,
+      },
+      update: {
+        passwordHash,
+        codeHash,
+        expiresAt,
+        attempts: 0,
       },
     });
 
-    await seedDefaultFolders(user.id);
-    await createSession({
-      id: user.id,
-      email: user.email,
-      name: user.displayName,
-    });
+    try {
+      await sendSignupVerificationEmail(email, code);
+    } catch (error) {
+      console.error("Signup verification email failed:", error);
+      await prisma.pendingSignup.delete({ where: { email } }).catch(() => {});
+      return NextResponse.json(
+        {
+          error:
+            "Could not send verification email. Check email settings and try again.",
+        },
+        { status: 503 },
+      );
+    }
 
     return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.displayName,
-        username: user.username,
-      },
+      message: "Verification code sent",
+      email,
+      expiresInMinutes: 15,
     });
-  } catch {
+  } catch (error) {
+    console.error("Register request error:", error);
     return NextResponse.json(
-      { error: "Registration failed" },
+      { error: "Could not start registration" },
       { status: 500 },
     );
   }

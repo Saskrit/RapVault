@@ -54,3 +54,25 @@ export async function sendPasswordResetEmail(
     `,
   });
 }
+
+export async function sendSignupVerificationEmail(to: string, code: string) {
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("EMAIL_FROM or SMTP_USER must be set");
+
+  const transporter = nodemailer.createTransport(getSmtpConfig());
+
+  await transporter.sendMail({
+    from: `RapVault <${from}>`,
+    to,
+    subject: "Your RapVault verification code",
+    text: `Your RapVault verification code is ${code}.\n\nIt expires in 15 minutes.\n\nIf you didn't try to create an account, you can ignore this email.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color: #8b5cf6;">Verify your email</h2>
+        <p>Use this code to finish creating your RapVault account:</p>
+        <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.2em; color: #18181b;">${code}</p>
+        <p style="color: #71717a; font-size: 14px;">This code expires in 15 minutes. If you didn't request it, ignore this email.</p>
+      </div>
+    `,
+  });
+}

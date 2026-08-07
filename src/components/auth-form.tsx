@@ -22,6 +22,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [awaitingCode, setAwaitingCode] = useState(false);
+  const [info, setInfo] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -35,20 +38,59 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    setAwaitingCode(false);
+    setCode("");
+    setInfo("");
+    setError("");
+  }, [mode]);
+
   const resetSuccess = searchParams.get("reset") === "success";
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
+    setInfo("");
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/auth/${mode}`, {
+      if (mode === "login") {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        router.push("/vault");
+        router.refresh();
+        return;
+      }
+
+      if (!awaitingCode) {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        setAwaitingCode(true);
+        setInfo(`We sent a 6-digit code to ${email}. Enter it below to create your account.`);
+        return;
+      }
+
+      const response = await fetch("/api/auth/register/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, code }),
       });
-
       const data = await response.json();
       if (!response.ok) {
         setError(data.error || "Something went wrong");
@@ -64,6 +106,29 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
+  async function handleResendCode() {
+    setError("");
+    setInfo("");
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Could not resend code");
+        return;
+      }
+      setInfo(`A new code was sent to ${email}.`);
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
       <div className="mb-8 text-center">
@@ -72,67 +137,114 @@ export function AuthForm({ mode }: AuthFormProps) {
           <BrandWordmark height={22} priority />
         </div>
         <h1 className="type-h2 mt-5 text-foreground">
-          {mode === "login" ? "Welcome back" : "Create your vault"}
+          {mode === "login"
+            ? "Welcome back"
+            : awaitingCode
+              ? "Verify your email"
+              : "Create your vault"}
         </h1>
         <p className="measure mx-auto mt-2 text-sm text-muted">
           {mode === "login"
             ? "Sign in to access your lyrics."
-            : "Start writing and never lose a bar."}
+            : awaitingCode
+              ? "Enter the code we emailed you. Your account is created only after verification."
+              : "Start writing and never lose a bar."}
         </p>
       </div>
 
-      <GoogleSignInButton
-        label={mode === "login" ? "Sign in with Google" : "Sign up with Google"}
-      />
+      {!(mode === "register" && awaitingCode) && (
+        <>
+          <GoogleSignInButton
+            label={
+              mode === "login" ? "Sign in with Google" : "Sign up with Google"
+            }
+          />
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase tracking-wider">
-          <span className="bg-card px-3 text-muted">or</span>
-        </div>
-      </div>
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wider">
+              <span className="bg-card px-3 text-muted">or</span>
+            </div>
+          </div>
+        </>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm text-muted">Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
-            placeholder="you@example.com"
-          />
-        </div>
+        {!(mode === "register" && awaitingCode) && (
+          <>
+            <div>
+              <label className="mb-1 block text-sm text-muted">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
+                placeholder="you@example.com"
+              />
+            </div>
 
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-sm text-muted">Password</label>
-            {mode === "login" && (
-              <Link
-                href="/forgot-password"
-                className="text-xs text-accent hover:underline"
-              >
-                Forgot password?
-              </Link>
-            )}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-sm text-muted">Password</label>
+                {mode === "login" && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
+                placeholder="Min 6 characters"
+              />
+            </div>
+          </>
+        )}
+
+        {mode === "register" && awaitingCode && (
+          <div>
+            <label className="mb-1 block text-sm text-muted">
+              Verification code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
+              placeholder="000000"
+            />
+            <p className="mt-2 text-xs text-muted">
+              Sent to <span className="text-foreground">{email}</span>
+            </p>
           </div>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
-            placeholder="Min 6 characters"
-          />
-        </div>
+        )}
 
         {resetSuccess && (
           <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-400">
             Password updated. You can sign in now.
+          </p>
+        )}
+
+        {info && (
+          <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+            {info}
           </p>
         )}
 
@@ -151,8 +263,36 @@ export function AuthForm({ mode }: AuthFormProps) {
             ? "Please wait..."
             : mode === "login"
               ? "Sign in"
-              : "Create account"}
+              : awaitingCode
+                ? "Verify & create account"
+                : "Send verification code"}
         </button>
+
+        {mode === "register" && awaitingCode && (
+          <div className="flex flex-col gap-2 text-center text-sm">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleResendCode}
+              className="text-accent hover:underline disabled:opacity-60"
+            >
+              Resend code
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setAwaitingCode(false);
+                setCode("");
+                setInfo("");
+                setError("");
+              }}
+              className="text-muted hover:text-foreground disabled:opacity-60"
+            >
+              Change email
+            </button>
+          </div>
+        )}
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">

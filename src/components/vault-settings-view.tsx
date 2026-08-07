@@ -154,6 +154,12 @@ export function VaultSettingsView() {
   const [recoveryError, setRecoveryError] = useState("");
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -560,6 +566,34 @@ export function VaultSettingsView() {
       setPasswordError("Network error. Try again.");
     } finally {
       setForgotLoading(false);
+    }
+  }
+
+  async function handleDeleteAccount(event: FormEvent) {
+    event.preventDefault();
+    setDeleteError("");
+    setDeleteLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          user?.hasPassword
+            ? { password: deletePassword }
+            : { confirm: deleteConfirm },
+        ),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error || "Could not delete account.");
+        return;
+      }
+      window.location.href = "/";
+    } catch {
+      setDeleteError("Network error. Try again.");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -1268,6 +1302,106 @@ export function VaultSettingsView() {
                       )}
                     </div>
                   </form>
+                </section>
+
+                <section className="rounded-3xl border border-red-500/25 bg-card">
+                  <div className="border-b border-red-500/20 px-5 py-5 sm:px-7">
+                    <div className="flex items-center gap-2">
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                      <h3 className="text-lg font-semibold tracking-tight text-red-400">
+                        Delete account
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-sm text-muted">
+                      Permanently delete your account, lyrics, folders, messages,
+                      and profile. This cannot be undone.
+                    </p>
+                  </div>
+                  <div className="space-y-4 px-5 py-6 sm:px-7">
+                    {!deleteOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteOpen(true);
+                          setDeleteError("");
+                          setDeletePassword("");
+                          setDeleteConfirm("");
+                        }}
+                        className="min-h-11 rounded-xl border border-red-500/40 px-5 text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
+                      >
+                        Delete my account…
+                      </button>
+                    ) : (
+                      <form
+                        onSubmit={handleDeleteAccount}
+                        className="space-y-4"
+                      >
+                        {user.hasPassword ? (
+                          <div>
+                            <label
+                              htmlFor="delete-password"
+                              className="mb-1.5 block text-sm font-medium"
+                            >
+                              Confirm with your password
+                            </label>
+                            <input
+                              id="delete-password"
+                              type="password"
+                              autoComplete="current-password"
+                              value={deletePassword}
+                              onChange={(e) => setDeletePassword(e.target.value)}
+                              className={inputClass}
+                              required
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label
+                              htmlFor="delete-confirm"
+                              className="mb-1.5 block text-sm font-medium"
+                            >
+                              Type DELETE to confirm
+                            </label>
+                            <input
+                              id="delete-confirm"
+                              type="text"
+                              autoComplete="off"
+                              value={deleteConfirm}
+                              onChange={(e) => setDeleteConfirm(e.target.value)}
+                              className={inputClass}
+                              placeholder="DELETE"
+                              required
+                            />
+                          </div>
+                        )}
+                        <FieldMessage error={deleteError} />
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="submit"
+                            disabled={deleteLoading}
+                            className="min-h-11 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+                          >
+                            {deleteLoading
+                              ? "Deleting..."
+                              : "Permanently delete account"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deleteLoading}
+                            onClick={() => {
+                              setDeleteOpen(false);
+                              setDeleteError("");
+                              setDeletePassword("");
+                              setDeleteConfirm("");
+                            }}
+                            className="min-h-11 rounded-xl border border-border px-5 text-sm font-medium text-muted transition hover:text-foreground disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
                 </section>
               </>
             )}
