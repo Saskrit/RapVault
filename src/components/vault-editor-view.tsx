@@ -462,19 +462,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       </VaultHeader>
 
       <div className="shrink-0 border-b border-border bg-card/50 px-2 py-2 sm:px-3 sm:py-3 lg:px-4">
-        <div className="grid w-full grid-cols-1 gap-2 lg:grid-cols-[minmax(0,55%)_minmax(0,45%)] lg:items-center lg:gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 lg:gap-3">
           <input
             id="song-title"
             type="text"
             value={song.title}
             onChange={(e) => scheduleSave({ title: e.target.value })}
             spellCheck={spellCheck}
-            className="box-border min-w-0 w-full max-w-full justify-self-stretch rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-xl xl:text-2xl"
+            className="box-border min-w-0 w-full flex-1 rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-xl xl:text-2xl"
             placeholder="Untitled track"
           />
 
-          <div className="flex min-w-0 w-full max-w-full items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:pb-0 [&::-webkit-scrollbar]:hidden">
+          <div className="flex shrink-0 items-center gap-2 self-stretch sm:self-auto">
+            <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-none sm:justify-start sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 onClick={() => setBeatsOpen((open) => !open)}
