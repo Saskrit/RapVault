@@ -26,7 +26,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const authPages = ["/login", "/register", "/forgot-password"];
+  // Allow signed-in users on forgot/reset password flows.
+  const authPages = ["/login", "/register"];
 
   if (
     authPages.some((p) => pathname === p || pathname.startsWith(`${p}/`)) &&

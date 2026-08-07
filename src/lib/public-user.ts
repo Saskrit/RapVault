@@ -19,6 +19,8 @@ type UserLike = {
   recoveryEmail: string | null;
   password?: string | null;
   googleId?: string | null;
+  totpEnabled?: boolean;
+  totpSecret?: string | null;
   createdAt: Date;
 };
 
@@ -38,6 +40,7 @@ export function toPublicUser(user: UserLike) {
     recoveryEmail: user.recoveryEmail,
     hasPassword: Boolean(user.password),
     hasGoogle: Boolean(user.googleId),
+    hasTotp: Boolean(user.totpEnabled && user.totpSecret),
     createdAt: user.createdAt.toISOString(),
     needsUsername: !user.username,
   };

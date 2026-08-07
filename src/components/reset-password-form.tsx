@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { Logo, BrandWordmark } from "@/components/logo";
 
 export function ResetPasswordForm() {
@@ -14,6 +15,32 @@ export function ResetPasswordForm() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!cancelled) setSignedIn(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setSignedIn(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => {
+      router.push(
+        signedIn ? "/vault/settings?reset=success" : "/login?reset=success",
+      );
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, [success, signedIn, router]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -43,12 +70,40 @@ export function ResetPasswordForm() {
         return;
       }
 
-      router.push("/login?reset=success");
+      setSuccess(true);
     } catch {
       setError("Network error. Try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (success) {
+    return (
+      <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <h1 className="mt-5 text-2xl font-bold text-foreground">
+            Password updated
+          </h1>
+          <p className="mt-2 max-w-sm text-sm text-muted">
+            Your password was changed successfully. You can sign in with it
+            anytime.
+          </p>
+          <p className="mt-4 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            Redirecting you now…
+          </p>
+          <Link
+            href={signedIn ? "/vault/settings?reset=success" : "/login?reset=success"}
+            className="mt-6 text-sm font-medium text-accent hover:underline"
+          >
+            {signedIn ? "Go to settings" : "Continue to sign in"}
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -110,9 +165,15 @@ export function ResetPasswordForm() {
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        <Link href="/login" className="text-accent hover:underline">
-          Back to sign in
-        </Link>
+        {signedIn ? (
+          <Link href="/vault/settings" className="text-accent hover:underline">
+            Back to settings
+          </Link>
+        ) : (
+          <Link href="/login" className="text-accent hover:underline">
+            Back to sign in
+          </Link>
+        )}
       </p>
     </div>
   );

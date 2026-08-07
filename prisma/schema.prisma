@@ -27,6 +27,8 @@ model User {
   recoveryEmail     String?   @unique
   resetToken        String?   @unique
   resetTokenExpires DateTime?
+  totpSecret        String?
+  totpEnabled       Boolean   @default(false)
   notificationsSeenAt DateTime?
   lastSeenAt        DateTime?
   createdAt         DateTime  @default(now())

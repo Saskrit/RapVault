@@ -24,6 +24,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [awaitingCode, setAwaitingCode] = useState(false);
+  const [awaitingTotp, setAwaitingTotp] = useState(false);
+  const [totpPendingToken, setTotpPendingToken] = useState("");
+  const [totpCode, setTotpCode] = useState("");
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,6 +43,9 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   useEffect(() => {
     setAwaitingCode(false);
+    setAwaitingTotp(false);
+    setTotpPendingToken("");
+    setTotpCode("");
     setCode("");
     setInfo("");
     setError("");
@@ -54,6 +60,25 @@ export function AuthForm({ mode }: AuthFormProps) {
     setLoading(true);
 
     try {
+      if (mode === "login" && awaitingTotp) {
+        const response = await fetch("/api/auth/totp/verify-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pendingToken: totpPendingToken,
+            code: totpCode,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        router.push("/vault");
+        router.refresh();
+        return;
+      }
+
       if (mode === "login") {
         const response = await fetch("/api/auth/login", {
           method: "POST",
@@ -63,6 +88,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         const data = await response.json();
         if (!response.ok) {
           setError(data.error || "Something went wrong");
+          return;
+        }
+        if (data.requiresTotp && data.pendingToken) {
+          setAwaitingTotp(true);
+          setTotpPendingToken(data.pendingToken);
+          setTotpCode("");
+          setInfo("Enter the 6-digit code from your authenticator app.");
           return;
         }
         router.push("/vault");
@@ -82,7 +114,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           return;
         }
         setAwaitingCode(true);
-        setInfo(`We sent a 6-digit code to ${email}. Enter it below to create your account.`);
+        setInfo(
+          `We sent a 6-digit code to ${email}. Enter it below to create your account.`,
+        );
         return;
       }
 
@@ -129,6 +163,10 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
+  const showPasswordFields =
+    !(mode === "register" && awaitingCode) &&
+    !(mode === "login" && awaitingTotp);
+
   return (
     <div className="w-full rounded-2xl border border-border bg-card p-4 shadow-xl sm:p-6">
       <div className="mb-5 text-center sm:mb-6">
@@ -138,21 +176,25 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
         <h1 className="type-h2 mt-3 text-foreground sm:mt-4">
           {mode === "login"
-            ? "Sign in"
+            ? awaitingTotp
+              ? "Authenticator code"
+              : "Sign in"
             : awaitingCode
               ? "Verify your email"
               : "Create your vault"}
         </h1>
         <p className="measure mx-auto mt-1.5 text-sm text-muted">
           {mode === "login"
-            ? "Sign in to access your lyrics."
+            ? awaitingTotp
+              ? "Open Google Authenticator and enter the current 6-digit code."
+              : "Sign in with your email or username."
             : awaitingCode
               ? "Enter the code we emailed you. Your account is created only after verification."
               : "Start writing and never lose a bar."}
         </p>
       </div>
 
-      {!(mode === "register" && awaitingCode) && (
+      {showPasswordFields && (
         <>
           <GoogleSignInButton
             label={
@@ -172,17 +214,24 @@ export function AuthForm({ mode }: AuthFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {!(mode === "register" && awaitingCode) && (
+        {showPasswordFields && (
           <>
             <div>
-              <label className="mb-1 block text-sm text-muted">Email</label>
+              <label className="mb-1 block text-sm text-muted">
+                {mode === "login" ? "Email or username" : "Email"}
+              </label>
               <input
-                type="email"
+                type={mode === "login" ? "text" : "email"}
+                autoComplete={mode === "login" ? "username" : "email"}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
-                placeholder="you@example.com"
+                placeholder={
+                  mode === "login"
+                    ? "you@example.com or username"
+                    : "you@example.com"
+                }
               />
             </div>
 
@@ -211,6 +260,28 @@ export function AuthForm({ mode }: AuthFormProps) {
           </>
         )}
 
+        {mode === "login" && awaitingTotp && (
+          <div>
+            <label className="mb-1 block text-sm text-muted">
+              Authenticator code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={totpCode}
+              onChange={(e) =>
+                setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
+              placeholder="000000"
+            />
+          </div>
+        )}
+
         {mode === "register" && awaitingCode && (
           <div>
             <label className="mb-1 block text-sm text-muted">
@@ -236,9 +307,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
         )}
 
-        {resetSuccess && (
-          <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-400">
-            Password updated. You can sign in now.
+        {resetSuccess && !awaitingTotp && (
+          <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            Password updated successfully. You can sign in now.
           </p>
         )}
 
@@ -262,11 +333,30 @@ export function AuthForm({ mode }: AuthFormProps) {
           {loading
             ? "Please wait..."
             : mode === "login"
-              ? "Sign in"
+              ? awaitingTotp
+                ? "Verify & sign in"
+                : "Sign in"
               : awaitingCode
                 ? "Verify & create account"
                 : "Send verification code"}
         </button>
+
+        {mode === "login" && awaitingTotp && (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setAwaitingTotp(false);
+              setTotpPendingToken("");
+              setTotpCode("");
+              setInfo("");
+              setError("");
+            }}
+            className="w-full text-center text-sm text-muted hover:text-foreground disabled:opacity-60"
+          >
+            Back to password
+          </button>
+        )}
 
         {mode === "register" && awaitingCode && (
           <div className="flex flex-col gap-2 text-center text-sm">
@@ -295,23 +385,25 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted">
-        {mode === "login" ? (
-          <>
-            New here?{" "}
-            <Link href="/register" className="text-accent hover:underline">
-              Create an account
-            </Link>
-          </>
-        ) : (
-          <>
-            Already have an account?{" "}
-            <Link href="/login" className="text-accent hover:underline">
-              Sign in
-            </Link>
-          </>
-        )}
-      </p>
+      {!awaitingTotp && (
+        <p className="mt-6 text-center text-sm text-muted">
+          {mode === "login" ? (
+            <>
+              New here?{" "}
+              <Link href="/register" className="text-accent hover:underline">
+                Create an account
+              </Link>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <Link href="/login" className="text-accent hover:underline">
+                Sign in
+              </Link>
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   Save,
   Share2,
   Shield,
+  Smartphone,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -58,6 +59,7 @@ type ProfileUser = {
   recoveryEmail: string | null;
   hasPassword: boolean;
   hasGoogle: boolean;
+  hasTotp?: boolean;
   createdAt?: string;
 };
 
@@ -139,7 +141,17 @@ export function VaultSettingsView() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
-  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const [totpSetupOpen, setTotpSetupOpen] = useState(false);
+  const [totpSecret, setTotpSecret] = useState("");
+  const [totpQr, setTotpQr] = useState("");
+  const [totpSetupToken, setTotpSetupToken] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [totpDisablePassword, setTotpDisablePassword] = useState("");
+  const [totpDisableCode, setTotpDisableCode] = useState("");
+  const [totpDisableOpen, setTotpDisableOpen] = useState(false);
+  const [totpError, setTotpError] = useState("");
+  const [totpLoading, setTotpLoading] = useState(false);
 
   const [newEmail, setNewEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
@@ -548,29 +560,101 @@ export function VaultSettingsView() {
     }
   }
 
-  async function handleForgotPassword() {
-    if (!user?.email || forgotLoading) return;
-    setPasswordError("");
-    setForgotLoading(true);
+  function resetTotpSetup() {
+    setTotpSetupOpen(false);
+    setTotpSecret("");
+    setTotpQr("");
+    setTotpSetupToken("");
+    setTotpCode("");
+    setTotpError("");
+  }
+
+  async function handleTotpSetupStart() {
+    setTotpError("");
+    setTotpLoading(true);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/auth/totp/setup", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTotpError(data.error || "Could not start two-step setup.");
+        return;
+      }
+      setTotpSecret(data.secret || "");
+      setTotpQr(data.qrDataUrl || "");
+      setTotpSetupToken(data.setupToken || "");
+      setTotpCode("");
+      setTotpDisableOpen(false);
+      setTotpSetupOpen(true);
+    } catch {
+      setTotpError("Network error. Try again.");
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleTotpEnable(event: FormEvent) {
+    event.preventDefault();
+    setTotpError("");
+    if (totpCode.length !== 6) {
+      setTotpError("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const res = await fetch("/api/auth/totp/enable", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email }),
+        body: JSON.stringify({
+          setupToken: totpSetupToken,
+          code: totpCode,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setPasswordError(data.error || "Could not send reset email.");
+        setTotpError(data.error || "Could not enable two-step verification.");
         return;
       }
-      showToast(
-        "success",
-        `Reset link sent to ${user.email}. Open it to choose a new password.`,
-      );
+      resetTotpSetup();
+      showToast("success", "Two-step verification enabled.");
+      await loadProfile();
     } catch {
-      setPasswordError("Network error. Try again.");
+      setTotpError("Network error. Try again.");
     } finally {
-      setForgotLoading(false);
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleTotpDisable(event: FormEvent) {
+    event.preventDefault();
+    setTotpError("");
+    if (!totpDisablePassword || totpDisableCode.length !== 6) {
+      setTotpError("Password and authenticator code are required.");
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const res = await fetch("/api/auth/totp/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: totpDisablePassword,
+          code: totpDisableCode,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTotpError(data.error || "Could not disable two-step verification.");
+        return;
+      }
+      setTotpDisableOpen(false);
+      setTotpDisablePassword("");
+      setTotpDisableCode("");
+      showToast("success", "Two-step verification disabled.");
+      await loadProfile();
+    } catch {
+      setTotpError("Network error. Try again.");
+    } finally {
+      setTotpLoading(false);
     }
   }
 
@@ -1186,14 +1270,12 @@ export function VaultSettingsView() {
                           >
                             Current password
                           </label>
-                          <button
-                            type="button"
-                            onClick={handleForgotPassword}
-                            disabled={forgotLoading || passwordLoading}
-                            className="text-xs font-medium text-accent transition hover:underline disabled:opacity-50"
+                          <Link
+                            href="/forgot-password"
+                            className="text-xs font-medium text-accent transition hover:underline"
                           >
-                            {forgotLoading ? "Sending..." : "Forgot password?"}
-                          </button>
+                            Forgot password?
+                          </Link>
                         </div>
                         <input
                           id="current-password"
@@ -1255,6 +1337,215 @@ export function VaultSettingsView() {
                           : "Create password"}
                     </button>
                   </form>
+                </section>
+
+                <section className="flex flex-col rounded-3xl border border-border bg-card sm:col-span-2">
+                  <div className="border-b border-border px-5 py-4 sm:px-6">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="h-4 w-4 text-muted" />
+                        <h3 className="text-base font-semibold tracking-tight">
+                          Two-step verification
+                        </h3>
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          user.hasTotp
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : "bg-muted/30 text-muted"
+                        }`}
+                      >
+                        {user.hasTotp ? "On" : "Off"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-muted">
+                      Use Google Authenticator (or any TOTP app) for email/password
+                      sign-in. Google sign-in stays one-step. Keep your phone safe —
+                      without backup codes, losing the app locks you out of password
+                      login until you can disable it while signed in.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-1 flex-col space-y-4 px-5 py-5 sm:px-6">
+                    {!user.hasPassword ? (
+                      <p className="text-sm text-muted">
+                        Create an email password above before enabling two-step
+                        verification.
+                      </p>
+                    ) : user.hasTotp ? (
+                      totpDisableOpen ? (
+                        <form
+                          onSubmit={handleTotpDisable}
+                          className="space-y-3"
+                        >
+                          <div>
+                            <label
+                              htmlFor="totp-disable-password"
+                              className="mb-1.5 block text-sm font-medium"
+                            >
+                              Current password
+                            </label>
+                            <input
+                              id="totp-disable-password"
+                              type="password"
+                              autoComplete="current-password"
+                              value={totpDisablePassword}
+                              onChange={(e) =>
+                                setTotpDisablePassword(e.target.value)
+                              }
+                              className={inputClass}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor="totp-disable-code"
+                              className="mb-1.5 block text-sm font-medium"
+                            >
+                              Authenticator code
+                            </label>
+                            <input
+                              id="totp-disable-code"
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="one-time-code"
+                              value={totpDisableCode}
+                              onChange={(e) =>
+                                setTotpDisableCode(
+                                  e.target.value.replace(/\D/g, "").slice(0, 6),
+                                )
+                              }
+                              className={`${inputClass} text-center tracking-[0.35em]`}
+                              placeholder="000000"
+                              required
+                              maxLength={6}
+                            />
+                          </div>
+                          <FieldMessage error={totpError} />
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="submit"
+                              disabled={totpLoading}
+                              className="min-h-11 rounded-xl border border-red-500/40 px-5 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+                            >
+                              {totpLoading ? "Disabling..." : "Disable two-step"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={totpLoading}
+                              onClick={() => {
+                                setTotpDisableOpen(false);
+                                setTotpDisablePassword("");
+                                setTotpDisableCode("");
+                                setTotpError("");
+                              }}
+                              className="min-h-11 rounded-xl border border-border px-5 text-sm font-medium text-muted transition hover:text-foreground disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted">
+                            Authenticator codes are required after your password
+                            when signing in with email.
+                          </p>
+                          <FieldMessage error={totpError} />
+                          <button
+                            type="button"
+                            disabled={totpLoading}
+                            onClick={() => {
+                              setTotpDisableOpen(true);
+                              setTotpError("");
+                              resetTotpSetup();
+                            }}
+                            className="w-fit min-h-11 rounded-xl border border-border px-5 text-sm font-semibold transition hover:border-foreground/20 disabled:opacity-50"
+                          >
+                            Disable…
+                          </button>
+                        </>
+                      )
+                    ) : totpSetupOpen ? (
+                      <form onSubmit={handleTotpEnable} className="space-y-4">
+                        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                          {totpQr ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={totpQr}
+                              alt="Authenticator QR code"
+                              width={180}
+                              height={180}
+                              className="rounded-xl border border-border bg-white p-2"
+                            />
+                          ) : null}
+                          <div className="min-w-0 space-y-2 text-sm">
+                            <p className="text-muted">
+                              Scan with Google Authenticator, then enter the
+                              6-digit code to confirm.
+                            </p>
+                            <p className="break-all font-mono text-xs text-foreground">
+                              {totpSecret}
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="totp-enable-code"
+                            className="mb-1.5 block text-sm font-medium"
+                          >
+                            Authenticator code
+                          </label>
+                          <input
+                            id="totp-enable-code"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            value={totpCode}
+                            onChange={(e) =>
+                              setTotpCode(
+                                e.target.value.replace(/\D/g, "").slice(0, 6),
+                              )
+                            }
+                            className={`${inputClass} max-w-xs text-center tracking-[0.35em]`}
+                            placeholder="000000"
+                            required
+                            maxLength={6}
+                          />
+                        </div>
+                        <FieldMessage error={totpError} />
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="submit"
+                            disabled={totpLoading}
+                            className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                          >
+                            {totpLoading ? "Enabling..." : "Confirm & enable"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={totpLoading}
+                            onClick={resetTotpSetup}
+                            className="min-h-11 rounded-xl border border-border px-5 text-sm font-medium text-muted transition hover:text-foreground disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <FieldMessage error={totpError} />
+                        <button
+                          type="button"
+                          disabled={totpLoading}
+                          onClick={() => void handleTotpSetupStart()}
+                          className="w-fit min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                        >
+                          {totpLoading ? "Preparing..." : "Enable with Authenticator"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </section>
 
                 <section className="flex flex-col rounded-3xl border border-border bg-card">

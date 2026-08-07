@@ -6,20 +6,23 @@ import {
   normalizeEmail,
   validatePassword,
 } from "@/lib/auth-validation";
+import { createTotpLoginToken } from "@/lib/totp";
+import { isValidUsername, normalizeUsername } from "@/lib/username";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const email = normalizeEmail(body.email);
+    const rawIdentifier =
+      typeof body.email === "string"
+        ? body.email.trim()
+        : typeof body.identifier === "string"
+          ? body.identifier.trim()
+          : "";
     const password = typeof body.password === "string" ? body.password : "";
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
-
-    if (!isValidEmail(email)) {
+    if (!rawIdentifier) {
       return NextResponse.json(
-        { error: "Enter a valid email address" },
+        { error: "Email or username is required" },
         { status: 400 },
       );
     }
@@ -29,11 +32,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: passwordError }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const email = normalizeEmail(rawIdentifier);
+    const username = normalizeUsername(rawIdentifier);
+
+    let user = null;
+    if (isValidEmail(email)) {
+      user = await prisma.user.findUnique({ where: { email } });
+    } else if (isValidUsername(username)) {
+      user = await prisma.user.findUnique({ where: { username } });
+    } else {
+      return NextResponse.json(
+        { error: "Enter a valid email or username" },
+        { status: 400 },
+      );
+    }
 
     if (!user) {
       return NextResponse.json(
-        { error: "No account found with this email. Create an account to get started." },
+        {
+          error: isValidEmail(email)
+            ? "No account found with this email. Create an account to get started."
+            : "No account found with this username. Check the spelling or sign in with email.",
+        },
         { status: 401 },
       );
     }
@@ -63,6 +83,14 @@ export async function POST(request: Request) {
         { error: "Incorrect password. Please try again." },
         { status: 401 },
       );
+    }
+
+    if (user.totpEnabled && user.totpSecret) {
+      const pendingToken = await createTotpLoginToken(user.id);
+      return NextResponse.json({
+        requiresTotp: true,
+        pendingToken,
+      });
     }
 
     await createSession({

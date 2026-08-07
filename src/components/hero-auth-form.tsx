@@ -16,12 +16,18 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [awaitingCode, setAwaitingCode] = useState(false);
+  const [awaitingTotp, setAwaitingTotp] = useState(false);
+  const [totpPendingToken, setTotpPendingToken] = useState("");
+  const [totpCode, setTotpCode] = useState("");
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setAwaitingCode(false);
+    setAwaitingTotp(false);
+    setTotpPendingToken("");
+    setTotpCode("");
     setCode("");
     setInfo("");
     setError("");
@@ -34,6 +40,25 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
     setLoading(true);
 
     try {
+      if (mode === "login" && awaitingTotp) {
+        const response = await fetch("/api/auth/totp/verify-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pendingToken: totpPendingToken,
+            code: totpCode,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        router.push("/vault");
+        router.refresh();
+        return;
+      }
+
       if (mode === "login") {
         const response = await fetch("/api/auth/login", {
           method: "POST",
@@ -43,6 +68,13 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         const data = await response.json();
         if (!response.ok) {
           setError(data.error || "Something went wrong");
+          return;
+        }
+        if (data.requiresTotp && data.pendingToken) {
+          setAwaitingTotp(true);
+          setTotpPendingToken(data.pendingToken);
+          setTotpCode("");
+          setInfo("Enter the 6-digit code from your authenticator app.");
           return;
         }
         router.push("/vault");
@@ -109,20 +141,31 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
     }
   }
 
+  const showPasswordFields =
+    !(mode === "register" && awaitingCode) &&
+    !(mode === "login" && awaitingTotp);
+
   return (
     <div className="hero-auth-mode flex min-h-full w-full flex-col justify-start gap-3 overflow-y-auto overscroll-contain px-3.5 py-3.5 sm:gap-3.5 sm:px-5 sm:py-4 lg:justify-center lg:px-5">
       <form onSubmit={handleSubmit} className="space-y-3">
-        {!(mode === "register" && awaitingCode) && (
+        {showPasswordFields && (
           <>
             <div>
-              <label className="mb-1 block text-sm text-muted">Email</label>
+              <label className="mb-1 block text-sm text-muted">
+                {mode === "login" ? "Email or username" : "Email"}
+              </label>
               <input
-                type="email"
+                type={mode === "login" ? "text" : "email"}
+                autoComplete={mode === "login" ? "username" : "email"}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full min-h-11 rounded-xl border border-border bg-background px-3.5 py-2.5 text-base text-foreground outline-none focus:border-accent"
-                placeholder="you@example.com"
+                placeholder={
+                  mode === "login"
+                    ? "you@example.com or username"
+                    : "you@example.com"
+                }
               />
             </div>
 
@@ -149,6 +192,28 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
               />
             </div>
           </>
+        )}
+
+        {mode === "login" && awaitingTotp && (
+          <div>
+            <label className="mb-1 block text-sm text-muted">
+              Authenticator code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={totpCode}
+              onChange={(e) =>
+                setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="w-full min-h-11 rounded-xl border border-border bg-background px-3.5 py-2.5 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
+              placeholder="000000"
+            />
+          </div>
         )}
 
         {mode === "register" && awaitingCode && (
@@ -194,11 +259,30 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
           {loading
             ? "Please wait..."
             : mode === "login"
-              ? "Sign in"
+              ? awaitingTotp
+                ? "Verify & sign in"
+                : "Sign in"
               : awaitingCode
                 ? "Verify & create account"
                 : "Send verification code"}
         </button>
+
+        {mode === "login" && awaitingTotp && (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setAwaitingTotp(false);
+              setTotpPendingToken("");
+              setTotpCode("");
+              setInfo("");
+              setError("");
+            }}
+            className="min-h-10 text-center text-sm text-muted hover:text-foreground disabled:opacity-60"
+          >
+            Back to password
+          </button>
+        )}
 
         {mode === "register" && awaitingCode && (
           <div className="flex flex-col gap-2 text-center text-sm">
@@ -227,7 +311,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         )}
       </form>
 
-      {!(mode === "register" && awaitingCode) && (
+      {showPasswordFields && (
         <>
           <div className="relative py-1">
             <div className="absolute inset-0 flex items-center">
@@ -247,31 +331,33 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         </>
       )}
 
-      <p className="pb-0.5 pt-0.5 text-center text-sm text-muted">
-        {mode === "login" ? (
-          <>
-            New here?{" "}
-            <button
-              type="button"
-              onClick={() => onSwitchMode("register")}
-              className="min-h-10 font-medium text-accent hover:underline"
-            >
-              Get started
-            </button>
-          </>
-        ) : (
-          <>
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={() => onSwitchMode("login")}
-              className="min-h-10 font-medium text-accent hover:underline"
-            >
-              Sign in
-            </button>
-          </>
-        )}
-      </p>
+      {!awaitingTotp && (
+        <p className="pb-0.5 pt-0.5 text-center text-sm text-muted">
+          {mode === "login" ? (
+            <>
+              New here?{" "}
+              <button
+                type="button"
+                onClick={() => onSwitchMode("register")}
+                className="min-h-10 font-medium text-accent hover:underline"
+              >
+                Get started
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => onSwitchMode("login")}
+                className="min-h-10 font-medium text-accent hover:underline"
+              >
+                Sign in
+              </button>
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }
