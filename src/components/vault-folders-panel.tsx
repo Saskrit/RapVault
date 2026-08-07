@@ -5,7 +5,6 @@ import {
   Folder,
   FolderPlus,
   ListMusic,
-  MessageSquare,
   Network,
   PanelLeftClose,
   PanelLeftOpen,
@@ -19,10 +18,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Folder as FolderType } from "@/types";
-import {
-  UnreadBadge,
-  useUnreadMessages,
-} from "@/hooks/use-unread-messages";
+import { UnreadBadge } from "@/hooks/use-unread-messages";
 import { useNotifications } from "@/hooks/use-notifications";
 
 type VaultFoldersPanelProps = {
@@ -74,11 +70,9 @@ export function VaultFoldersPanel({
   onNavigate,
 }: VaultFoldersPanelProps) {
   const pathname = usePathname();
-  const { unreadCount } = useUnreadMessages();
   const { count: networkRequestCount } = useNotifications(20000);
   const onArtists = pathname.startsWith("/vault/artists");
   const onNetwork = pathname.startsWith("/vault/network");
-  const onMessages = pathname.startsWith("/vault/messages");
   const onStats = pathname.startsWith("/vault/stats");
   const onAllSongs =
     !selectedFolderId && !showFavorites && !showTrash && !showCollaborations;
@@ -182,18 +176,6 @@ export function VaultFoldersPanel({
             count={networkRequestCount}
             className="-right-0.5 -top-0.5"
           />
-        </Link>
-        <Link
-          href="/vault/messages"
-          onClick={() => onNavigate?.()}
-          className={`${collapsedBtn} ${onMessages ? collapsedActive : ""}`}
-          aria-label={
-            unreadCount > 0 ? `Messages, ${unreadCount} unread` : "Messages"
-          }
-          title="Messages"
-        >
-          <MessageSquare className="h-4 w-4" />
-          <UnreadBadge count={unreadCount} className="-right-0.5 -top-0.5" />
         </Link>
         <Link
           href="/vault/stats"
@@ -352,27 +334,6 @@ export function VaultFoldersPanel({
             {networkRequestCount > 0 && (
               <span className="rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
                 {networkRequestCount > 99 ? "99+" : networkRequestCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/vault/messages"
-            onClick={() => onNavigate?.()}
-            className={`${navBtn} ${itemClass(onMessages)}`}
-            aria-label={
-              unreadCount > 0
-                ? `Messages, ${unreadCount} unread`
-                : "Messages"
-            }
-          >
-            <span className="relative shrink-0">
-              <MessageSquare className="h-4 w-4" />
-              <UnreadBadge count={unreadCount} className="-right-2 -top-2" />
-            </span>
-            <span className="min-w-0 flex-1 truncate">Messages</span>
-            {unreadCount > 0 && (
-              <span className="rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
-                {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
           </Link>

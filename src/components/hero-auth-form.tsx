@@ -110,8 +110,8 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
   }
 
   return (
-    <div className="hero-auth-mode flex h-full min-h-0 w-full flex-col justify-center gap-4 overflow-y-auto overscroll-contain px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
-      <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
+    <div className="hero-auth-mode flex min-h-full w-full flex-col justify-start gap-4 overflow-y-auto overscroll-contain px-4 py-5 sm:gap-5 sm:px-6 sm:py-6 lg:justify-center lg:px-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {!(mode === "register" && awaitingCode) && (
           <>
             <div>
@@ -121,7 +121,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full min-h-11 rounded-xl border border-border bg-background px-3.5 py-2.5 text-base text-foreground outline-none focus:border-accent"
+                className="w-full min-h-12 rounded-xl border border-border bg-background px-3.5 py-3 text-base text-foreground outline-none focus:border-accent"
                 placeholder="you@example.com"
               />
             </div>
@@ -132,7 +132,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
                 {mode === "login" && (
                   <Link
                     href="/forgot-password"
-                    className="text-xs text-accent hover:underline sm:text-sm"
+                    className="text-sm text-accent hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -144,7 +144,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full min-h-11 rounded-xl border border-border bg-background px-3.5 py-2.5 text-base text-foreground outline-none focus:border-accent"
+                className="w-full min-h-12 rounded-xl border border-border bg-background px-3.5 py-3 text-base text-foreground outline-none focus:border-accent"
                 placeholder="Min 6 characters"
               />
             </div>
@@ -167,7 +167,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
               onChange={(e) =>
                 setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
               }
-              className="w-full min-h-11 rounded-xl border border-border bg-background px-3.5 py-2.5 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
+              className="w-full min-h-12 rounded-xl border border-border bg-background px-3.5 py-3 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
               placeholder="000000"
             />
             <p className="mt-1.5 text-xs text-muted">Sent to {email}</p>
@@ -175,13 +175,13 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         )}
 
         {info && (
-          <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm leading-snug text-emerald-600 dark:text-emerald-400">
+          <p className="rounded-xl bg-emerald-500/10 px-3 py-2.5 text-sm leading-snug text-emerald-600 dark:text-emerald-400">
             {info}
           </p>
         )}
 
         {error && (
-          <p className="rounded-xl bg-red-500/10 px-3 py-2 text-sm leading-snug text-red-400">
+          <p className="rounded-xl bg-red-500/10 px-3 py-2.5 text-sm leading-snug text-red-400">
             {error}
           </p>
         )}
@@ -189,7 +189,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full min-h-11 rounded-xl bg-accent py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
+          className="w-full min-h-12 rounded-xl bg-accent py-3 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
         >
           {loading
             ? "Please wait..."
@@ -201,12 +201,12 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         </button>
 
         {mode === "register" && awaitingCode && (
-          <div className="flex flex-col gap-1.5 text-center text-sm">
+          <div className="flex flex-col gap-2 text-center text-sm">
             <button
               type="button"
               disabled={loading}
               onClick={handleResendCode}
-              className="font-medium text-accent hover:underline disabled:opacity-60"
+              className="min-h-10 font-medium text-accent hover:underline disabled:opacity-60"
             >
               Resend code
             </button>
@@ -219,7 +219,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
                 setInfo("");
                 setError("");
               }}
-              className="text-muted hover:text-foreground disabled:opacity-60"
+              className="min-h-10 text-muted hover:text-foreground disabled:opacity-60"
             >
               Change email
             </button>
@@ -229,7 +229,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
 
       {!(mode === "register" && awaitingCode) && (
         <>
-          <div className="relative py-0.5">
+          <div className="relative py-1">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
             </div>
@@ -242,19 +242,19 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
             label={
               mode === "login" ? "Sign in with Google" : "Sign up with Google"
             }
-            className="min-h-11 gap-2 rounded-xl px-3 py-2.5 text-sm"
+            className="min-h-12 gap-2 rounded-xl px-3 py-3 text-sm"
           />
         </>
       )}
 
-      <p className="pt-0.5 text-center text-sm text-muted">
+      <p className="pb-1 pt-1 text-center text-sm text-muted">
         {mode === "login" ? (
           <>
             New here?{" "}
             <button
               type="button"
               onClick={() => onSwitchMode("register")}
-              className="font-medium text-accent hover:underline"
+              className="min-h-10 font-medium text-accent hover:underline"
             >
               Get started
             </button>
@@ -265,7 +265,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
             <button
               type="button"
               onClick={() => onSwitchMode("login")}
-              className="font-medium text-accent hover:underline"
+              className="min-h-10 font-medium text-accent hover:underline"
             >
               Sign in
             </button>

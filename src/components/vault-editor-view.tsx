@@ -58,7 +58,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCollabModal, setShowCollabModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [spellCheck, setSpellCheck] = useState(true);
+  const [spellCheck, setSpellCheck] = useState(false);
   const [beatsOpen, setBeatsOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,8 +71,17 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   }, [song]);
 
   useEffect(() => {
-    const saved = preferenceStorageGet("rapvault-spellcheck");
-    if (saved === "false") setSpellCheck(false);
+    const media = window.matchMedia("(max-width: 1023px)");
+    function syncSpellCheck() {
+      if (media.matches) {
+        setSpellCheck(false);
+        return;
+      }
+      setSpellCheck(preferenceStorageGet("rapvault-spellcheck") !== "false");
+    }
+    syncSpellCheck();
+    media.addEventListener("change", syncSpellCheck);
+    return () => media.removeEventListener("change", syncSpellCheck);
   }, []);
 
   useEffect(() => {
@@ -114,6 +123,10 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   }, []);
 
   function toggleSpellCheck() {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setSpellCheck(false);
+      return;
+    }
     setSpellCheck((prev) => {
       const next = !prev;
       preferenceStorageSet("rapvault-spellcheck", String(next));
@@ -432,11 +445,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       <VaultHeader>
         <Link
           href="/vault"
-          className={`${iconBtn} w-auto shrink-0 gap-1.5 px-3 text-sm font-medium`}
+          className={`${iconBtn} shrink-0`}
           aria-label="Back to library"
+          title="Library"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Library</span>
         </Link>
       </VaultHeader>
 

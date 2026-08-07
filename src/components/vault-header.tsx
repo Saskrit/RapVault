@@ -40,10 +40,10 @@ const SKIP_LOGOUT_CONFIRM_KEY = "rapvault-skip-logout-confirm";
 
 /** Touch-friendly on phones; same visual size on desktop (lg+). */
 const iconBtn =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground";
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:w-10";
 
 const logoutBtn =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400";
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400 sm:h-10 sm:w-10";
 
 const headerIcon = "h-4 w-4";
 
@@ -187,15 +187,15 @@ export function VaultHeader({
       )}
 
       <div
-        className={`relative items-center gap-1 px-2 py-2 sm:gap-1.5 sm:px-3 sm:py-2.5 lg:gap-3 lg:px-5 lg:py-3 ${
+        className={`relative items-center gap-1 px-1.5 py-1.5 sm:gap-1.5 sm:px-3 sm:py-2.5 lg:gap-3 lg:px-5 lg:py-3 ${
           showSearch && mobileSearchOpen ? "hidden" : "flex"
         }`}
       >
         {children}
 
-        <div className="relative z-10 flex min-w-0 items-center gap-1 sm:gap-1.5 lg:gap-2">
+        <div className="relative z-10 flex min-w-0 shrink-0 items-center gap-1 sm:gap-1.5 lg:gap-2">
           <span className="inline-flex lg:hidden">
-            <Logo size={28} href="/vault" priority />
+            <Logo size={24} href="/vault" priority />
           </span>
           <span className="hidden lg:inline-flex">
             <Logo size={36} href="/vault" priority />
@@ -222,7 +222,7 @@ export function VaultHeader({
         )}
 
         {centerLabel && !showSearch && (
-          <p className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-12 sm:px-20 lg:px-28">
+          <p className="pointer-events-none absolute inset-x-0 top-1/2 z-0 hidden -translate-y-1/2 justify-center px-20 sm:flex sm:px-24 lg:px-28">
             <span className="truncate text-xs font-semibold tracking-tight text-foreground sm:text-sm lg:text-base">
               {centerLabel}
             </span>
@@ -230,7 +230,7 @@ export function VaultHeader({
         )}
 
         {centerLabel && showSearch && (
-          <p className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-foreground lg:hidden">
+          <p className="min-w-0 flex-1 truncate text-center text-sm font-semibold tracking-tight text-foreground lg:hidden">
             {centerLabel}
           </p>
         )}
@@ -398,7 +398,7 @@ export function VaultHeader({
           >
             <Settings className={headerIcon} />
           </Link>
-          <ThemeToggle />
+          <ThemeToggle className="hidden md:flex" />
           <button
             type="button"
             onClick={handleLogoutClick}

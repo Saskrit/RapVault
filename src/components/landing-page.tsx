@@ -116,13 +116,19 @@ export function LandingPage({
 
   function focusAuthBox() {
     const isNarrow = window.matchMedia("(max-width: 1023px)").matches;
-    // Wait a frame so the auth panel is mounted before scrolling.
-    requestAnimationFrame(() => {
+    const scrollToBox = () => {
       authBoxRef.current?.scrollIntoView({
         behavior: "smooth",
         block: isNarrow ? "start" : "nearest",
         inline: "nearest",
       });
+    };
+    // Wait for the taller auth panel to layout, then scroll into view.
+    requestAnimationFrame(() => {
+      scrollToBox();
+      if (isNarrow) {
+        window.setTimeout(scrollToBox, 150);
+      }
     });
     setAuthHighlight(true);
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
@@ -274,11 +280,15 @@ export function LandingPage({
               <div
                 ref={authBoxRef}
                 id="auth-box"
-                className="relative flex min-h-[22rem] w-full scroll-mt-[4.75rem] sm:min-h-[28rem] lg:min-h-[34rem] lg:scroll-mt-24"
+                className={`relative flex w-full scroll-mt-[4.75rem] lg:scroll-mt-24 ${
+                  authOpen
+                    ? "min-h-[min(85dvh,42rem)] sm:min-h-[36rem] lg:min-h-[34rem]"
+                    : "min-h-[22rem] sm:min-h-[28rem] lg:min-h-[34rem]"
+                }`}
               >
                 <div className="pointer-events-none absolute -inset-3 rounded-3xl bg-accent/12 blur-2xl" />
                 <div
-                  className={`relative flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl transition-[box-shadow,border-color] duration-500 ${
+                  className={`relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl transition-[box-shadow,border-color] duration-500 ${
                     authHighlight
                       ? "border-accent shadow-[0_0_0_3px_rgba(139,92,246,0.35)]"
                       : "border-border"
@@ -296,13 +306,13 @@ export function LandingPage({
                         <button
                           type="button"
                           onClick={closeAuth}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
                           aria-label="Close"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-4 w-4" />
                         </button>
                       </div>
-                      <div className="relative min-h-0 flex-1 bg-editor">
+                      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor">
                         {authMode && (
                           <div
                             key={
@@ -310,7 +320,7 @@ export function LandingPage({
                                 ? "auth-exit"
                                 : `auth-${authMode}`
                             }
-                            className={`absolute inset-0 ${
+                            className={`min-h-full ${
                               authPhase === "closing"
                                 ? "hero-auth-exit"
                                 : "hero-auth-enter"
@@ -324,7 +334,7 @@ export function LandingPage({
                           </div>
                         )}
                       </div>
-                      <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-2.5 text-[11px] text-muted sm:px-5 sm:text-xs">
+                      <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-3 text-xs text-muted sm:px-5">
                         <span>
                           {authMode === "login"
                             ? "Welcome back"
@@ -333,7 +343,7 @@ export function LandingPage({
                         <button
                           type="button"
                           onClick={closeAuth}
-                          className="font-medium text-accent transition hover:underline"
+                          className="min-h-10 px-1 font-medium text-accent transition hover:underline"
                         >
                           Back
                         </button>

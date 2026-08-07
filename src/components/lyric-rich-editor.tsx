@@ -407,8 +407,19 @@ export function LyricRichEditor({
   }
 
   useEffect(() => {
-    const saved = preferenceStorageGet("rapvault-rap-tools");
-    if (saved === "true") setRapToolsOpen(true);
+    const media = window.matchMedia("(min-width: 1024px)");
+    function syncRapTools() {
+      if (!media.matches) {
+        setRapToolsOpen(false);
+        setShowSyllables(false);
+        setShowRhymes(false);
+        return;
+      }
+      const saved = preferenceStorageGet("rapvault-rap-tools");
+      setRapToolsOpen(saved === "true");
+    }
+    syncRapTools();
+    media.addEventListener("change", syncRapTools);
 
     const savedSize = Number(preferenceStorageGet(FONT_SIZE_KEY));
     if (FONT_SIZES.includes(savedSize as (typeof FONT_SIZES)[number])) {
@@ -418,6 +429,8 @@ export function LyricRichEditor({
     if (canChooseWriterColor) {
       setPickedColor(loadSavedCollabColor());
     }
+
+    return () => media.removeEventListener("change", syncRapTools);
   }, [canChooseWriterColor]);
 
   useEffect(() => {
@@ -716,40 +729,42 @@ export function LyricRichEditor({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border">
         <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 lg:px-6">
-          <button type="button" className={`${toolBtn} w-9`} title="Bold" aria-label="Bold" onClick={() => runCommand("bold")}>
-            <Bold className="h-4 w-4" />
-          </button>
-          <button type="button" className={`${toolBtn} w-9`} title="Italic" aria-label="Italic" onClick={() => runCommand("italic")}>
-            <Italic className="h-4 w-4" />
-          </button>
-          <button type="button" className={`${toolBtn} w-9`} title="Strikethrough" aria-label="Strikethrough" onClick={() => runCommand("strikeThrough")}>
-            <Strikethrough className="h-4 w-4" />
-          </button>
-          <button type="button" className={`${toolBtn} w-9`} title="Bullet list" aria-label="Bullet list" onClick={() => runCommand("insertUnorderedList")}>
-            <List className="h-4 w-4" />
-          </button>
-          <button type="button" className={`${toolBtn} w-9`} title="Numbered list" aria-label="Numbered list" onClick={() => runCommand("insertOrderedList")}>
-            <ListOrdered className="h-4 w-4" />
-          </button>
-          <button type="button" className={`${toolBtn} w-9`} title="Quote" aria-label="Quote" onClick={() => runCommand("formatBlock", "blockquote")}>
-            <Quote className="h-4 w-4" />
-          </button>
-          <button type="button" className={`${toolBtn} w-9`} title="Link" aria-label="Link" onClick={insertLink}>
-            <Link className="h-4 w-4" />
-          </button>
-          {onSpellCheckChange && (
-            <button
-              type="button"
-              className={`${toolBtn} w-9 ${
-                spellCheck ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent" : ""
-              }`}
-              title={spellCheck ? "Spell check on" : "Spell check off"}
-              aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
-              onClick={() => onSpellCheckChange(!spellCheck)}
-            >
-              <SpellCheck className="h-4 w-4" />
+          <div className="hidden items-center gap-0.5 lg:flex">
+            <button type="button" className={`${toolBtn} w-9`} title="Bold" aria-label="Bold" onClick={() => runCommand("bold")}>
+              <Bold className="h-4 w-4" />
             </button>
-          )}
+            <button type="button" className={`${toolBtn} w-9`} title="Italic" aria-label="Italic" onClick={() => runCommand("italic")}>
+              <Italic className="h-4 w-4" />
+            </button>
+            <button type="button" className={`${toolBtn} w-9`} title="Strikethrough" aria-label="Strikethrough" onClick={() => runCommand("strikeThrough")}>
+              <Strikethrough className="h-4 w-4" />
+            </button>
+            <button type="button" className={`${toolBtn} w-9`} title="Bullet list" aria-label="Bullet list" onClick={() => runCommand("insertUnorderedList")}>
+              <List className="h-4 w-4" />
+            </button>
+            <button type="button" className={`${toolBtn} w-9`} title="Numbered list" aria-label="Numbered list" onClick={() => runCommand("insertOrderedList")}>
+              <ListOrdered className="h-4 w-4" />
+            </button>
+            <button type="button" className={`${toolBtn} w-9`} title="Quote" aria-label="Quote" onClick={() => runCommand("formatBlock", "blockquote")}>
+              <Quote className="h-4 w-4" />
+            </button>
+            <button type="button" className={`${toolBtn} w-9`} title="Link" aria-label="Link" onClick={insertLink}>
+              <Link className="h-4 w-4" />
+            </button>
+            {onSpellCheckChange && (
+              <button
+                type="button"
+                className={`${toolBtn} w-9 ${
+                  spellCheck ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent" : ""
+                }`}
+                title={spellCheck ? "Spell check on" : "Spell check off"}
+                aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
+                onClick={() => onSpellCheckChange(!spellCheck)}
+              >
+                <SpellCheck className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
           <div className="ml-0.5 flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
             <button
@@ -839,7 +854,7 @@ export function LyricRichEditor({
           <button
             type="button"
             onClick={toggleRapTools}
-            className={`${toolBtn} ${toolbarStats ? "" : "ml-auto "}gap-1 px-2.5 text-xs font-medium ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
+            className={`${toolBtn} hidden ${toolbarStats ? "" : "ml-auto "}gap-1 px-2.5 text-xs font-medium lg:inline-flex ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
             title={rapToolsOpen ? "Hide rap tools" : "Show rap tools"}
             aria-expanded={rapToolsOpen}
           >
@@ -849,7 +864,7 @@ export function LyricRichEditor({
         </div>
 
         {rapToolsOpen && (
-          <>
+          <div className="hidden lg:block">
             <div className="flex flex-wrap items-center gap-0.5 border-t border-border px-3 py-1.5 lg:px-6">
               <button
                 type="button"
@@ -883,12 +898,12 @@ export function LyricRichEditor({
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {rapToolsOpen && (showSyllables || showRhymes) && lineAnalysis.length > 0 && (
-        <div className="max-h-36 shrink-0 overflow-y-auto border-b border-border bg-sidebar/80 px-3 py-2 text-xs lg:px-6">
+        <div className="hidden max-h-36 shrink-0 overflow-y-auto border-b border-border bg-sidebar/80 px-3 py-2 text-xs lg:block lg:px-6">
           {lineAnalysis.map((item) => (
             <div key={`${item.line}-${item.syllables}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-0.5">
               <span className="min-w-0 flex-1 truncate text-foreground/90">{item.line}</span>
