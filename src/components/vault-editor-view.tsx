@@ -189,6 +189,57 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     };
   }, [songId, refreshPending]);
 
+  // Shared collab songs: poll for the other writer's saves while idle.
+  const isSharedCollab =
+    Boolean(song?.isCollaborator) ||
+    (song?.collaborators?.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (!isSharedCollab || !songId) return;
+
+    let cancelled = false;
+
+    async function pullRemote() {
+      if (cancelled || document.visibilityState === "hidden") return;
+      if (isBrowserOffline()) return;
+      if (pendingPatch.current || getPendingPatch(songId) || saveTimer.current) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/songs/${songId}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { song: Song };
+        const remote = data.song;
+        const local = songRef.current;
+        if (!local) return;
+        if (remote.updatedAt <= local.updatedAt) return;
+        if (pendingPatch.current || getPendingPatch(songId)) return;
+
+        cacheSong(remote);
+        setSong(applyPendingToSong(remote));
+        setSaveState("saved");
+        window.setTimeout(() => {
+          if (!cancelled) setSaveState("idle");
+        }, 1500);
+      } catch {
+        // ignore
+      }
+    }
+
+    const interval = window.setInterval(() => void pullRemote(), 3500);
+    function onVisible() {
+      if (document.visibilityState === "visible") void pullRemote();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [songId, isSharedCollab]);
+
   const persistSong = useCallback(
     async (id: string) => {
       if (isBrowserOffline()) {

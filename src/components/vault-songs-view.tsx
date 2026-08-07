@@ -175,7 +175,11 @@ export function VaultSongsView() {
         if (showFavorites) {
           cached = cached.filter((song) => song.isFavorite);
         } else if (showCollaborations) {
-          cached = cached.filter((song) => song.isCollaborator);
+          cached = cached.filter(
+            (song) =>
+              song.isCollaborator ||
+              (song.isOwner && (song.collaborators?.length ?? 0) > 0),
+          );
         } else if (selectedFolderId) {
           cached = cached.filter((song) => song.folderId === selectedFolderId);
         }

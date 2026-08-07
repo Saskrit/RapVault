@@ -21,6 +21,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { ArtistSocialLinks } from "@/components/artist-social-links";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
+import { notifyNotificationsUpdated } from "@/hooks/use-notifications";
 import type { ConnectionRelation } from "@/types";
 
 type ArtistProfile = {
@@ -129,7 +130,10 @@ export function ArtistProfileView({ username }: { username: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "accept" }),
       });
-      if (res.ok) await load();
+      if (res.ok) {
+        await load();
+        notifyNotificationsUpdated();
+      }
     } finally {
       setConnecting(false);
     }
@@ -144,7 +148,10 @@ export function ArtistProfileView({ username }: { username: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "decline" }),
       });
-      if (res.ok) await load();
+      if (res.ok) {
+        await load();
+        notifyNotificationsUpdated();
+      }
     } finally {
       setConnecting(false);
     }
@@ -157,11 +164,10 @@ export function ArtistProfileView({ username }: { username: string }) {
       const res = await fetch(`/api/network/${artist.connectionId}`, {
         method: "DELETE",
       });
-      if (res.ok) await load();
-    } finally {
-      setConnecting(false);
-    }
-  }
+      if (res.ok) {
+        await load();
+        notifyNotificationsUpdated();
+      }
 
   function renderActions() {
     if (!artist) return null;

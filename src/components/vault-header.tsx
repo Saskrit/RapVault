@@ -4,11 +4,16 @@ import Link from "next/link";
 import { LogOut, MessageSquare, Search, Settings, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo, BrandWordmark } from "@/components/logo";
+import { Modal } from "@/components/modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   UnreadBadge,
   useUnreadMessages,
 } from "@/hooks/use-unread-messages";
+import {
+  preferenceStorageGet,
+  preferenceStorageSet,
+} from "@/lib/safe-storage";
 
 type VaultHeaderProps = {
   searchQuery?: string;
@@ -19,8 +24,13 @@ type VaultHeaderProps = {
   children?: React.ReactNode;
 };
 
+const SKIP_LOGOUT_CONFIRM_KEY = "rapvault-skip-logout-confirm";
+
 const iconBtn =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground";
+
+const logoutBtn =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400";
 
 export function VaultHeader({
   searchQuery = "",
@@ -32,6 +42,10 @@ export function VaultHeader({
 }: VaultHeaderProps) {
   const showSearch = onSearchChange !== undefined;
   const [label, setLabel] = useState<string | null>(null);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [skipConfirm, setSkipConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const { unreadCount } = useUnreadMessages();
 
   useEffect(() => {
@@ -47,6 +61,38 @@ export function VaultHeader({
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setSkipConfirm(preferenceStorageGet(SKIP_LOGOUT_CONFIRM_KEY) === "1");
+  }, []);
+
+  async function performLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/";
+    } catch {
+      setLoggingOut(false);
+    }
+  }
+
+  function handleLogoutClick() {
+    if (skipConfirm) {
+      void performLogout();
+      return;
+    }
+    setDontShowAgain(false);
+    setLogoutOpen(true);
+  }
+
+  function handleConfirmLogout() {
+    if (dontShowAgain) {
+      preferenceStorageSet(SKIP_LOGOUT_CONFIRM_KEY, "1");
+      setSkipConfirm(true);
+    }
+    setLogoutOpen(false);
+    void performLogout();
+  }
 
   return (
     <header className="shrink-0 border-b border-border bg-card pt-[max(0.625rem,env(safe-area-inset-top))]">
@@ -154,17 +200,53 @@ export function VaultHeader({
           <ThemeToggle />
           <button
             type="button"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              window.location.href = "/login";
-            }}
-            className={`${iconBtn} hover:border-red-500/40 hover:text-red-400`}
-            aria-label="Sign out"
+            onClick={handleLogoutClick}
+            disabled={loggingOut}
+            className={logoutBtn}
+            aria-label="Log out"
+            title="Log out"
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>
+
+      <Modal
+        open={logoutOpen}
+        onClose={() => {
+          if (!loggingOut) setLogoutOpen(false);
+        }}
+        title="Log out"
+        description="Are you sure you want to log out?"
+      >
+        <label className="mb-5 flex cursor-pointer items-start gap-2.5 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={dontShowAgain}
+            onChange={(e) => setDontShowAgain(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-red-500"
+          />
+          <span>Do not show this box again</span>
+        </label>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setLogoutOpen(false)}
+            disabled={loggingOut}
+            className="w-full rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted transition hover:border-foreground/30 hover:text-foreground disabled:opacity-50 sm:w-auto sm:py-2"
+          >
+            No
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmLogout}
+            disabled={loggingOut}
+            className="w-full rounded-xl bg-red-500/90 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50 sm:w-auto sm:py-2"
+          >
+            {loggingOut ? "Logging out..." : "Yes"}
+          </button>
+        </div>
+      </Modal>
     </header>
   );
 }

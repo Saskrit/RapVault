@@ -12,11 +12,12 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
+import { notifyNotificationsUpdated } from "@/hooks/use-notifications";
 
 type NetworkArtist = {
   id: string;
@@ -38,6 +39,7 @@ type Tab = "connections" | "incoming" | "outgoing";
 
 export function NetworkView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [connections, setConnections] = useState<NetworkRow[]>([]);
   const [incoming, setIncoming] = useState<NetworkRow[]>([]);
   const [outgoing, setOutgoing] = useState<NetworkRow[]>([]);
@@ -54,9 +56,21 @@ export function NetworkView() {
       setConnections(data.connections || []);
       setIncoming(data.incoming || []);
       setOutgoing(data.outgoing || []);
+      notifyNotificationsUpdated();
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    const requested = searchParams.get("tab");
+    if (
+      requested === "incoming" ||
+      requested === "outgoing" ||
+      requested === "connections"
+    ) {
+      setTab(requested);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,15 +81,24 @@ export function NetworkView() {
         setConnections(data.connections || []);
         setIncoming(data.incoming || []);
         setOutgoing(data.outgoing || []);
-        if ((data.incoming?.length || 0) > 0) {
+        const requested = searchParams.get("tab");
+        if (
+          requested === "incoming" ||
+          requested === "outgoing" ||
+          requested === "connections"
+        ) {
+          setTab(requested);
+        } else if ((data.incoming?.length || 0) > 0) {
           setTab("incoming");
         }
+        notifyNotificationsUpdated();
       }
       if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial load; tab from URL handled above
   }, []);
 
   const rows = useMemo(() => {
@@ -105,7 +128,10 @@ export function NetworkView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "accept" }),
       });
-      if (res.ok) await load();
+      if (res.ok) {
+        await load();
+        notifyNotificationsUpdated();
+      }
     } finally {
       setBusyId(null);
     }
@@ -119,7 +145,10 @@ export function NetworkView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "decline" }),
       });
-      if (res.ok) await load();
+      if (res.ok) {
+        await load();
+        notifyNotificationsUpdated();
+      }
     } finally {
       setBusyId(null);
     }
@@ -129,11 +158,10 @@ export function NetworkView() {
     setBusyId(id);
     try {
       const res = await fetch(`/api/network/${id}`, { method: "DELETE" });
-      if (res.ok) await load();
-    } finally {
-      setBusyId(null);
-    }
-  }
+      if (res.ok) {
+        await load();
+        notifyNotificationsUpdated();
+      }
 
   async function startMessage(username: string | null, userId: string) {
     if (!username) return;

@@ -23,6 +23,7 @@ import {
   UnreadBadge,
   useUnreadMessages,
 } from "@/hooks/use-unread-messages";
+import { useNotifications } from "@/hooks/use-notifications";
 
 type VaultFoldersPanelProps = {
   folders: FolderType[];
@@ -74,6 +75,7 @@ export function VaultFoldersPanel({
 }: VaultFoldersPanelProps) {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
+  const { count: networkRequestCount } = useNotifications();
   const onArtists = pathname.startsWith("/vault/artists");
   const onNetwork = pathname.startsWith("/vault/network");
   const onMessages = pathname.startsWith("/vault/messages");
@@ -168,10 +170,18 @@ export function VaultFoldersPanel({
           href="/vault/network"
           onClick={() => onNavigate?.()}
           className={`${collapsedBtn} ${onNetwork ? collapsedActive : ""}`}
-          aria-label="Network"
+          aria-label={
+            networkRequestCount > 0
+              ? `Network, ${networkRequestCount} requests`
+              : "Network"
+          }
           title="Network"
         >
           <Network className="h-4 w-4" />
+          <UnreadBadge
+            count={networkRequestCount}
+            className="-right-0.5 -top-0.5"
+          />
         </Link>
         <Link
           href="/vault/messages"
@@ -325,9 +335,25 @@ export function VaultFoldersPanel({
             href="/vault/network"
             onClick={() => onNavigate?.()}
             className={`${navBtn} ${itemClass(onNetwork)}`}
+            aria-label={
+              networkRequestCount > 0
+                ? `Network, ${networkRequestCount} requests`
+                : "Network"
+            }
           >
-            <Network className="h-4 w-4 shrink-0" />
+            <span className="relative shrink-0">
+              <Network className="h-4 w-4" />
+              <UnreadBadge
+                count={networkRequestCount}
+                className="-right-2 -top-2"
+              />
+            </span>
             <span className="min-w-0 flex-1 truncate">Network</span>
+            {networkRequestCount > 0 && (
+              <span className="rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+                {networkRequestCount > 99 ? "99+" : networkRequestCount}
+              </span>
+            )}
           </Link>
           <Link
             href="/vault/messages"

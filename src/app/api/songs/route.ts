@@ -31,7 +31,13 @@ export async function GET(request: Request) {
     const songs = await prisma.song.findMany({
       where: {
         deletedAt: null,
-        collaborators: { some: { userId: user.id } },
+        OR: [
+          { collaborators: { some: { userId: user.id } } },
+          {
+            userId: user.id,
+            collaborators: { some: {} },
+          },
+        ],
         ...(textFilter ? textFilter : {}),
       },
       orderBy: { updatedAt: "desc" },
