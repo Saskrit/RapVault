@@ -2,11 +2,15 @@
   "name": "RapVault",
   "short_name": "RapVault",
   "description": "Private lyrics notebook for hooks, punchlines, and unfinished verses.",
+  "id": "/",
   "start_url": "/vault",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1d1d1e",
   "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
+  "lang": "en",
+  "categories": ["productivity", "music"],
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

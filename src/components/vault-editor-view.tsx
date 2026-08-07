@@ -23,17 +23,30 @@ import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
+import { useOfflineSync } from "@/components/offline-provider";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
+import {
+  applyPendingToSong,
+  cacheSong,
+  flushPendingSong,
+  getCachedSong,
+  getPendingPatch,
+  isBrowserOffline,
+  queueSongPatch,
+  removeCachedSong,
+  type SongPatch,
+} from "@/lib/offline-songs";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
 import type { Song } from "@/types";
 
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "saving" | "saved" | "offline" | "error";
 
 type VaultEditorViewProps = {
   songId: string;
 };
 
 export function VaultEditorView({ songId }: VaultEditorViewProps) {
+  const { online, refreshPending } = useOfflineSync();
   const [song, setSong] = useState<Song | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -45,8 +58,13 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [beatsOpen, setBeatsOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingPatch = useRef<Partial<Song> | null>(null);
+  const pendingPatch = useRef<SongPatch | null>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
+  const songRef = useRef<Song | null>(null);
+
+  useEffect(() => {
+    songRef.current = song;
+  }, [song]);
 
   useEffect(() => {
     const saved = localStorage.getItem("rapvault-spellcheck");
@@ -100,69 +118,160 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   }
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
-      const res = await fetch(`/api/songs/${songId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSong(data.song);
-        setNotFound(false);
-      } else {
-        setNotFound(true);
+      setNotFound(false);
+
+      const applyLocal = (base: Song) => applyPendingToSong(base);
+
+      try {
+        const res = await fetch(`/api/songs/${songId}`);
+        if (cancelled) return;
+
+        if (res.ok) {
+          const data = (await res.json()) as { song: Song };
+          cacheSong(data.song);
+          const merged = applyLocal(data.song);
+          setSong(merged);
+          setNotFound(false);
+
+          if (getPendingPatch(songId) && !isBrowserOffline()) {
+            setSaveState("saving");
+            const result = await flushPendingSong(songId);
+            refreshPending();
+            if (!cancelled) {
+              const cached = getCachedSong(songId);
+              if (cached) setSong(applyLocal(cached));
+              setSaveState(result === "ok" ? "saved" : "offline");
+              if (result === "ok") {
+                setTimeout(() => {
+                  if (!cancelled) setSaveState("idle");
+                }, 2000);
+              }
+            }
+          }
+        } else {
+          const cached = getCachedSong(songId);
+          if (cached) {
+            setSong(applyLocal(cached));
+            setNotFound(false);
+            if (getPendingPatch(songId)) setSaveState("offline");
+          } else {
+            setNotFound(true);
+          }
+        }
+      } catch {
+        if (cancelled) return;
+        const cached = getCachedSong(songId);
+        if (cached) {
+          setSong(applyLocal(cached));
+          setNotFound(false);
+          if (getPendingPatch(songId) || isBrowserOffline()) {
+            setSaveState("offline");
+          }
+        } else {
+          setNotFound(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     }
+
     load();
-  }, [songId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [songId, refreshPending]);
 
   const persistSong = useCallback(
-    async (id: string, patch: Partial<Song>) => {
+    async (id: string) => {
+      if (isBrowserOffline()) {
+        setSaveState("offline");
+        refreshPending();
+        return;
+      }
+
       setSaveState("saving");
-      try {
-        const res = await fetch(`/api/songs/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        });
-        if (!res.ok) throw new Error("Save failed");
-        const data = await res.json();
+      const result = await flushPendingSong(id);
+      refreshPending();
+
+      if (result === "fail") {
+        setSaveState("offline");
+        return;
+      }
+
+      const cached = getCachedSong(id);
+      if (cached) {
         setSong((prev) => {
-          if (!prev) return data.song;
-          // Keep live editor text if the user kept typing while the save was in flight.
+          if (!prev) return applyPendingToSong(cached);
           return {
-            ...data.song,
+            ...applyPendingToSong(cached),
             content: prev.content,
             title: prev.title,
             beatUrl: prev.beatUrl,
           };
         });
-        setSaveState("saved");
-        setTimeout(() => setSaveState("idle"), 2000);
-      } catch {
-        setSaveState("error");
       }
+
+      if (getPendingPatch(id)) {
+        setSaveState("offline");
+        return;
+      }
+
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
     },
-    [],
+    [refreshPending],
   );
 
   const scheduleSave = useCallback(
-    (patch: Partial<Song>) => {
-      if (!song) return;
-      const id = song.id;
+    (patch: SongPatch) => {
+      const current = songRef.current;
+      if (!current) return;
+      const id = current.id;
+
       pendingPatch.current = { ...pendingPatch.current, ...patch };
       setSong((prev) => (prev ? { ...prev, ...patch } : prev));
+      queueSongPatch(id, patch);
+      refreshPending();
+
+      if (isBrowserOffline()) {
+        setSaveState("offline");
+      }
 
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
-        if (pendingPatch.current) {
-          const toSave = pendingPatch.current;
-          pendingPatch.current = null;
-          persistSong(id, toSave);
-        }
+        pendingPatch.current = null;
+        void persistSong(id);
       }, 2000);
     },
-    [song, persistSong],
+    [persistSong, refreshPending],
   );
+
+  // When connectivity returns, push any queued edits.
+  useEffect(() => {
+    if (!online || !songId) return;
+    if (!getPendingPatch(songId)) return;
+    void persistSong(songId);
+  }, [online, songId, persistSong]);
+
+  // Flush debounce early if the user leaves the page.
+  useEffect(() => {
+    function flushNow() {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      if (pendingPatch.current || getPendingPatch(songId)) {
+        pendingPatch.current = null;
+        void flushPendingSong(songId);
+      }
+    }
+    window.addEventListener("pagehide", flushNow);
+    return () => window.removeEventListener("pagehide", flushNow);
+  }, [songId]);
 
   async function confirmDeleteSong() {
     if (!song) return;
@@ -178,6 +287,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     try {
       const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
       if (res.ok) {
+        removeCachedSong(song.id);
         setShowDeleteModal(false);
         // Hard navigate: soft router.push + refresh can fail after unmounting the
         // YouTube beat player and leave an empty "page couldn't load" state.
@@ -223,19 +333,24 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const isOwner = song?.isOwner !== false;
 
   async function refreshSongMeta() {
-    const res = await fetch(`/api/songs/${songId}`);
-    if (res.ok) {
-      const data = await res.json();
-      setSong((prev) =>
-        prev
-          ? {
-              ...data.song,
-              content: prev.content,
-              title: prev.title,
-              beatUrl: prev.beatUrl,
-            }
-          : data.song,
-      );
+    try {
+      const res = await fetch(`/api/songs/${songId}`);
+      if (res.ok) {
+        const data = (await res.json()) as { song: Song };
+        cacheSong(data.song);
+        setSong((prev) =>
+          prev
+            ? {
+                ...applyPendingToSong(data.song),
+                content: prev.content,
+                title: prev.title,
+                beatUrl: prev.beatUrl,
+              }
+            : applyPendingToSong(data.song),
+        );
+      }
+    } catch {
+      // Keep local state when offline.
     }
   }
 
@@ -488,16 +603,20 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                           ? "text-accent"
                           : saveState === "saved"
                             ? "text-green-400"
-                            : ""
+                            : saveState === "offline"
+                              ? "text-amber-500"
+                              : ""
                     }
                   >
                     {saveState === "saving"
                       ? "Saving..."
                       : saveState === "saved"
                         ? "Saved"
-                        : saveState === "error"
-                          ? "Save failed"
-                          : "Ready"}
+                        : saveState === "offline"
+                          ? "Saved offline"
+                          : saveState === "error"
+                            ? "Save failed"
+                            : "Ready"}
                   </span>
                 </div>
               }

@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, type AnimationEvent } from "react";
+import { useEffect, useRef, useState, type AnimationEvent } from "react";
 import { HeroAuthForm } from "@/components/hero-auth-form";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { SiteCredit } from "@/components/site-credit";
@@ -71,8 +71,18 @@ const FEATURES = [
 export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [authPhase, setAuthPhase] = useState<AuthPhase>("closed");
+  const [authHighlight, setAuthHighlight] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const authBoxRef = useRef<HTMLDivElement>(null);
   const authOpen = authPhase === "open" || authPhase === "closing";
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    };
+  }, []);
 
   function clearCloseTimer() {
     if (closeTimerRef.current) {
@@ -85,17 +95,33 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
     clearCloseTimer();
     setAuthMode(null);
     setAuthPhase("closed");
+    setAuthHighlight(false);
+  }
+
+  function focusAuthBox() {
+    requestAnimationFrame(() => {
+      authBoxRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    });
+    setAuthHighlight(true);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setAuthHighlight(false), 1600);
   }
 
   function openAuth(mode: AuthMode) {
     clearCloseTimer();
     setAuthMode(mode);
     setAuthPhase("open");
+    focusAuthBox();
   }
 
   function closeAuth() {
     if (authPhase === "closing" || authPhase === "closed") return;
     setAuthPhase("closing");
+    setAuthHighlight(false);
     clearCloseTimer();
     closeTimerRef.current = setTimeout(finishClose, 400);
   }
@@ -155,13 +181,13 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       </header>
 
       <main className="relative z-10">
-        <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-16 md:pt-24">
+        <section className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-16 md:pt-20 lg:pb-28 lg:pt-24">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium uppercase tracking-widest text-accent">
             <Cloud className="h-3.5 w-3.5" />
             Private lyrics cloud
           </p>
 
-          <div className="grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-8 xl:gap-10">
+          <div className="grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12">
             <div className="flex flex-col">
               <h1 className="type-h1">
                 Your bars.
@@ -218,9 +244,19 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
               </div>
             </div>
 
-            <div className="relative flex min-h-[26rem] w-full lg:min-h-full">
+            <div
+              ref={authBoxRef}
+              id="auth-box"
+              className="relative flex min-h-[32rem] w-full scroll-mt-24 sm:min-h-[34rem] lg:min-h-[36rem]"
+            >
               <div className="pointer-events-none absolute -inset-4 rounded-3xl bg-accent/15 blur-2xl" />
-              <div className="relative flex min-h-[26rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:min-h-0">
+              <div
+                className={`relative flex min-h-[32rem] w-full flex-1 flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl transition-[box-shadow,border-color] duration-500 sm:min-h-[34rem] lg:min-h-[36rem] ${
+                  authHighlight
+                    ? "border-accent shadow-[0_0_0_3px_rgba(139,92,246,0.35)]"
+                    : "border-border"
+                }`}
+              >
                 <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4 py-3.5 sm:px-5">
                   <div className="h-3 w-3 rounded-full bg-red-500/80" />
                   <div className="h-3 w-3 rounded-full bg-amber-400/80" />
@@ -245,7 +281,6 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                 </div>
 
                 <div className="relative min-h-0 flex-1 bg-editor">
-                  {/* Preview — fades out when auth opens */}
                   <div
                     className={`absolute inset-0 grid grid-cols-[minmax(0,1fr)_7.5rem] transition-opacity duration-500 ease-in-out sm:grid-cols-[minmax(0,1fr)_10rem] ${
                       authPhase === "open"
@@ -281,7 +316,6 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                     </div>
                   </div>
 
-                  {/* Auth — fades in inside the same box */}
                   {authOpen && authMode && (
                     <div
                       key={authPhase === "closing" ? "auth-exit" : `auth-${authMode}`}

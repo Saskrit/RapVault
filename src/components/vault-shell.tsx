@@ -8,6 +8,11 @@ import { NewFolderModal } from "@/components/new-folder-modal";
 import { VaultFoldersPanel } from "@/components/vault-folders-panel";
 import { VaultHeader, iconBtn } from "@/components/vault-header";
 import type { Folder } from "@/types";
+import {
+  cacheFolders,
+  getCachedFolders,
+  isBrowserOffline,
+} from "@/lib/offline-songs";
 
 type VaultShellProps = {
   children: ReactNode;
@@ -68,19 +73,35 @@ export function VaultShell({
       : null;
 
   const fetchFolders = useCallback(async () => {
-    const res = await fetch("/api/folders");
-    if (res.ok) {
-      const data = await res.json();
-      setFolders(data.folders);
-      onFoldersChange?.(data.folders);
+    try {
+      const res = await fetch("/api/folders");
+      if (res.ok) {
+        const data = (await res.json()) as { folders: Folder[] };
+        cacheFolders(data.folders);
+        setFolders(data.folders);
+        onFoldersChange?.(data.folders);
+        return;
+      }
+    } catch {
+      // Fall through to cache when offline.
+    }
+
+    const cached = getCachedFolders();
+    if (cached.length > 0 || isBrowserOffline()) {
+      setFolders(cached);
+      onFoldersChange?.(cached);
     }
   }, [onFoldersChange]);
 
   const fetchTrashCount = useCallback(async () => {
-    const res = await fetch("/api/songs?trash=true");
-    if (res.ok) {
-      const data = await res.json();
-      setTrashCount(data.songs.length);
+    try {
+      const res = await fetch("/api/songs?trash=true");
+      if (res.ok) {
+        const data = await res.json();
+        setTrashCount(data.songs.length);
+      }
+    } catch {
+      // Keep last known count offline.
     }
   }, []);
 

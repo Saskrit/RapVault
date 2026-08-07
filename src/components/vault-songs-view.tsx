@@ -29,6 +29,16 @@ import {
 import { VaultShell } from "@/components/vault-shell";
 import { contentSnippet } from "@/lib/rich-text";
 import { RapVaultLoading } from "@/components/rapvault-loading";
+import {
+  applyPendingToSong,
+  cacheFolders,
+  cacheSongs,
+  getCachedFolders,
+  getCachedSongs,
+  isBrowserOffline,
+  queueSongPatch,
+  removeCachedSong,
+} from "@/lib/offline-songs";
 import type { Folder, Song } from "@/types";
 import { suggestUsernameFromEmail } from "@/lib/username";
 
@@ -110,10 +120,21 @@ export function VaultSongsView() {
   }, []);
 
   const fetchFolders = useCallback(async () => {
-    const res = await fetch("/api/folders");
-    if (res.ok) {
-      const data = await res.json();
-      setFolders(data.folders);
+    try {
+      const res = await fetch("/api/folders");
+      if (res.ok) {
+        const data = (await res.json()) as { folders: Folder[] };
+        cacheFolders(data.folders);
+        setFolders(data.folders);
+        return;
+      }
+    } catch {
+      // Fall through to cache when offline.
+    }
+
+    const cached = getCachedFolders();
+    if (cached.length > 0 || isBrowserOffline()) {
+      setFolders(cached);
     }
   }, []);
 
@@ -129,10 +150,43 @@ export function VaultSongsView() {
     }
     if (searchQuery.trim()) params.set("q", searchQuery.trim());
 
-    const res = await fetch(`/api/songs?${params}`);
-    if (res.ok) {
-      const data = await res.json();
-      setSongs(data.songs);
+    try {
+      const res = await fetch(`/api/songs?${params}`);
+      if (res.ok) {
+        const data = (await res.json()) as { songs: Song[] };
+        cacheSongs(data.songs);
+        setSongs(data.songs.map(applyPendingToSong));
+        return;
+      }
+    } catch {
+      // Fall through to cache when offline.
+    }
+
+    if (isBrowserOffline() || getCachedSongs().length > 0) {
+      let cached = getCachedSongs();
+      if (showTrash) {
+        cached = cached.filter((song) => Boolean(song.deletedAt));
+      } else {
+        cached = cached.filter((song) => !song.deletedAt);
+        if (showFavorites) {
+          cached = cached.filter((song) => song.isFavorite);
+        } else if (showCollaborations) {
+          cached = cached.filter((song) => song.isCollaborator);
+        } else if (selectedFolderId) {
+          cached = cached.filter((song) => song.folderId === selectedFolderId);
+        }
+      }
+      const q = searchQuery.trim().toLowerCase();
+      if (q) {
+        cached = cached.filter(
+          (song) =>
+            song.title.toLowerCase().includes(q) ||
+            song.content.toLowerCase().includes(q) ||
+            song.genre.toLowerCase().includes(q) ||
+            song.moodTags.toLowerCase().includes(q),
+        );
+      }
+      setSongs(cached);
     }
   }, [
     selectedFolderId,
@@ -235,45 +289,49 @@ export function VaultSongsView() {
     router.push(`/vault/write/${song.id}`);
   }
 
-  async function toggleFavorite(song: Song) {
-    const res = await fetch(`/api/songs/${song.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isFavorite: !song.isFavorite }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setSongs((prev) => prev.map((item) => (item.id === song.id ? data.song : item)));
+  async function patchSongLocal(
+    song: Song,
+    patch: { isFavorite?: boolean; isPublic?: boolean; status?: string },
+  ) {
+    const optimistic = { ...song, ...patch };
+    setSongs((prev) =>
+      prev.map((item) => (item.id === song.id ? optimistic : item)),
+    );
+    queueSongPatch(song.id, patch);
+
+    if (isBrowserOffline()) return;
+
+    try {
+      const res = await fetch(`/api/songs/${song.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { song: Song };
+        cacheSongs([data.song]);
+        setSongs((prev) =>
+          prev.map((item) =>
+            item.id === song.id ? applyPendingToSong(data.song) : item,
+          ),
+        );
+      }
+    } catch {
+      // Kept in local queue; OfflineProvider will sync later.
     }
   }
 
+  async function toggleFavorite(song: Song) {
+    await patchSongLocal(song, { isFavorite: !song.isFavorite });
+  }
+
   async function togglePublic(song: Song) {
-    const res = await fetch(`/api/songs/${song.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isPublic: !Boolean(song.isPublic) }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setSongs((prev) =>
-        prev.map((item) => (item.id === song.id ? data.song : item)),
-      );
-    }
+    await patchSongLocal(song, { isPublic: !Boolean(song.isPublic) });
   }
 
   async function toggleStatus(song: Song) {
     const nextStatus = song.status === "finished" ? "draft" : "finished";
-    const res = await fetch(`/api/songs/${song.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setSongs((prev) =>
-        prev.map((item) => (item.id === song.id ? data.song : item)),
-      );
-    }
+    await patchSongLocal(song, { status: nextStatus });
   }
 
   async function restoreSong(song: Song) {
@@ -291,6 +349,7 @@ export function VaultSongsView() {
   async function moveSongToBin(song: Song) {
     const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
     if (res.ok) {
+      removeCachedSong(song.id);
       setSongs((prev) => prev.filter((item) => item.id !== song.id));
       await fetchFolders();
     }
@@ -304,6 +363,7 @@ export function VaultSongsView() {
         method: "DELETE",
       });
       if (res.ok) {
+        removeCachedSong(songToPurge.id);
         setSongs((prev) => prev.filter((item) => item.id !== songToPurge.id));
         setSongToPurge(null);
       }

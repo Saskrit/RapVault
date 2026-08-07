@@ -1,72 +1,136 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { WifiOff } from "lucide-react";
-import { BrandWordmark, Logo } from "@/components/logo";
+import {
+  flushAllPendingSongs,
+  getPendingSongIds,
+  isBrowserOffline,
+} from "@/lib/offline-songs";
 
-export function OfflineProvider({ children }: { children: React.ReactNode }) {
+type OfflineSyncContextValue = {
+  online: boolean;
+  pendingCount: number;
+  syncing: boolean;
+  refreshPending: () => void;
+  syncNow: () => Promise<void>;
+};
+
+const OfflineSyncContext = createContext<OfflineSyncContextValue>({
+  online: true,
+  pendingCount: 0,
+  syncing: false,
+  refreshPending: () => {},
+  syncNow: async () => {},
+});
+
+export function useOfflineSync() {
+  return useContext(OfflineSyncContext);
+}
+
+export function OfflineProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
-  const [checking, setChecking] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
+
+  const refreshPending = useCallback(() => {
+    setPendingCount(getPendingSongIds().length);
+  }, []);
+
+  const syncNow = useCallback(async () => {
+    if (isBrowserOffline()) {
+      setOnline(false);
+      refreshPending();
+      return;
+    }
+    if (syncingRef.current) return;
+    if (getPendingSongIds().length === 0) {
+      refreshPending();
+      return;
+    }
+
+    syncingRef.current = true;
+    setSyncing(true);
+    try {
+      await flushAllPendingSongs();
+    } finally {
+      syncingRef.current = false;
+      setSyncing(false);
+      refreshPending();
+    }
+  }, [refreshPending]);
 
   useEffect(() => {
-    function sync() {
-      setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
-    }
-    sync();
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
-    return () => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
-    };
-  }, []);
-
-  const retry = useCallback(async () => {
-    setChecking(true);
-    try {
-      // Lightweight reachability check (cache-bust) — navigator.onLine alone can lie.
-      await fetch(`/favicon.ico?offline-check=${Date.now()}`, {
-        method: "HEAD",
-        cache: "no-store",
-      });
+    function onOnline() {
       setOnline(true);
-    } catch {
-      setOnline(false);
-    } finally {
-      setChecking(false);
     }
-  }, []);
+    function onOffline() {
+      setOnline(false);
+    }
 
-  if (!online) {
-    return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-background px-6 text-center text-foreground">
-        <div className="flex flex-col items-center gap-3">
-          <Logo size={56} href={null} priority />
-          <BrandWordmark height={22} href={null} priority />
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-card text-muted">
-          <WifiOff className="h-5 w-5" />
-        </div>
-        <div className="max-w-sm">
-          <h1 className="text-xl font-semibold tracking-tight">
-            No internet connection
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            RapVault needs a connection to load your vault, sync lyrics, and
-            update your profile. Check your network and try again.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={retry}
-          disabled={checking}
-          className="min-h-11 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition hover:bg-accent/90 disabled:opacity-50"
-        >
-          {checking ? "Checking..." : "Try again"}
-        </button>
-      </div>
-    );
-  }
+    setOnline(!isBrowserOffline());
+    refreshPending();
 
-  return <>{children}</>;
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, [refreshPending]);
+
+  useEffect(() => {
+    if (!online) return;
+    void syncNow();
+  }, [online, syncNow]);
+
+  useEffect(() => {
+    function onVisibility() {
+      if (document.visibilityState === "visible" && !isBrowserOffline()) {
+        void syncNow();
+      } else {
+        refreshPending();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [syncNow, refreshPending]);
+
+  const value = useMemo(
+    () => ({
+      online,
+      pendingCount,
+      syncing,
+      refreshPending,
+      syncNow,
+    }),
+    [online, pendingCount, syncing, refreshPending, syncNow],
+  );
+
+  return (
+    <OfflineSyncContext.Provider value={value}>
+      {children}
+      {!online && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[80] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-3.5 py-2 text-sm text-foreground shadow-lg backdrop-blur">
+            <WifiOff className="h-4 w-4 shrink-0 text-muted" />
+            <span>
+              Offline — edits save on this device and sync when you&apos;re back
+              online
+            </span>
+          </div>
+        </div>
+      )}
+    </OfflineSyncContext.Provider>
+  );
 }
