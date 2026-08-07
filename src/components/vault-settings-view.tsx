@@ -725,10 +725,10 @@ export function VaultSettingsView() {
       <VaultHeader centerLabel="Profile & settings">
         <Link
           href="/vault"
-          className="relative z-10 flex h-11 w-auto shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-foreground/25 hover:text-foreground"
+          className="relative z-10 flex h-8 w-auto shrink-0 items-center gap-1 rounded-lg border border-border px-2 text-xs font-medium text-muted transition hover:border-foreground/25 hover:text-foreground sm:h-9 sm:gap-1.5 sm:rounded-xl sm:px-2.5 sm:text-sm lg:h-11 lg:px-3"
           aria-label="Back to library"
         >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0 lg:h-4 lg:w-4" />
           <span className="hidden sm:inline">Library</span>
         </Link>
       </VaultHeader>

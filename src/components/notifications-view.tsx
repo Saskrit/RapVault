@@ -106,7 +106,7 @@ export function NotificationsView() {
   }
 
   return (
-    <VaultShell centerLabel="Notifications">
+    <VaultShell>
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3">

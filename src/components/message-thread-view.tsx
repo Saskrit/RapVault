@@ -32,6 +32,7 @@ type Thread = {
     username: string | null;
     displayName: string;
     avatarUrl: string | null;
+    online?: boolean;
   } | null;
   messages: ChatMessage[];
 };
@@ -175,7 +176,7 @@ export function MessageThreadView({
   }
 
   return (
-    <VaultShell centerLabel={thread?.other?.displayName || "Messages"}>
+    <VaultShell>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {loading ? (
           <RapVaultLoading label="Loading..." />
@@ -188,31 +189,44 @@ export function MessageThreadView({
           </div>
         ) : (
           <>
-            <div className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-2 py-2.5 sm:gap-3 sm:px-4 sm:py-3 lg:px-8">
               <Link
                 href="/vault/messages"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-foreground/20 hover:text-foreground sm:h-9 sm:w-9 sm:rounded-xl"
                 aria-label="Back to inbox"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
               </Link>
               <UserAvatar
                 src={thread.other?.avatarUrl}
                 name={thread.other?.displayName || "Artist"}
                 size="sm"
+                online={Boolean(thread.other?.online)}
               />
               <div className="min-w-0">
                 <p className="truncate font-semibold">
                   {thread.other?.displayName || "Artist"}
                 </p>
-                {thread.other?.username && (
-                  <Link
-                    href={`/vault/artists/${thread.other.username}`}
-                    className="text-xs text-muted hover:text-accent"
-                  >
-                    @{thread.other.username}
-                  </Link>
-                )}
+                <p className="text-xs text-muted">
+                  {thread.other?.online ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      Online
+                    </span>
+                  ) : (
+                    "Offline"
+                  )}
+                  {thread.other?.username ? (
+                    <>
+                      {" · "}
+                      <Link
+                        href={`/vault/artists/${thread.other.username}`}
+                        className="hover:text-accent"
+                      >
+                        @{thread.other.username}
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
               </div>
             </div>
 

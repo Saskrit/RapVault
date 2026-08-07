@@ -28,6 +28,7 @@ model User {
   resetToken        String?   @unique
   resetTokenExpires DateTime?
   notificationsSeenAt DateTime?
+  lastSeenAt        DateTime?
   createdAt         DateTime  @default(now())
   folders           Folder[]
   songs             Song[]
@@ -38,6 +39,8 @@ model User {
   messages          Message[]
   connectionsSent     Connection[] @relation("ConnectionRequester")
   connectionsReceived Connection[] @relation("ConnectionAddressee")
+
+  @@index([lastSeenAt])
 }
 
 model PendingSignup {

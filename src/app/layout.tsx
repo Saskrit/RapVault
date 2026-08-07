@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { CookieBanner } from "@/components/cookie-banner";
 import { CookieConsentProvider } from "@/components/cookie-consent-provider";
 import { OfflineProvider } from "@/components/offline-provider";
+import { PresenceBeacon } from "@/components/presence-beacon";
 import { PwaRegister } from "@/components/pwa-register";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -66,7 +67,10 @@ export default function RootLayout({
       <body className="min-h-full">
         <CookieConsentProvider>
           <ThemeProvider>
-            <OfflineProvider>{children}</OfflineProvider>
+            <OfflineProvider>
+              <PresenceBeacon />
+              {children}
+            </OfflineProvider>
             <PwaRegister />
             <CookieBanner />
           </ThemeProvider>

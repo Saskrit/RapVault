@@ -81,7 +81,7 @@ export function StatsView() {
   );
 
   return (
-    <VaultShell centerLabel="Stats">
+    <VaultShell>
       <main className="relative min-h-0 flex-1 overflow-y-auto">
         <div
           aria-hidden

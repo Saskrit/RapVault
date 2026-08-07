@@ -38,11 +38,14 @@ type VaultHeaderProps = {
 
 const SKIP_LOGOUT_CONFIRM_KEY = "rapvault-skip-logout-confirm";
 
+/** Compact on mobile; unchanged desktop (lg+) sizing. */
 const iconBtn =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-9 sm:w-9 lg:h-10 lg:w-10 lg:rounded-xl";
 
 const logoutBtn =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400 sm:h-9 sm:w-9 lg:h-10 lg:w-10 lg:rounded-xl";
+
+const headerIcon = "h-3.5 w-3.5 lg:h-4 lg:w-4";
 
 function formatNotifTime(iso: string) {
   const date = new Date(iso);
@@ -158,18 +161,18 @@ export function VaultHeader({
   }
 
   return (
-    <header className="shrink-0 border-b border-border bg-card pt-[max(0.625rem,env(safe-area-inset-top))]">
+    <header className="shrink-0 border-b border-border bg-card pt-[max(0.5rem,env(safe-area-inset-top))] lg:pt-[max(0.625rem,env(safe-area-inset-top))]">
       {showSearch && mobileSearchOpen && (
-        <div className="flex items-center gap-2 px-3 py-2.5 lg:hidden">
+        <div className="flex items-center gap-1.5 px-2 py-2 sm:gap-2 sm:px-3 sm:py-2.5 lg:hidden">
           <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted sm:left-3.5 sm:h-4 sm:w-4" />
             <input
               type="search"
               autoFocus
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search songs..."
-              className="w-full min-h-11 rounded-2xl border border-border bg-background py-2.5 pl-11 pr-4 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+              className="w-full min-h-10 rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 sm:min-h-11 sm:rounded-2xl sm:pl-11 sm:pr-4"
             />
           </div>
           <button
@@ -178,21 +181,31 @@ export function VaultHeader({
             className={iconBtn}
             aria-label="Close search"
           >
-            <X className="h-4 w-4" />
+            <X className={headerIcon} />
           </button>
         </div>
       )}
 
       <div
-        className={`relative items-center gap-2.5 px-3 py-3 lg:gap-3 lg:px-5 ${
+        className={`relative items-center gap-1 px-2 py-2 sm:gap-1.5 sm:px-3 sm:py-2.5 lg:gap-3 lg:px-5 lg:py-3 ${
           showSearch && mobileSearchOpen ? "hidden" : "flex"
         }`}
       >
         {children}
 
-        <div className="relative z-10 flex min-w-0 items-center gap-1.5 sm:gap-2">
-          <Logo size={36} href="/vault" priority />
-          <BrandWordmark height={18} href="/vault" priority />
+        <div className="relative z-10 flex min-w-0 items-center gap-1 sm:gap-1.5 lg:gap-2">
+          <span className="inline-flex lg:hidden">
+            <Logo size={28} href="/vault" priority />
+          </span>
+          <span className="hidden lg:inline-flex">
+            <Logo size={36} href="/vault" priority />
+          </span>
+          <BrandWordmark
+            height={18}
+            href="/vault"
+            priority
+            className="hidden lg:inline-flex"
+          />
         </div>
 
         {showSearch && (
@@ -209,8 +222,8 @@ export function VaultHeader({
         )}
 
         {centerLabel && !showSearch && (
-          <p className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-16 sm:px-24">
-            <span className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
+          <p className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-12 sm:px-20 lg:px-28">
+            <span className="truncate text-xs font-semibold tracking-tight text-foreground sm:text-sm lg:text-base">
               {centerLabel}
             </span>
           </p>
@@ -222,7 +235,7 @@ export function VaultHeader({
           </p>
         )}
 
-        <div className="relative z-10 ml-auto flex shrink-0 items-center gap-1.5">
+        <div className="relative z-10 ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1 lg:gap-1.5">
           {showSearch && (
             <button
               type="button"
@@ -230,7 +243,7 @@ export function VaultHeader({
               className={`${iconBtn} lg:hidden`}
               aria-label="Search"
             >
-              <Search className="h-4 w-4" />
+              <Search className={headerIcon} />
             </button>
           )}
 
@@ -247,12 +260,15 @@ export function VaultHeader({
               aria-expanded={notifOpen}
               title="Notifications"
             >
-              <Bell className="h-4 w-4" />
-              <UnreadBadge count={notifCount} />
+              <Bell className={headerIcon} />
+              <UnreadBadge
+                count={notifCount}
+                className="-right-0.5 -top-0.5 h-3.5 min-w-3.5 text-[9px] lg:-right-1 lg:-top-1 lg:h-4 lg:min-w-4 lg:text-[10px]"
+              />
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.4rem)] z-40 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+              <div className="absolute right-0 top-[calc(100%+0.4rem)] z-40 flex w-[min(22rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
                 <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold tracking-tight">
@@ -361,8 +377,11 @@ export function VaultHeader({
             }
             title="Messages"
           >
-            <MessageSquare className="h-4 w-4" />
-            <UnreadBadge count={unreadCount} />
+            <MessageSquare className={headerIcon} />
+            <UnreadBadge
+              count={unreadCount}
+              className="-right-0.5 -top-0.5 h-3.5 min-w-3.5 text-[9px] lg:-right-1 lg:-top-1 lg:h-4 lg:min-w-4 lg:text-[10px]"
+            />
           </Link>
           {label && (
             <Link
@@ -379,12 +398,11 @@ export function VaultHeader({
           )}
           <Link
             href="/vault/settings"
-            className={`${iconBtn} w-auto gap-1 px-2.5 xl:hidden`}
+            className={`${iconBtn} xl:hidden`}
             aria-label="Profile & settings"
             title="Profile & settings"
           >
-            <UserRound className="h-4 w-4" />
-            <Settings className="h-3.5 w-3.5" />
+            <Settings className={headerIcon} />
           </Link>
           <ThemeToggle />
           <button
@@ -395,7 +413,7 @@ export function VaultHeader({
             aria-label="Log out"
             title="Log out"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className={headerIcon} />
           </button>
         </div>
       </div>

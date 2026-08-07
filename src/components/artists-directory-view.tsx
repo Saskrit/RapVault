@@ -107,7 +107,7 @@ export function ArtistsDirectoryView() {
   }
 
   return (
-    <VaultShell centerLabel="Artists">
+    <VaultShell>
       <main className="relative min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-5xl px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8">
           {/* Masthead */}

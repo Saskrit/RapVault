@@ -192,7 +192,7 @@ export function NetworkView() {
   ];
 
   return (
-    <VaultShell centerLabel="Network">
+    <VaultShell>
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
           aria-hidden

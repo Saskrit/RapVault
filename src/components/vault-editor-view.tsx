@@ -432,27 +432,27 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       <VaultHeader>
         <Link
           href="/vault"
-          className={`${iconBtn} flex w-auto items-center gap-1.5 px-3 text-sm font-medium`}
+          className={`${iconBtn} w-auto gap-1 px-2 text-xs font-medium sm:gap-1.5 sm:px-2.5 sm:text-sm lg:px-3`}
           aria-label="Back to library"
         >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
+          <ArrowLeft className="h-3.5 w-3.5 shrink-0 lg:h-4 lg:w-4" />
           <span className="hidden sm:inline">Library</span>
         </Link>
       </VaultHeader>
 
-      <div className="shrink-0 border-b border-border bg-card/50 px-3 py-3 lg:px-4">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="shrink-0 border-b border-border bg-card/50 px-2 py-2 sm:px-3 sm:py-3 lg:px-4">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 lg:gap-3">
           <input
             id="song-title"
             type="text"
             value={song.title}
             onChange={(e) => scheduleSave({ title: e.target.value })}
             spellCheck={spellCheck}
-            className="min-w-0 flex-1 basis-40 rounded-xl border border-border bg-background px-3.5 py-2.5 text-lg font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:text-xl lg:text-2xl"
+            className="min-w-0 flex-1 basis-32 rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:basis-40 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-2xl"
             placeholder="Untitled track"
           />
 
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
             <button
               type="button"
               onClick={() => setBeatsOpen((open) => !open)}

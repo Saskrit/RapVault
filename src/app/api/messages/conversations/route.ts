@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { isUserOnline } from "@/lib/presence";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -21,6 +22,7 @@ export async function GET() {
                   username: true,
                   displayName: true,
                   avatarUrl: true,
+                  lastSeenAt: true,
                 },
               },
             },
@@ -69,6 +71,7 @@ export async function GET() {
               username: other.username,
               displayName: other.displayName || other.username || "Artist",
               avatarUrl: other.avatarUrl,
+              online: isUserOnline(other.lastSeenAt),
             }
           : null,
         lastMessage: last

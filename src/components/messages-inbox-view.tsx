@@ -20,6 +20,7 @@ type ConversationRow = {
     username: string | null;
     displayName: string;
     avatarUrl: string | null;
+    online?: boolean;
   } | null;
   lastMessage: {
     id: string;
@@ -71,10 +72,12 @@ export function MessagesInboxView() {
 
   useEffect(() => {
     load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
   }, [load]);
 
   return (
-    <VaultShell centerLabel="Messages">
+    <VaultShell>
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-border px-4 py-5 sm:px-6 lg:px-8">
           <p className="type-eyebrow text-muted">Inbox</p>
@@ -131,6 +134,7 @@ export function MessagesInboxView() {
                           src={c.other?.avatarUrl}
                           name={c.other?.displayName || "Artist"}
                           size="md"
+                          online={Boolean(c.other?.online)}
                         />
                         {unread > 0 && (
                           <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-card" />

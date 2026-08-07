@@ -839,7 +839,6 @@ export function VaultSongsView() {
       onSearchChange={setSearchQuery}
       mobileSearchOpen={mobileSearchOpen}
       onMobileSearchOpen={setMobileSearchOpen}
-      centerLabel={collectionTitle}
       folderDrawerOpen={folderDrawerOpen}
       onFolderDrawerOpenChange={setFolderDrawerOpen}
       onFoldersChange={setFolders}

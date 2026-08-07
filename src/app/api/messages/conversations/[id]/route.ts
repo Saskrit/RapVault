@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { isUserOnline } from "@/lib/presence";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -40,7 +41,13 @@ export async function GET(_request: Request, context: RouteContext) {
       participants: {
         include: {
           user: {
-            select: { id: true, username: true, displayName: true, avatarUrl: true },
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+              lastSeenAt: true,
+            },
           },
         },
       },
@@ -75,6 +82,7 @@ export async function GET(_request: Request, context: RouteContext) {
             username: other.username,
             displayName: other.displayName || other.username || "Artist",
             avatarUrl: other.avatarUrl,
+            online: isUserOnline(other.lastSeenAt),
           }
         : null,
       messages: conversation.messages.map((m) => ({

@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { WifiOff } from "lucide-react";
+import { Wifi, WifiOff } from "lucide-react";
 import {
   flushAllPendingSongs,
   getPendingSongIds,
@@ -41,7 +41,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [banner, setBanner] = useState<"offline" | "back" | null>(null);
   const syncingRef = useRef(false);
+  const hadOfflineRef = useRef(false);
+  const backTimerRef = useRef<number | null>(null);
 
   const refreshPending = useCallback(() => {
     setPendingCount(getPendingSongIds().length);
@@ -71,14 +74,41 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [refreshPending]);
 
   useEffect(() => {
-    function onOnline() {
-      setOnline(true);
-    }
-    function onOffline() {
-      setOnline(false);
+    function clearBackTimer() {
+      if (backTimerRef.current !== null) {
+        window.clearTimeout(backTimerRef.current);
+        backTimerRef.current = null;
+      }
     }
 
-    setOnline(!isBrowserOffline());
+    function onOnline() {
+      setOnline(true);
+      if (hadOfflineRef.current) {
+        setBanner("back");
+        clearBackTimer();
+        backTimerRef.current = window.setTimeout(() => {
+          setBanner(null);
+          backTimerRef.current = null;
+        }, 3500);
+      } else {
+        setBanner(null);
+      }
+      hadOfflineRef.current = false;
+    }
+
+    function onOffline() {
+      hadOfflineRef.current = true;
+      setOnline(false);
+      clearBackTimer();
+      setBanner("offline");
+    }
+
+    const initiallyOffline = isBrowserOffline();
+    setOnline(!initiallyOffline);
+    if (initiallyOffline) {
+      hadOfflineRef.current = true;
+      setBanner("offline");
+    }
     refreshPending();
 
     window.addEventListener("online", onOnline);
@@ -86,6 +116,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      clearBackTimer();
     };
   }, [refreshPending]);
 
@@ -117,20 +148,42 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     [online, pendingCount, syncing, refreshPending, syncNow],
   );
 
+  const showOffline = !online || banner === "offline";
+  const showBack = online && banner === "back";
+
   return (
     <OfflineSyncContext.Provider value={value}>
-      {children}
-      {!online && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[80] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-3.5 py-2 text-sm text-foreground shadow-lg backdrop-blur">
-            <WifiOff className="h-4 w-4 shrink-0 text-muted" />
-            <span>
-              Offline — edits save on this device and sync when you&apos;re back
-              online
-            </span>
+      {(showOffline || showBack) && (
+        <div
+          className="pointer-events-none fixed inset-x-0 top-0 z-[90] flex justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm shadow-lg backdrop-blur ${
+              showBack
+                ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                : "border-amber-500/35 bg-amber-500/15 text-amber-900 dark:text-amber-200"
+            }`}
+          >
+            {showBack ? (
+              <>
+                <Wifi className="h-4 w-4 shrink-0" />
+                <span>You are back Online.</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4 shrink-0" />
+                <span>
+                  You&apos;re offline — edits save on this device and sync when
+                  you&apos;re back online
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
+      {children}
     </OfflineSyncContext.Provider>
   );
 }
