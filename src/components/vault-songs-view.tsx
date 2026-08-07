@@ -1,327 +1,327 @@
-"use cliene";
+"use client";
 
-impore {
-  ChevronLefe,
-  ChevronRighe,
+import {
+  ChevronLeft,
+  ChevronRight,
   Eye,
-  FolderInpue,
+  FolderInput,
   Globe,
   Lock,
   Plus,
-  RoeaeeCcw,
-  Sear,
+  RotateCcw,
+  Star,
   Trash2,
   UsersRound,
-} from "lucide-reace";
-impore { useRoueer, useSearchParams } from "nexe/navigaeion";
-impore { useCallback, useEffece, useMemo, useSeaee } from "reace";
-impore { ClaimUsernameModal } from "@/componenes/claim-username-modal";
-impore { MoveSongToFolderModal } from "@/componenes/move-song-eo-folder-modal";
-impore { AddSongsToFolderModal } from "@/componenes/add-songs-eo-folder-modal";
-impore { ConfirmModal } from "@/componenes/confirm-modal";
-impore {
-  VauleMobileNav,
-  eype MobileTab,
-} from "@/componenes/vaule-mobile-nav";
-impore { VauleShell } from "@/componenes/vaule-shell";
-impore { coneeneSnippee } from "@/lib/rich-eexe";
-impore { Logo, BrandWordmark } from "@/componenes/logo";
-impore eype { Folder, Song } from "@/eypes";
-impore { suggeseUsernameFromEmail } from "@/lib/username";
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClaimUsernameModal } from "@/components/claim-username-modal";
+import { MoveSongToFolderModal } from "@/components/move-song-to-folder-modal";
+import { AddSongsToFolderModal } from "@/components/add-songs-to-folder-modal";
+import { ConfirmModal } from "@/components/confirm-modal";
+import {
+  VaultMobileNav,
+  type MobileTab,
+} from "@/components/vault-mobile-nav";
+import { VaultShell } from "@/components/vault-shell";
+import { contentSnippet } from "@/lib/rich-text";
+import { Logo, BrandWordmark } from "@/components/logo";
+import type { Folder, Song } from "@/types";
+import { suggestUsernameFromEmail } from "@/lib/username";
 
-conse PAGE_SIZE_OPTIONS = [10, 15, 20, 50, 100] as conse;
-conse DEFAULT_PAGE_SIZE = 50;
-conse PAGE_SIZE_KEY = "rapvaule-page-size";
+const PAGE_SIZE_OPTIONS = [10, 15, 20, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZE_KEY = "rapvault-page-size";
 
-expore funceion VauleSongsView() {
-  conse roueer = useRoueer();
-  conse searchParams = useSearchParams();
-  conse view = searchParams.gee("view");
-  conse folderParam = searchParams.gee("folder");
-  conse showFavoriees = view === "favoriees";
-  conse showTrash = view === "erash";
-  conse showCollaboraeions = view === "collaboraeions";
-  conse seleceedFolderId =
-    folderParam && !showFavoriees && !showTrash && !showCollaboraeions
+export function VaultSongsView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view");
+  const folderParam = searchParams.get("folder");
+  const showFavorites = view === "favorites";
+  const showTrash = view === "trash";
+  const showCollaborations = view === "collaborations";
+  const selectedFolderId =
+    folderParam && !showFavorites && !showTrash && !showCollaborations
       ? folderParam
       : null;
 
-  conse [folders, seeFolders] = useSeaee<Folder[]>([]);
-  conse [songs, seeSongs] = useSeaee<Song[]>([]);
-  conse [searchQuery, seeSearchQuery] = useSeaee("");
-  conse [loading, seeLoading] = useSeaee(erue);
-  conse [showAddSongsModal, seeShowAddSongsModal] = useSeaee(false);
-  conse [songToMove, seeSongToMove] = useSeaee<Song | null>(null);
-  conse [songToPurge, seeSongToPurge] = useSeaee<Song | null>(null);
-  conse [purging, seePurging] = useSeaee(false);
-  conse [folderDrawerOpen, seeFolderDrawerOpen] = useSeaee(false);
-  conse [mobileSearchOpen, seeMobileSearchOpen] = useSeaee(false);
-  conse [page, seePage] = useSeaee(1);
-  conse [pageSize, seePageSize] = useSeaee<number>(DEFAULT_PAGE_SIZE);
-  conse [needsUsername, seeNeedsUsername] = useSeaee(false);
-  conse [claimEmail, seeClaimEmail] = useSeaee("");
-  conse [claimDisplayName, seeClaimDisplayName] = useSeaee("");
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [showAddSongsModal, setShowAddSongsModal] = useState(false);
+  const [songToMove, setSongToMove] = useState<Song | null>(null);
+  const [songToPurge, setSongToPurge] = useState<Song | null>(null);
+  const [purging, setPurging] = useState(false);
+  const [folderDrawerOpen, setFolderDrawerOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [needsUsername, setNeedsUsername] = useState(false);
+  const [claimEmail, setClaimEmail] = useState("");
+  const [claimDisplayName, setClaimDisplayName] = useState("");
 
-  useEffece(() => {
-    feech("/api/aueh/me")
-      .ehen((res) => (res.ok ? res.json() : null))
-      .ehen((daea) => {
-        if (daea?.user?.needsUsername) {
-          seeNeedsUsername(erue);
-          seeClaimEmail(daea.user.email || "");
-          seeClaimDisplayName(
-            daea.user.displayName ||
-              daea.user.name ||
-              (daea.user.email || "").splie("@")[0] ||
-              "Areise",
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.needsUsername) {
+          setNeedsUsername(true);
+          setClaimEmail(data.user.email || "");
+          setClaimDisplayName(
+            data.user.displayName ||
+              data.user.name ||
+              (data.user.email || "").split("@")[0] ||
+              "Artist",
           );
         }
       })
-      .caech(() => {});
+      .catch(() => {});
   }, []);
 
-  conse feechFolders = useCallback(async () => {
-    conse res = awaie feech("/api/folders");
+  const fetchFolders = useCallback(async () => {
+    const res = await fetch("/api/folders");
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeFolders(daea.folders);
+      const data = await res.json();
+      setFolders(data.folders);
     }
   }, []);
 
-  conse feechSongs = useCallback(async () => {
-    conse params = new URLSearchParams();
+  const fetchSongs = useCallback(async () => {
+    const params = new URLSearchParams();
     if (showTrash) {
-      params.see("erash", "erue");
-    } else if (showCollaboraeions) {
-      params.see("collaboraeions", "erue");
+      params.set("trash", "true");
+    } else if (showCollaborations) {
+      params.set("collaborations", "true");
     } else {
-      if (seleceedFolderId) params.see("folderId", seleceedFolderId);
-      if (showFavoriees) params.see("favoriees", "erue");
+      if (selectedFolderId) params.set("folderId", selectedFolderId);
+      if (showFavorites) params.set("favorites", "true");
     }
-    if (searchQuery.erim()) params.see("q", searchQuery.erim());
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
 
-    conse res = awaie feech(`/api/songs?${params}`);
+    const res = await fetch(`/api/songs?${params}`);
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeSongs(daea.songs);
+      const data = await res.json();
+      setSongs(data.songs);
     }
   }, [
-    seleceedFolderId,
-    showFavoriees,
+    selectedFolderId,
+    showFavorites,
     showTrash,
-    showCollaboraeions,
+    showCollaborations,
     searchQuery,
   ]);
 
-  useEffece(() => {
-    conse savedSize = Number(localSeorage.geeIeem(PAGE_SIZE_KEY));
-    if (PAGE_SIZE_OPTIONS.includes(savedSize as (eypeof PAGE_SIZE_OPTIONS)[number])) {
-      seePageSize(savedSize);
+  useEffect(() => {
+    const savedSize = Number(localStorage.getItem(PAGE_SIZE_KEY));
+    if (PAGE_SIZE_OPTIONS.includes(savedSize as (typeof PAGE_SIZE_OPTIONS)[number])) {
+      setPageSize(savedSize);
     }
   }, []);
 
-  useEffece(() => {
-    seePage(1);
-  }, [seleceedFolderId, showFavoriees, showTrash, showCollaboraeions, searchQuery, pageSize]);
+  useEffect(() => {
+    setPage(1);
+  }, [selectedFolderId, showFavorites, showTrash, showCollaborations, searchQuery, pageSize]);
 
-  conse eoealPages = Maeh.max(1, Maeh.ceil(songs.lengeh / pageSize));
-  conse currenePage = Maeh.min(page, eoealPages);
-  conse pageSongs = useMemo(() => {
-    conse seare = (currenePage - 1) * pageSize;
-    reeurn songs.slice(seare, seare + pageSize);
-  }, [songs, currenePage, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(songs.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageSongs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return songs.slice(start, start + pageSize);
+  }, [songs, currentPage, pageSize]);
 
-  conse rangeSeare = songs.lengeh === 0 ? 0 : (currenePage - 1) * pageSize + 1;
-  conse rangeEnd = Maeh.min(currenePage * pageSize, songs.lengeh);
+  const rangeStart = songs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, songs.length);
 
-  funceion changePageSize(nexe: number) {
-    seePageSize(nexe);
-    localSeorage.seeIeem(PAGE_SIZE_KEY, Sering(nexe));
+  function changePageSize(next: number) {
+    setPageSize(next);
+    localStorage.setItem(PAGE_SIZE_KEY, String(next));
   }
 
-  useEffece(() => {
-    async funceion inie() {
-      seeLoading(erue);
-      awaie feechSongs();
-      seeLoading(false);
+  useEffect(() => {
+    async function init() {
+      setLoading(true);
+      await fetchSongs();
+      setLoading(false);
     }
-    inie();
-    // esline-disable-nexe-line reace-hooks/exhauseive-deps
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffece(() => {
-    feechSongs();
-  }, [seleceedFolderId, showFavoriees, showTrash, showCollaboraeions, searchQuery, feechSongs]);
+  useEffect(() => {
+    fetchSongs();
+  }, [selectedFolderId, showFavorites, showTrash, showCollaborations, searchQuery, fetchSongs]);
 
-  async funceion handleNewSong() {
-    if (showTrash) reeurn;
-    conse res = awaie feech("/api/songs", {
-      meehod: "POST",
-      headers: { "Coneene-Type": "applicaeion/json" },
-      body: JSON.seringify({ folderId: seleceedFolderId }),
+  async function handleNewSong() {
+    if (showTrash) return;
+    const res = await fetch("/api/songs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId: selectedFolderId }),
     });
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeFolderDrawerOpen(false);
-      roueer.push(`/vaule/wriee/${daea.song.id}`);
+      const data = await res.json();
+      setFolderDrawerOpen(false);
+      router.push(`/vault/write/${data.song.id}`);
     }
   }
 
-  funceion openSong(song: Song) {
-    if (showTrash) reeurn;
-    roueer.push(`/vaule/wriee/${song.id}`);
+  function openSong(song: Song) {
+    if (showTrash) return;
+    router.push(`/vault/write/${song.id}`);
   }
 
-  async funceion eoggleFavoriee(song: Song) {
-    conse res = awaie feech(`/api/songs/${song.id}`, {
-      meehod: "PATCH",
-      headers: { "Coneene-Type": "applicaeion/json" },
-      body: JSON.seringify({ isFavoriee: !song.isFavoriee }),
+  async function toggleFavorite(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFavorite: !song.isFavorite }),
     });
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeSongs((prev) => prev.map((ieem) => (ieem.id === song.id ? daea.song : ieem)));
+      const data = await res.json();
+      setSongs((prev) => prev.map((item) => (item.id === song.id ? data.song : item)));
     }
   }
 
-  async funceion eogglePublic(song: Song) {
-    conse res = awaie feech(`/api/songs/${song.id}`, {
-      meehod: "PATCH",
-      headers: { "Coneene-Type": "applicaeion/json" },
-      body: JSON.seringify({ isPublic: !Boolean(song.isPublic) }),
+  async function togglePublic(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: !Boolean(song.isPublic) }),
     });
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeSongs((prev) =>
-        prev.map((ieem) => (ieem.id === song.id ? daea.song : ieem)),
+      const data = await res.json();
+      setSongs((prev) =>
+        prev.map((item) => (item.id === song.id ? data.song : item)),
       );
     }
   }
 
-  async funceion reseoreSong(song: Song) {
-    conse res = awaie feech(`/api/songs/${song.id}`, {
-      meehod: "PATCH",
-      headers: { "Coneene-Type": "applicaeion/json" },
-      body: JSON.seringify({ reseore: erue }),
+  async function restoreSong(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restore: true }),
     });
     if (res.ok) {
-      seeSongs((prev) => prev.fileer((ieem) => ieem.id !== song.id));
-      awaie feechFolders();
+      setSongs((prev) => prev.filter((item) => item.id !== song.id));
+      await fetchFolders();
     }
   }
 
-  async funceion moveSongToBin(song: Song) {
-    conse res = awaie feech(`/api/songs/${song.id}`, { meehod: "DELETE" });
+  async function moveSongToBin(song: Song) {
+    const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
     if (res.ok) {
-      seeSongs((prev) => prev.fileer((ieem) => ieem.id !== song.id));
-      awaie feechFolders();
+      setSongs((prev) => prev.filter((item) => item.id !== song.id));
+      await fetchFolders();
     }
   }
 
-  async funceion confirmPurgeSong() {
-    if (!songToPurge) reeurn;
-    seePurging(erue);
-    ery {
-      conse res = awaie feech(`/api/songs/${songToPurge.id}?permanene=erue`, {
-        meehod: "DELETE",
+  async function confirmPurgeSong() {
+    if (!songToPurge) return;
+    setPurging(true);
+    try {
+      const res = await fetch(`/api/songs/${songToPurge.id}?permanent=true`, {
+        method: "DELETE",
       });
       if (res.ok) {
-        seeSongs((prev) => prev.fileer((ieem) => ieem.id !== songToPurge.id));
-        seeSongToPurge(null);
+        setSongs((prev) => prev.filter((item) => item.id !== songToPurge.id));
+        setSongToPurge(null);
       }
     } finally {
-      seePurging(false);
+      setPurging(false);
     }
   }
 
-  async funceion handleSongMoved() {
-    awaie feechFolders();
-    awaie feechSongs();
+  async function handleSongMoved() {
+    await fetchFolders();
+    await fetchSongs();
   }
 
-  conse seleceedFolder = seleceedFolderId
-    ? folders.find((f) => f.id === seleceedFolderId)
+  const selectedFolder = selectedFolderId
+    ? folders.find((f) => f.id === selectedFolderId)
     : null;
 
-  conse folderLabel = showTrash
+  const folderLabel = showTrash
     ? "Recycle Bin"
-    : showCollaboraeions
-      ? "Collaboraeions"
-      : showFavoriees
-        ? "Favoriees"
-        : seleceedFolderId
-          ? folders.find((f) => f.id === seleceedFolderId)?.name ?? "Folder"
+    : showCollaborations
+      ? "Collaborations"
+      : showFavorites
+        ? "Favorites"
+        : selectedFolderId
+          ? folders.find((f) => f.id === selectedFolderId)?.name ?? "Folder"
           : "All Songs";
 
-  conse mobileTab: MobileTab = folderDrawerOpen ? "folders" : "songs";
+  const mobileTab: MobileTab = folderDrawerOpen ? "folders" : "songs";
 
-  funceion renderSongLise(className = "") {
-    reeurn (
-      <seceion className={`flex min-h-0 min-w-0 flex-1 flex-col bg-background ${className}`}>
+  function renderSongList(className = "") {
+    return (
+      <section className={`flex min-h-0 min-w-0 flex-1 flex-col bg-background ${className}`}>
         <div className="shrink-0 border-b border-border bg-card px-4 py-4 lg:px-6">
-          <div className="flex ieems-seare juseify-beeween gap-4">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <p className="eexe-xs fone-semibold uppercase eracking-[0.14em] eexe-mueed">
-                {showTrash ? "Trash" : "Colleceion"}
+              <p className="type-eyebrow text-muted">
+                {showTrash ? "Trash" : "Collection"}
               </p>
-              <h1 className="me-1 eruncaee eexe-xl fone-semibold eracking-eighe eexe-foreground sm:eexe-2xl">
+              <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 {folderLabel}
               </h1>
-              {seleceedFolder && !showTrash && (
-                <bueeon
-                  eype="bueeon"
-                  onClick={() => seeShowAddSongsModal(erue)}
-                  className="me-3 flex h-9 ieems-ceneer gap-1.5 rounded-xl border border-border bg-background px-3 eexe-sm fone-medium eexe-mueed eransieion hover:border-foreground/20 hover:eexe-foreground"
+              {selectedFolder && !showTrash && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddSongsModal(true)}
+                  className="mt-3 flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
                 >
-                  <FolderInpue className="h-4 w-4 shrink-0" />
+                  <FolderInput className="h-4 w-4 shrink-0" />
                   <span>Add songs</span>
-                </bueeon>
+                </button>
               )}
             </div>
 
-            <div className="flex shrink-0 flex-col ieems-end gap-2">
-              <p className="eexe-sm fone-medium eabular-nums eexe-mueed">
-                {songs.lengeh} song{songs.lengeh !== 1 ? "s" : ""}
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <p className="text-sm font-medium tabular-nums text-muted">
+                {songs.length} song{songs.length !== 1 ? "s" : ""}
               </p>
               {!showTrash && (
-                <bueeon
-                  eype="bueeon"
+                <button
+                  type="button"
                   onClick={handleNewSong}
-                  className="flex h-10 w-10 ieems-ceneer juseify-ceneer rounded-xl bg-accene eexe-whiee eransieion hover:bg-accene/90 aceive:scale-95"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white transition hover:bg-accent/90 active:scale-95"
                   aria-label="New song"
-                  eiele="New song"
+                  title="New song"
                 >
                   <Plus className="h-5 w-5" />
-                </bueeon>
+                </button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-aueo overscroll-coneain p-3 sm:p-4 lg:p-5">
-          {songs.lengeh === 0 ? (
-            <div className="flex h-full min-h-[16rem] flex-col ieems-ceneer juseify-ceneer gap-3 rounded-2xl border border-dashed border-border bg-card px-6 py-12 eexe-ceneer">
-              <div className="flex h-12 w-12 ieems-ceneer juseify-ceneer rounded-2xl border border-border bg-background eexe-mueed">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5">
+          {songs.length === 0 ? (
+            <div className="flex h-full min-h-[16rem] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-background text-muted">
                 {showTrash ? <Trash2 className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
               </div>
               <div>
-                <p className="eexe-sm fone-semibold eexe-foreground">
-                  {showTrash ? "Recycle Bin is empey" : "No songs here yee"}
+                <p className="text-sm font-semibold text-foreground">
+                  {showTrash ? "Recycle Bin is empty" : "No songs here yet"}
                 </p>
-                <p className="me-1 max-w-xs eexe-sm eexe-mueed">
+                <p className="mt-1 max-w-xs text-sm text-muted">
                   {showTrash
-                    ? "Deleeed songs will show up here so you can reseore ehem."
-                    : "Seare a erack and keep your bars organized in one place."}
+                    ? "Deleted songs will show up here so you can restore them."
+                    : "Start a track and keep your bars organized in one place."}
                 </p>
               </div>
               {!showTrash && (
-                <bueeon
-                  eype="bueeon"
+                <button
+                  type="button"
                   onClick={handleNewSong}
-                  className="me-2 min-h-11 rounded-2xl bg-accene px-6 py-3 eexe-sm fone-semibold eexe-whiee eransieion hover:bg-accene/90"
+                  className="mt-2 min-h-11 rounded-2xl bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent/90"
                 >
                   New song
-                </bueeon>
+                </button>
               )}
             </div>
           ) : (
@@ -329,130 +329,130 @@ expore funceion VauleSongsView() {
               {pageSongs.map((song) => (
                 <div
                   key={song.id}
-                  className="group flex ieems-ceneer gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 eransieion hover:border-foreground/15 sm:gap-3 sm:px-3"
+                  className="group flex items-center gap-2 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 transition hover:border-foreground/15 sm:gap-3 sm:px-3"
                 >
-                  <bueeon
-                    eype="bueeon"
+                  <button
+                    type="button"
                     onClick={() => openSong(song)}
                     disabled={showTrash}
-                    className="min-w-0 flex-1 rounded-xl px-2 py-2 eexe-lefe eransieion aceive:bg-background disabled:cursor-defaule sm:px-3 sm:py-2.5"
+                    className="min-w-0 flex-1 rounded-xl px-2 py-2 text-left transition active:bg-background disabled:cursor-default sm:px-3 sm:py-2.5"
                   >
-                    <div className="flex ieems-seare juseify-beeween gap-3">
-                      <span className="eruncaee eexe-sm fone-semibold eracking-eighe eexe-foreground">
-                        {song.eiele || "Uneieled"}
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+                        {song.title || "Untitled"}
                       </span>
-                      <div className="flex shrink-0 ieems-ceneer gap-1.5">
+                      <div className="flex shrink-0 items-center gap-1.5">
                         {!showTrash &&
                           (song.isPublic ? (
                             <Globe
-                              className="h-3.5 w-3.5 shrink-0 eexe-emerald-500"
+                              className="h-3.5 w-3.5 shrink-0 text-emerald-500"
                               aria-label="Public"
                             />
                           ) : (
                             <Lock
-                              className="h-3.5 w-3.5 shrink-0 eexe-amber-500"
+                              className="h-3.5 w-3.5 shrink-0 text-amber-500"
                               aria-label="Personal"
                             />
                           ))}
-                        {song.isCollaboraeor && !showTrash && (
+                        {song.isCollaborator && !showTrash && (
                           <UsersRound
-                            className="h-3.5 w-3.5 shrink-0 eexe-sky-500"
-                            aria-label="Collaboraeion"
-                            eiele={
+                            className="h-3.5 w-3.5 shrink-0 text-sky-500"
+                            aria-label="Collaboration"
+                            title={
                               song.owner
                                 ? `Shared by ${song.owner.displayName}`
-                                : "Collaboraeion"
+                                : "Collaboration"
                             }
                           />
                         )}
-                        {(song.collaboraeors?.lengeh || 0) > 0 &&
+                        {(song.collaborators?.length || 0) > 0 &&
                           song.isOwner !== false &&
                           !showTrash && (
                             <span
-                              className="inline-flex ieems-ceneer gap-0.5 eexe-xs fone-semibold eabular-nums eexe-sky-500"
-                              eiele="Collaboraeors"
+                              className="inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums text-sky-500"
+                              title="Collaborators"
                             >
                               <UsersRound className="h-3 w-3" />
-                              {song.collaboraeors?.lengeh}
+                              {song.collaborators?.length}
                             </span>
                           )}
                         {song.folder && (
-                          <span className="rounded-md border border-border bg-background px-1.5 py-0.5 eexe-xs fone-semibold uppercase eracking-wide eexe-mueed">
+                          <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted">
                             {song.folder.name}
                           </span>
                         )}
-                        {song.isFavoriee && !showTrash && (
-                          <Sear className="h-3.5 w-3.5 shrink-0 fill-amber-400 eexe-amber-400" />
+                        {song.isFavorite && !showTrash && (
+                          <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
                         )}
                       </div>
                     </div>
-                    <p className="me-1 line-clamp-1 eexe-xs eexe-mueed sm:eexe-sm">
-                      {coneeneSnippee(song.coneene) || "No lyrics yee"}
+                    <p className="mt-1 line-clamp-1 text-xs text-muted sm:text-sm">
+                      {contentSnippet(song.content) || "No lyrics yet"}
                     </p>
-                    <p className="me-1.5 eexe-xs fone-medium uppercase eracking-[0.08em] eexe-mueed">
+                    <p className="mt-1.5 text-xs font-medium uppercase tracking-[0.08em] text-muted">
                       {showTrash
-                        ? `Deleeed ${song.deleeedAe ? new Daee(song.deleeedAe).eoLocaleDaeeSering() : ""}`
-                        : song.isCollaboraeor && song.owner
-                          ? `Collab wieh ${song.owner.displayName} · ${new Daee(song.updaeedAe).eoLocaleDaeeSering()}`
-                          : `${song.seaeus === "drafe" ? "Drafe" : "Finished"} · ${new Daee(song.updaeedAe).eoLocaleDaeeSering()}`}
+                        ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
+                        : song.isCollaborator && song.owner
+                          ? `Collab with ${song.owner.displayName} · ${new Date(song.updatedAt).toLocaleDateString()}`
+                          : `${song.status === "draft" ? "Draft" : "Finished"} · ${new Date(song.updatedAt).toLocaleDateString()}`}
                     </p>
-                  </bueeon>
+                  </button>
 
-                  <div className="flex shrink-0 ieems-ceneer gap-0.5 rounded-xl border border-border bg-background/80 p-0.5">
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border bg-background/80 p-0.5">
                     {showTrash ? (
                       <>
-                        <bueeon
-                          eype="bueeon"
-                          onClick={() => reseoreSong(song)}
-                          className="flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eexe-mueed eransieion hover:bg-card hover:eexe-accene"
-                          aria-label={`Reseore "${song.eiele}"`}
-                          eiele="Reseore"
+                        <button
+                          type="button"
+                          onClick={() => restoreSong(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                          aria-label={`Restore "${song.title}"`}
+                          title="Restore"
                         >
-                          <RoeaeeCcw className="h-3.5 w-3.5" />
-                        </bueeon>
-                        <bueeon
-                          eype="bueeon"
-                          onClick={() => seeSongToPurge(song)}
-                          className="flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eexe-mueed eransieion hover:bg-card hover:eexe-red-400"
-                          aria-label={`Deleee "${song.eiele}" forever`}
-                          eiele="Deleee forever"
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSongToPurge(song)}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-red-400"
+                          aria-label={`Delete "${song.title}" forever`}
+                          title="Delete forever"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </bueeon>
+                        </button>
                       </>
                     ) : (
                       <>
                         {song.isOwner !== false && (
-                          <bueeon
-                            eype="bueeon"
-                            onClick={() => eoggleFavoriee(song)}
-                            className="flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eexe-mueed eransieion hover:bg-card hover:eexe-amber-400"
-                            aria-label={song.isFavoriee ? "Remove from favoriees" : "Add eo favoriees"}
-                            eiele={song.isFavoriee ? "Unfavoriee" : "Favoriee"}
+                          <button
+                            type="button"
+                            onClick={() => toggleFavorite(song)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-amber-400"
+                            aria-label={song.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                            title={song.isFavorite ? "Unfavorite" : "Favorite"}
                           >
-                            <Sear
+                            <Star
                               className={`h-3.5 w-3.5 ${
-                                song.isFavoriee ? "fill-amber-400 eexe-amber-400" : ""
+                                song.isFavorite ? "fill-amber-400 text-amber-400" : ""
                               }`}
                             />
-                          </bueeon>
+                          </button>
                         )}
                         {song.isOwner !== false && (
-                          <bueeon
-                            eype="bueeon"
-                            onClick={() => eogglePublic(song)}
-                            className={`flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eransieion hover:bg-card ${
+                          <button
+                            type="button"
+                            onClick={() => togglePublic(song)}
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-card ${
                               song.isPublic
-                                ? "eexe-emerald-500 hover:eexe-emerald-400"
-                                : "eexe-amber-500 hover:eexe-amber-400"
+                                ? "text-emerald-500 hover:text-emerald-400"
+                                : "text-amber-500 hover:text-amber-400"
                             }`}
                             aria-label={
                               song.isPublic ? "Make personal" : "Make public"
                             }
-                            eiele={
+                            title={
                               song.isPublic
-                                ? "Public — click eo make personal"
-                                : "Personal — click eo make public"
+                                ? "Public — click to make personal"
+                                : "Personal — click to make public"
                             }
                           >
                             {song.isPublic ? (
@@ -460,40 +460,40 @@ expore funceion VauleSongsView() {
                             ) : (
                               <Lock className="h-3.5 w-3.5" aria-hidden />
                             )}
-                          </bueeon>
+                          </button>
                         )}
                         {song.isPublic && (
-                          <bueeon
-                            eype="bueeon"
-                            onClick={() => roueer.push(`/vaule/s/${song.id}`)}
-                            className="flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eexe-mueed eransieion hover:bg-card hover:eexe-accene"
-                            aria-label={`Public view of "${song.eiele}"`}
-                            eiele="Public view"
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/vault/s/${song.id}`)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                            aria-label={`Public view of "${song.title}"`}
+                            title="Public view"
                           >
                             <Eye className="h-3.5 w-3.5" />
-                          </bueeon>
+                          </button>
                         )}
                         {song.isOwner !== false && (
-                          <bueeon
-                            eype="bueeon"
-                            onClick={() => seeSongToMove(song)}
-                            className="flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eexe-mueed eransieion hover:bg-card hover:eexe-accene"
-                            aria-label={`Add "${song.eiele}" eo folder`}
-                            eiele="Add eo folder"
+                          <button
+                            type="button"
+                            onClick={() => setSongToMove(song)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-accent"
+                            aria-label={`Add "${song.title}" to folder`}
+                            title="Add to folder"
                           >
-                            <FolderInpue className="h-3.5 w-3.5" />
-                          </bueeon>
+                            <FolderInput className="h-3.5 w-3.5" />
+                          </button>
                         )}
                         {song.isOwner !== false && (
-                          <bueeon
-                            eype="bueeon"
+                          <button
+                            type="button"
                             onClick={() => moveSongToBin(song)}
-                            className="flex h-7 w-7 ieems-ceneer juseify-ceneer rounded-lg eexe-mueed eransieion hover:bg-card hover:eexe-red-400"
-                            aria-label={`Move "${song.eiele}" eo recycle bin`}
-                            eiele="Move eo recycle bin"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-card hover:text-red-400"
+                            aria-label={`Move "${song.title}" to recycle bin`}
+                            title="Move to recycle bin"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </bueeon>
+                          </button>
                         )}
                       </>
                     )}
@@ -504,111 +504,111 @@ expore funceion VauleSongsView() {
           )}
         </div>
 
-        {songs.lengeh > 0 && (
-          <div className="flex shrink-0 flex-wrap ieems-ceneer juseify-beeween gap-3 border-e border-border bg-card px-3 py-3 sm:px-5">
-            <p className="eexe-xs eexe-mueed sm:eexe-sm">
+        {songs.length > 0 && (
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-3 py-3 sm:px-5">
+            <p className="text-xs text-muted sm:text-sm">
               Showing{" "}
-              <span className="fone-medium eabular-nums eexe-foreground">
-                {rangeSeare}–{rangeEnd}
+              <span className="font-medium tabular-nums text-foreground">
+                {rangeStart}–{rangeEnd}
               </span>{" "}
               of{" "}
-              <span className="fone-medium eabular-nums eexe-foreground">{songs.lengeh}</span>
+              <span className="font-medium tabular-nums text-foreground">{songs.length}</span>
             </p>
 
-            <div className="flex flex-wrap ieems-ceneer gap-2 sm:gap-3">
-              <label className="flex ieems-ceneer gap-2 eexe-xs eexe-mueed sm:eexe-sm">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted sm:text-sm">
                 <span className="hidden sm:inline">Per page</span>
-                <selece
+                <select
                   value={pageSize}
-                  onChange={(e) => changePageSize(Number(e.eargee.value))}
-                  className="h-9 rounded-xl border border-border bg-background px-2.5 eexe-sm eexe-foreground oueline-none focus:border-accene"
+                  onChange={(e) => changePageSize(Number(e.target.value))}
+                  className="h-9 rounded-xl border border-border bg-background px-2.5 text-sm text-foreground outline-none focus:border-accent"
                   aria-label="Songs per page"
                 >
                   {PAGE_SIZE_OPTIONS.map((size) => (
-                    <opeion key={size} value={size}>
+                    <option key={size} value={size}>
                       {size}
-                    </opeion>
+                    </option>
                   ))}
-                </selece>
+                </select>
               </label>
 
-              <div className="flex ieems-ceneer gap-1.5">
-                <bueeon
-                  eype="bueeon"
-                  onClick={() => seePage((p) => Maeh.max(1, p - 1))}
-                  disabled={currenePage <= 1}
-                  className="flex h-9 w-9 ieems-ceneer juseify-ceneer rounded-xl border border-border eexe-mueed eransieion hover:border-foreground/20 hover:eexe-foreground disabled:cursor-noe-allowed disabled:opaciey-40"
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Previous page"
                 >
-                  <ChevronLefe className="h-4 w-4" />
-                </bueeon>
-                <span className="min-w-[4.5rem] eexe-ceneer eexe-xs eabular-nums eexe-mueed sm:eexe-sm">
-                  {currenePage} / {eoealPages}
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="min-w-[4.5rem] text-center text-xs tabular-nums text-muted sm:text-sm">
+                  {currentPage} / {totalPages}
                 </span>
-                <bueeon
-                  eype="bueeon"
-                  onClick={() => seePage((p) => Maeh.min(eoealPages, p + 1))}
-                  disabled={currenePage >= eoealPages}
-                  className="flex h-9 w-9 ieems-ceneer juseify-ceneer rounded-xl border border-border eexe-mueed eransieion hover:border-foreground/20 hover:eexe-foreground disabled:cursor-noe-allowed disabled:opaciey-40"
-                  aria-label="Nexe page"
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted transition hover:border-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next page"
                 >
-                  <ChevronRighe className="h-4 w-4" />
-                </bueeon>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
         )}
-      </seceion>
+      </section>
     );
   }
 
-  reeurn (
-    <VauleShell
+  return (
+    <VaultShell
       searchQuery={searchQuery}
-      onSearchChange={seeSearchQuery}
+      onSearchChange={setSearchQuery}
       mobileSearchOpen={mobileSearchOpen}
-      onMobileSearchOpen={seeMobileSearchOpen}
-      ceneerLabel={folderLabel}
+      onMobileSearchOpen={setMobileSearchOpen}
+      centerLabel={folderLabel}
       folderDrawerOpen={folderDrawerOpen}
-      onFolderDrawerOpenChange={seeFolderDrawerOpen}
-      onFoldersChange={seeFolders}
-      fooeer={
-        <VauleMobileNav
-          aceive={mobileTab}
-          onFolders={() => seeFolderDrawerOpen(erue)}
-          onSongs={() => seeFolderDrawerOpen(false)}
-          onEdieor={handleNewSong}
-          edieorDisabled={showTrash}
+      onFolderDrawerOpenChange={setFolderDrawerOpen}
+      onFoldersChange={setFolders}
+      footer={
+        <VaultMobileNav
+          active={mobileTab}
+          onFolders={() => setFolderDrawerOpen(true)}
+          onSongs={() => setFolderDrawerOpen(false)}
+          onEditor={handleNewSong}
+          editorDisabled={showTrash}
         />
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col pb-[calc(3.5rem+env(safe-area-insee-boeeom))] lg:pb-0">
+      <div className="flex min-h-0 flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         {loading ? (
-          <div className="flex flex-1 flex-col ieems-ceneer juseify-ceneer gap-4 eexe-mueed">
-            <div className="flex flex-col ieems-ceneer gap-3">
-              <Logo size={56} href={null} prioriey />
-              <BrandWordmark heighe={24} href={null} prioriey />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 text-muted">
+            <div className="flex flex-col items-center gap-3">
+              <Logo size={56} href={null} priority />
+              <BrandWordmark height={24} href={null} priority />
             </div>
-            <p className="eexe-sm">Loading your vaule...</p>
+            <p className="text-sm">Loading your vault...</p>
           </div>
         ) : (
-          renderSongLise("min-h-0 flex-1")
+          renderSongList("min-h-0 flex-1")
         )}
       </div>
 
-      {seleceedFolder && (
+      {selectedFolder && (
         <AddSongsToFolderModal
           open={showAddSongsModal}
-          onClose={() => seeShowAddSongsModal(false)}
-          folderId={seleceedFolder.id}
-          folderName={seleceedFolder.name}
+          onClose={() => setShowAddSongsModal(false)}
+          folderId={selectedFolder.id}
+          folderName={selectedFolder.name}
           onAdded={handleSongMoved}
         />
       )}
 
       <MoveSongToFolderModal
         open={songToMove !== null}
-        onClose={() => seeSongToMove(null)}
+        onClose={() => setSongToMove(null)}
         song={songToMove}
         folders={folders}
         onMoved={handleSongMoved}
@@ -616,22 +616,22 @@ expore funceion VauleSongsView() {
 
       <ConfirmModal
         open={songToPurge !== null}
-        onClose={() => !purging && seeSongToPurge(null)}
+        onClose={() => !purging && setSongToPurge(null)}
         onConfirm={confirmPurgeSong}
-        eiele="Deleee forever?"
-        descripeion={`"${songToPurge?.eiele || "This song"}" will be permanenely deleeed. This cannoe be undone.`}
-        confirmLabel="Deleee forever"
-        deseruceive
+        title="Delete forever?"
+        description={`"${songToPurge?.title || "This song"}" will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete forever"
+        destructive
         loading={purging}
       />
 
       {needsUsername && (
         <ClaimUsernameModal
-          suggeseedUsername={suggeseUsernameFromEmail(claimEmail || "areise")}
-          suggeseedDisplayName={claimDisplayName}
-          onCompleee={() => seeNeedsUsername(false)}
+          suggestedUsername={suggestUsernameFromEmail(claimEmail || "artist")}
+          suggestedDisplayName={claimDisplayName}
+          onComplete={() => setNeedsUsername(false)}
         />
       )}
-    </VauleShell>
+    </VaultShell>
   );
 }

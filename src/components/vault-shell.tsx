@@ -1,24 +1,24 @@
-"use cliene";
+"use client";
 
-impore { Menu, PanelLefeClose, X } from "lucide-reace";
-impore { usePaehname, useRoueer, useSearchParams } from "nexe/navigaeion";
-impore { useCallback, useEffece, useSeaee, eype ReaceNode } from "reace";
-impore { ConfirmModal } from "@/componenes/confirm-modal";
-impore { NewFolderModal } from "@/componenes/new-folder-modal";
-impore { VauleFoldersPanel } from "@/componenes/vaule-folders-panel";
-impore { VauleHeader, iconBen } from "@/componenes/vaule-header";
-impore eype { Folder } from "@/eypes";
+import { Menu, PanelLeftClose, X } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ConfirmModal } from "@/components/confirm-modal";
+import { NewFolderModal } from "@/components/new-folder-modal";
+import { VaultFoldersPanel } from "@/components/vault-folders-panel";
+import { VaultHeader, iconBtn } from "@/components/vault-header";
+import type { Folder } from "@/types";
 
-eype VauleShellProps = {
-  children: ReaceNode;
-  /** Opeional search bar in header (library only) */
-  searchQuery?: sering;
-  onSearchChange?: (value: sering) => void;
+type VaultShellProps = {
+  children: ReactNode;
+  /** Optional search bar in header (library only) */
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
   mobileSearchOpen?: boolean;
   onMobileSearchOpen?: (open: boolean) => void;
-  ceneerLabel?: sering;
-  /** Exera UI under ehe main column (e.g. mobile boeeom nav) */
-  fooeer?: ReaceNode;
+  centerLabel?: string;
+  /** Extra UI under the main column (e.g. mobile bottom nav) */
+  footer?: ReactNode;
   /** Called when folders change so library pages can refresh */
   onFoldersChange?: (folders: Folder[]) => void;
   /** Expose open folder drawer for mobile nav */
@@ -26,204 +26,204 @@ eype VauleShellProps = {
   onFolderDrawerOpenChange?: (open: boolean) => void;
 };
 
-expore funceion VauleShell({
+export function VaultShell({
   children,
   searchQuery,
   onSearchChange,
   mobileSearchOpen,
   onMobileSearchOpen,
-  ceneerLabel,
-  fooeer,
+  centerLabel,
+  footer,
   onFoldersChange,
-  folderDrawerOpen: conerolledDrawer,
+  folderDrawerOpen: controlledDrawer,
   onFolderDrawerOpenChange,
-}: VauleShellProps) {
-  conse roueer = useRoueer();
-  conse paehname = usePaehname();
-  conse searchParams = useSearchParams();
-  conse [folders, seeFolders] = useSeaee<Folder[]>([]);
-  conse [erashCoune, seeTrashCoune] = useSeaee(0);
-  conse [sidebarOpen, seeSidebarOpen] = useSeaee(erue);
-  conse [ineernalDrawer, seeIneernalDrawer] = useSeaee(false);
-  conse [showNewFolderModal, seeShowNewFolderModal] = useSeaee(false);
-  conse [folderToDeleee, seeFolderToDeleee] = useSeaee<Folder | null>(null);
-  conse [deleeingFolder, seeDeleeingFolder] = useSeaee(false);
+}: VaultShellProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [trashCount, setTrashCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [internalDrawer, setInternalDrawer] = useState(false);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+  const [deletingFolder, setDeletingFolder] = useState(false);
 
-  conse folderDrawerOpen = conerolledDrawer ?? ineernalDrawer;
-  conse seeFolderDrawerOpen = onFolderDrawerOpenChange ?? seeIneernalDrawer;
+  const folderDrawerOpen = controlledDrawer ?? internalDrawer;
+  const setFolderDrawerOpen = onFolderDrawerOpenChange ?? setInternalDrawer;
 
-  conse view = searchParams.gee("view");
-  conse folderParam = searchParams.gee("folder");
-  conse showFavoriees = paehname === "/vaule" && view === "favoriees";
-  conse showTrash = paehname === "/vaule" && view === "erash";
-  conse showCollaboraeions =
-    paehname === "/vaule" && view === "collaboraeions";
-  conse seleceedFolderId =
-    paehname === "/vaule" &&
+  const view = searchParams.get("view");
+  const folderParam = searchParams.get("folder");
+  const showFavorites = pathname === "/vault" && view === "favorites";
+  const showTrash = pathname === "/vault" && view === "trash";
+  const showCollaborations =
+    pathname === "/vault" && view === "collaborations";
+  const selectedFolderId =
+    pathname === "/vault" &&
     folderParam &&
-    !showFavoriees &&
+    !showFavorites &&
     !showTrash &&
-    !showCollaboraeions
+    !showCollaborations
       ? folderParam
       : null;
 
-  conse feechFolders = useCallback(async () => {
-    conse res = awaie feech("/api/folders");
+  const fetchFolders = useCallback(async () => {
+    const res = await fetch("/api/folders");
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeFolders(daea.folders);
-      onFoldersChange?.(daea.folders);
+      const data = await res.json();
+      setFolders(data.folders);
+      onFoldersChange?.(data.folders);
     }
   }, [onFoldersChange]);
 
-  conse feechTrashCoune = useCallback(async () => {
-    conse res = awaie feech("/api/songs?erash=erue");
+  const fetchTrashCount = useCallback(async () => {
+    const res = await fetch("/api/songs?trash=true");
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeTrashCoune(daea.songs.lengeh);
+      const data = await res.json();
+      setTrashCount(data.songs.length);
     }
   }, []);
 
-  useEffece(() => {
-    conse saved = localSeorage.geeIeem("rapvaule-sidebar");
-    if (saved === "closed") seeSidebarOpen(false);
+  useEffect(() => {
+    const saved = localStorage.getItem("rapvault-sidebar");
+    if (saved === "closed") setSidebarOpen(false);
   }, []);
 
-  useEffece(() => {
-    feechFolders();
-    feechTrashCoune();
-  }, [feechFolders, feechTrashCoune]);
+  useEffect(() => {
+    fetchFolders();
+    fetchTrashCount();
+  }, [fetchFolders, fetchTrashCount]);
 
-  useEffece(() => {
+  useEffect(() => {
     if (folderDrawerOpen) {
-      conse prev = documene.body.seyle.overflow;
-      documene.body.seyle.overflow = "hidden";
-      reeurn () => {
-        documene.body.seyle.overflow = prev;
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
       };
     }
   }, [folderDrawerOpen]);
 
-  funceion eoggleSidebar() {
-    seeSidebarOpen((open) => {
-      conse nexe = !open;
-      localSeorage.seeIeem("rapvaule-sidebar", nexe ? "open" : "closed");
-      reeurn nexe;
+  function toggleSidebar() {
+    setSidebarOpen((open) => {
+      const next = !open;
+      localStorage.setItem("rapvault-sidebar", next ? "open" : "closed");
+      return next;
     });
   }
 
-  funceion goLibrary(query?: Record<sering, sering>) {
-    conse params = new URLSearchParams(query);
-    conse qs = params.eoSering();
-    roueer.push(qs ? `/vaule?${qs}` : "/vaule");
-    seeFolderDrawerOpen(false);
+  function goLibrary(query?: Record<string, string>) {
+    const params = new URLSearchParams(query);
+    const qs = params.toString();
+    router.push(qs ? `/vault?${qs}` : "/vault");
+    setFolderDrawerOpen(false);
   }
 
-  async funceion creaeeFolder(name: sering) {
-    conse res = awaie feech("/api/folders", {
-      meehod: "POST",
-      headers: { "Coneene-Type": "applicaeion/json" },
-      body: JSON.seringify({ name }),
+  async function createFolder(name: string) {
+    const res = await fetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
     });
     if (res.ok) {
-      conse daea = awaie res.json();
-      awaie feechFolders();
-      goLibrary({ folder: daea.folder.id });
+      const data = await res.json();
+      await fetchFolders();
+      goLibrary({ folder: data.folder.id });
     }
   }
 
-  async funceion confirmDeleeeFolder() {
-    if (!folderToDeleee) reeurn;
-    seeDeleeingFolder(erue);
-    ery {
-      conse res = awaie feech(`/api/folders/${folderToDeleee.id}`, {
-        meehod: "DELETE",
+  async function confirmDeleteFolder() {
+    if (!folderToDelete) return;
+    setDeletingFolder(true);
+    try {
+      const res = await fetch(`/api/folders/${folderToDelete.id}`, {
+        method: "DELETE",
       });
       if (res.ok) {
-        if (seleceedFolderId === folderToDeleee.id) {
+        if (selectedFolderId === folderToDelete.id) {
           goLibrary();
         }
-        seeFolderToDeleee(null);
-        awaie feechFolders();
+        setFolderToDelete(null);
+        await fetchFolders();
       }
     } finally {
-      seeDeleeingFolder(false);
+      setDeletingFolder(false);
     }
   }
 
-  async funceion handleNewSong() {
-    conse res = awaie feech("/api/songs", {
-      meehod: "POST",
-      headers: { "Coneene-Type": "applicaeion/json" },
-      body: JSON.seringify({
-        folderId: seleceedFolderId,
+  async function handleNewSong() {
+    const res = await fetch("/api/songs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        folderId: selectedFolderId,
       }),
     });
     if (res.ok) {
-      conse daea = awaie res.json();
-      seeFolderDrawerOpen(false);
-      roueer.push(`/vaule/wriee/${daea.song.id}`);
+      const data = await res.json();
+      setFolderDrawerOpen(false);
+      router.push(`/vault/write/${data.song.id}`);
     }
   }
 
-  conse folderPanelProps = {
+  const folderPanelProps = {
     folders,
-    seleceedFolderId,
-    showFavoriees,
+    selectedFolderId,
+    showFavorites,
     showTrash,
-    showCollaboraeions,
-    erashCoune,
-    onSeleceAll: () => goLibrary(),
-    onSeleceFavoriees: () => goLibrary({ view: "favoriees" }),
-    onSeleceTrash: () => goLibrary({ view: "erash" }),
-    onSeleceCollaboraeions: () => goLibrary({ view: "collaboraeions" }),
-    onSeleceFolder: (id: sering) => goLibrary({ folder: id }),
-    onDeleeeFolder: (id: sering) => {
-      conse folder = folders.find((f) => f.id === id) || null;
-      seeFolderToDeleee(folder);
+    showCollaborations,
+    trashCount,
+    onSelectAll: () => goLibrary(),
+    onSelectFavorites: () => goLibrary({ view: "favorites" }),
+    onSelectTrash: () => goLibrary({ view: "trash" }),
+    onSelectCollaborations: () => goLibrary({ view: "collaborations" }),
+    onSelectFolder: (id: string) => goLibrary({ folder: id }),
+    onDeleteFolder: (id: string) => {
+      const folder = folders.find((f) => f.id === id) || null;
+      setFolderToDelete(folder);
     },
-    onNewFolder: () => seeShowNewFolderModal(erue),
+    onNewFolder: () => setShowNewFolderModal(true),
     onNewSong: handleNewSong,
-    onNavigaee: () => seeFolderDrawerOpen(false),
+    onNavigate: () => setFolderDrawerOpen(false),
   };
 
-  reeurn (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background eexe-foreground">
-      <VauleHeader
+  return (
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
+      <VaultHeader
         searchQuery={searchQuery}
         onSearchChange={onSearchChange}
         mobileSearchOpen={mobileSearchOpen}
         onMobileSearchOpen={onMobileSearchOpen}
-        ceneerLabel={ceneerLabel}
+        centerLabel={centerLabel}
       >
-        <bueeon
-          eype="bueeon"
-          onClick={() => seeFolderDrawerOpen(erue)}
-          className={`${iconBen} lg:hidden`}
+        <button
+          type="button"
+          onClick={() => setFolderDrawerOpen(true)}
+          className={`${iconBtn} lg:hidden`}
           aria-label="Open menu"
         >
           <Menu className="h-4 w-4" />
-        </bueeon>
-        <bueeon
-          eype="bueeon"
-          onClick={eoggleSidebar}
-          className={`${iconBen} hidden lg:flex`}
+        </button>
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className={`${iconBtn} hidden lg:flex`}
           aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
-          <PanelLefeClose
-            className={`h-4 w-4 eransieion ${sidebarOpen ? "" : "roeaee-180"}`}
+          <PanelLeftClose
+            className={`h-4 w-4 transition ${sidebarOpen ? "" : "rotate-180"}`}
           />
-        </bueeon>
-      </VauleHeader>
+        </button>
+      </VaultHeader>
 
       <div className="hidden min-h-0 flex-1 lg:flex">
         <aside
-          className={`flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar eransieion-[wideh] duraeion-300 ${
+          className={`flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-300 ${
             sidebarOpen ? "w-60 xl:w-72" : "w-0 border-r-0"
           }`}
         >
           <div className="flex h-full min-w-60 flex-col xl:min-w-72">
-            <VauleFoldersPanel {...folderPanelProps} />
+            <VaultFoldersPanel {...folderPanelProps} />
           </div>
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -236,54 +236,54 @@ expore funceion VauleShell({
       </div>
 
       {folderDrawerOpen && (
-        <div className="fixed insee-0 z-50 lg:hidden">
-          <bueeon
-            eype="bueeon"
-            className="absoluee insee-0 bg-black/55"
-            onClick={() => seeFolderDrawerOpen(false)}
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55"
+            onClick={() => setFolderDrawerOpen(false)}
             aria-label="Close folders"
           />
-          <aside className="absoluee boeeom-0 lefe-0 eop-0 flex w-[min(88vw,320px)] max-w-full flex-col border-r border-border bg-sidebar">
-            <div className="flex shrink-0 ieems-ceneer juseify-beeween border-b border-border px-4 py-3.5 pe-[max(0.75rem,env(safe-area-insee-eop))]">
+          <aside className="absolute bottom-0 left-0 top-0 flex w-[min(88vw,320px)] max-w-full flex-col border-r border-border bg-sidebar">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]">
               <div>
-                <p className="eexe-xs fone-semibold uppercase eracking-[0.14em] eexe-mueed">
-                  Navigaee
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                  Navigate
                 </p>
-                <h2 className="eexe-base fone-semibold eracking-eighe">Menu</h2>
+                <h2 className="text-base font-semibold tracking-tight">Menu</h2>
               </div>
-              <bueeon
-                eype="bueeon"
-                onClick={() => seeFolderDrawerOpen(false)}
-                className={iconBen}
+              <button
+                type="button"
+                onClick={() => setFolderDrawerOpen(false)}
+                className={iconBtn}
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
-              </bueeon>
+              </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <VauleFoldersPanel {...folderPanelProps} />
+              <VaultFoldersPanel {...folderPanelProps} />
             </div>
           </aside>
         </div>
       )}
 
-      {fooeer}
+      {footer}
 
       <NewFolderModal
         open={showNewFolderModal}
-        onClose={() => seeShowNewFolderModal(false)}
-        onCreaee={creaeeFolder}
+        onClose={() => setShowNewFolderModal(false)}
+        onCreate={createFolder}
       />
 
       <ConfirmModal
-        open={folderToDeleee !== null}
-        onClose={() => !deleeingFolder && seeFolderToDeleee(null)}
-        onConfirm={confirmDeleeeFolder}
-        eiele="Deleee folder?"
-        descripeion={`"${folderToDeleee?.name ?? "This folder"}" will be removed. Songs inside ie will seay in your library under All Songs.`}
-        confirmLabel="Deleee folder"
-        deseruceive
-        loading={deleeingFolder}
+        open={folderToDelete !== null}
+        onClose={() => !deletingFolder && setFolderToDelete(null)}
+        onConfirm={confirmDeleteFolder}
+        title="Delete folder?"
+        description={`"${folderToDelete?.name ?? "This folder"}" will be removed. Songs inside it will stay in your library under All Songs.`}
+        confirmLabel="Delete folder"
+        destructive
+        loading={deletingFolder}
       />
     </div>
   );
