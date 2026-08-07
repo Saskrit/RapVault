@@ -462,7 +462,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       </VaultHeader>
 
       <div className="shrink-0 border-b border-border bg-card/50 px-2 py-2 sm:px-3 sm:py-3 lg:px-4">
-        <div className="grid grid-cols-1 gap-2 lg:grid-cols-[60%_40%] lg:items-center lg:gap-4">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-[55%_45%] lg:items-center lg:gap-4">
           <input
             id="song-title"
             type="text"
@@ -473,8 +473,8 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             placeholder="Untitled track"
           />
 
-          <div className="box-border flex min-w-0 w-full max-w-full items-center justify-start overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:pb-0 [&::-webkit-scrollbar]:hidden">
-            <div className="inline-flex items-center gap-2">
+          <div className="box-border flex min-w-0 w-full max-w-full items-center justify-start overflow-x-auto overscroll-x-contain pb-0.5 pl-0.5 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="inline-flex items-center gap-2 pr-1">
               <button
                 type="button"
                 onClick={() => setBeatsOpen((open) => !open)}
@@ -744,9 +744,10 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         open={showDeleteModal}
         onClose={() => !deleting && setShowDeleteModal(false)}
         onConfirm={confirmDeleteSong}
-        title="Move to Recycle Bin?"
-        description={`"${song.title || "This song"}" will be moved to the Recycle Bin. You can restore it later.`}
-        confirmLabel="Move to bin"
+        title="Delete this song?"
+        description={`Are you sure you want to move "${song.title || "this song"}" to the Recycle Bin? You can restore it later.`}
+        confirmLabel="Yes"
+        cancelLabel="No"
         destructive
         loading={deleting}
       />
