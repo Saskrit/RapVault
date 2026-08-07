@@ -14,6 +14,7 @@ import {
   Star,
   Trash2,
   UsersRound,
+  X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,6 +35,29 @@ import { suggestUsernameFromEmail } from "@/lib/username";
 const PAGE_SIZE_OPTIONS = [10, 15, 20, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_KEY = "rapvault-page-size";
+
+type StatusFilter = "all" | "draft" | "finished";
+type VisibilityFilter = "all" | "public" | "personal";
+
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "draft", label: "Draft" },
+  { id: "finished", label: "Finished" },
+];
+
+const VISIBILITY_FILTERS: { id: VisibilityFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "public", label: "Public" },
+  { id: "personal", label: "Personal" },
+];
+
+function filterChipClass(active: boolean) {
+  return `rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+    active
+      ? "bg-accent/15 text-accent"
+      : "text-muted hover:bg-background hover:text-foreground"
+  }`;
+}
 
 export function VaultSongsView() {
   const router = useRouter();
@@ -60,6 +84,9 @@ export function VaultSongsView() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [visibilityFilter, setVisibilityFilter] =
+    useState<VisibilityFilter>("all");
   const [needsUsername, setNeedsUsername] = useState(false);
   const [claimEmail, setClaimEmail] = useState("");
   const [claimDisplayName, setClaimDisplayName] = useState("");
@@ -124,17 +151,51 @@ export function VaultSongsView() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedFolderId, showFavorites, showTrash, showCollaborations, searchQuery, pageSize]);
+  }, [
+    selectedFolderId,
+    showFavorites,
+    showTrash,
+    showCollaborations,
+    searchQuery,
+    pageSize,
+    statusFilter,
+    visibilityFilter,
+  ]);
 
-  const totalPages = Math.max(1, Math.ceil(songs.length / pageSize));
+  useEffect(() => {
+    setStatusFilter("all");
+    setVisibilityFilter("all");
+  }, [selectedFolderId, showFavorites, showTrash, showCollaborations]);
+
+  const filtersActive =
+    !showTrash && (statusFilter !== "all" || visibilityFilter !== "all");
+
+  const filteredSongs = useMemo(() => {
+    if (showTrash) return songs;
+    return songs.filter((song) => {
+      if (statusFilter === "draft" && song.status !== "draft") return false;
+      if (statusFilter === "finished" && song.status !== "finished") return false;
+      if (visibilityFilter === "public" && !song.isPublic) return false;
+      if (visibilityFilter === "personal" && song.isPublic) return false;
+      return true;
+    });
+  }, [songs, showTrash, statusFilter, visibilityFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSongs.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageSongs = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return songs.slice(start, start + pageSize);
-  }, [songs, currentPage, pageSize]);
+    return filteredSongs.slice(start, start + pageSize);
+  }, [filteredSongs, currentPage, pageSize]);
 
-  const rangeStart = songs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(currentPage * pageSize, songs.length);
+  const rangeStart =
+    filteredSongs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, filteredSongs.length);
+
+  function clearFilters() {
+    setStatusFilter("all");
+    setVisibilityFilter("all");
+  }
 
   function changePageSize(next: number) {
     setPageSize(next);
@@ -298,7 +359,9 @@ export function VaultSongsView() {
 
             <div className="flex shrink-0 flex-col items-end gap-2">
               <p className="text-sm font-medium tabular-nums text-muted">
-                {songs.length} song{songs.length !== 1 ? "s" : ""}
+                {filtersActive
+                  ? `${filteredSongs.length} of ${songs.length}`
+                  : `${songs.length} song${songs.length !== 1 ? "s" : ""}`}
               </p>
               {!showTrash && (
                 <button
@@ -313,6 +376,53 @@ export function VaultSongsView() {
               )}
             </div>
           </div>
+
+          {!showTrash && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div
+                className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-background p-0.5"
+                role="group"
+                aria-label="Filter by status"
+              >
+                {STATUS_FILTERS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setStatusFilter(item.id)}
+                    className={filterChipClass(statusFilter === item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div
+                className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-background p-0.5"
+                role="group"
+                aria-label="Filter by visibility"
+              >
+                {VISIBILITY_FILTERS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setVisibilityFilter(item.id)}
+                    className={filterChipClass(visibilityFilter === item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              {filtersActive && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-muted transition hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-5">
@@ -340,6 +450,24 @@ export function VaultSongsView() {
                   New song
                 </button>
               )}
+            </div>
+          ) : filteredSongs.length === 0 ? (
+            <div className="flex h-full min-h-[16rem] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  No songs match these filters
+                </p>
+                <p className="mt-1 max-w-xs text-sm text-muted">
+                  Try a different status or visibility, or clear the filters.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-2 min-h-10 rounded-xl border border-border bg-background px-4 text-sm font-semibold transition hover:border-foreground/20"
+              >
+                Clear filters
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -538,7 +666,7 @@ export function VaultSongsView() {
           )}
         </div>
 
-        {songs.length > 0 && (
+        {filteredSongs.length > 0 && (
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-3 py-3 sm:px-5">
             <p className="text-xs text-muted sm:text-sm">
               Showing{" "}
@@ -546,7 +674,9 @@ export function VaultSongsView() {
                 {rangeStart}–{rangeEnd}
               </span>{" "}
               of{" "}
-              <span className="font-medium tabular-nums text-foreground">{songs.length}</span>
+              <span className="font-medium tabular-nums text-foreground">
+                {filteredSongs.length}
+              </span>
             </p>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">

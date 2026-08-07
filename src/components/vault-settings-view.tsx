@@ -24,6 +24,7 @@ import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
+import { prepareAvatarFile } from "@/lib/prepare-avatar";
 
 type ProfileUser = {
   id: string;
@@ -170,13 +171,14 @@ export function VaultSettingsView() {
     setAvatarError("");
     setAvatarLoading(true);
     try {
+      const prepared = await prepareAvatarFile(file);
       const form = new FormData();
-      form.append("avatar", file);
+      form.append("avatar", prepared);
       const res = await fetch("/api/auth/avatar", {
         method: "POST",
         body: form,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setAvatarError(data.error || "Could not upload photo.");
         return;
@@ -482,7 +484,7 @@ export function VaultSettingsView() {
                   <input
                     ref={fileRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
                     className="hidden"
                     onChange={(e) =>
                       handleAvatarChange(e.target.files?.[0] ?? null)
@@ -527,7 +529,7 @@ export function VaultSettingsView() {
                   <p className="mt-2 text-xs text-red-400">{avatarError}</p>
                 )}
                 <p className="mt-3 text-xs text-muted">
-                  JPG, PNG, or WebP · max 10MB
+                  JPG, PNG, or WebP · max 5MB
                 </p>
               </div>
             </div>

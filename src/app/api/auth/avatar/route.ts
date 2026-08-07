@@ -1,17 +1,29 @@
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { deleteStoredAvatar, storeAvatar } from "@/lib/avatar-storage";
 import { prisma } from "@/lib/prisma";
 import { toPublicUser } from "@/lib/public-user";
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_BYTES = 5 * 1024 * 1024;
+const ALLOWED = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 
 function extFor(type: string) {
   if (type === "image/png") return "png";
   if (type === "image/webp") return "webp";
   return "jpg";
+}
+
+function normalizeType(file: File) {
+  const type = (file.type || "").toLowerCase();
+  if (ALLOWED.has(type)) {
+    return type === "image/jpg" ? "image/jpeg" : type;
+  }
+
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  return "";
 }
 
 export async function POST(request: Request) {
@@ -23,11 +35,13 @@ export async function POST(request: Request) {
 
     const form = await request.formData();
     const file = form.get("avatar");
-    if (!(file instanceof File)) {
+    if (!(file instanceof Blob) || file.size <= 0) {
       return NextResponse.json({ error: "Image file is required" }, { status: 400 });
     }
 
-    if (!ALLOWED.has(file.type)) {
+    const asFile = file as File;
+    const contentType = normalizeType(asFile);
+    if (!contentType) {
       return NextResponse.json(
         { error: "Use a JPG, PNG, or WebP image" },
         { status: 400 },
@@ -36,7 +50,7 @@ export async function POST(request: Request) {
 
     if (file.size > MAX_BYTES) {
       return NextResponse.json(
-        { error: "Image must be under 10MB" },
+        { error: "Image must be under 5MB" },
         { status: 400 },
       );
     }
@@ -46,21 +60,15 @@ export async function POST(request: Request) {
       select: { avatarUrl: true },
     });
 
-    const dir = path.join(process.cwd(), "public", "uploads", "avatars");
-    await mkdir(dir, { recursive: true });
-
-    const ext = extFor(file.type);
-    const filename = `${session.id}-${Date.now()}.${ext}`;
-    const diskPath = path.join(dir, filename);
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(diskPath, buffer);
+    const avatarUrl = await storeAvatar({
+      userId: session.id,
+      buffer,
+      contentType,
+      ext: extFor(contentType),
+    });
 
-    const avatarUrl = `/uploads/avatars/${filename}`;
-
-    if (existing?.avatarUrl?.startsWith("/uploads/avatars/")) {
-      const oldPath = path.join(process.cwd(), "public", existing.avatarUrl);
-      await unlink(oldPath).catch(() => {});
-    }
+    await deleteStoredAvatar(existing?.avatarUrl);
 
     const updated = await prisma.user.update({
       where: { id: session.id },
@@ -92,10 +100,7 @@ export async function DELETE() {
       select: { avatarUrl: true },
     });
 
-    if (existing?.avatarUrl?.startsWith("/uploads/avatars/")) {
-      const oldPath = path.join(process.cwd(), "public", existing.avatarUrl);
-      await unlink(oldPath).catch(() => {});
-    }
+    await deleteStoredAvatar(existing?.avatarUrl);
 
     const updated = await prisma.user.update({
       where: { id: session.id },
