@@ -47,15 +47,6 @@ type ArtistProfile = {
   }>;
 };
 
-function avatarTone(seed: string) {
-  const hues = [262, 198, 32, 152, 340, 220];
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash + seed.charCodeAt(i) * (i + 1)) % 997;
-  }
-  return hues[hash % hues.length];
-}
-
 export function ArtistProfileView({ username }: { username: string }) {
   const router = useRouter();
   const [artist, setArtist] = useState<ArtistProfile | null>(null);
@@ -171,8 +162,6 @@ export function ArtistProfileView({ username }: { username: string }) {
     }
   }
 
-  const hue = avatarTone(artist?.username || username);
-
   function renderActions() {
     if (!artist) return null;
 
@@ -180,7 +169,7 @@ export function ArtistProfileView({ username }: { username: string }) {
       return (
         <Link
           href="/vault/settings"
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-4 text-sm font-medium backdrop-blur transition hover:border-accent hover:text-accent"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-medium transition hover:border-accent hover:text-accent"
         >
           <Settings className="h-4 w-4" />
           Edit profile
@@ -293,7 +282,7 @@ export function ArtistProfileView({ username }: { username: string }) {
           type="button"
           onClick={startMessage}
           disabled={messaging}
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-background/80 px-4 text-sm font-medium backdrop-blur transition hover:border-accent hover:text-accent disabled:opacity-50"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-medium transition hover:border-accent hover:text-accent disabled:opacity-50"
         >
           {messaging ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -325,21 +314,9 @@ export function ArtistProfileView({ username }: { username: string }) {
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {/* Hero */}
-            <section className="relative shrink-0 overflow-hidden border-b border-border">
-              <div
-                aria-hidden
-                className="absolute inset-0"
-                style={{
-                  background: `
-                    radial-gradient(ellipse 80% 120% at 10% 20%, hsl(${hue} 70% 45% / 0.45), transparent 55%),
-                    linear-gradient(180deg, hsl(${hue} 40% 18% / 0.55) 0%, transparent 100%)
-                  `,
-                }}
-              />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-
-              <div className="relative mx-auto w-full max-w-5xl px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:px-8">
+            {/* Header */}
+            <section className="shrink-0 border-b border-border bg-background">
+              <div className="mx-auto w-full max-w-5xl px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:px-8">
                 <Link
                   href="/vault/artists"
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-muted transition hover:text-foreground"
@@ -348,15 +325,15 @@ export function ArtistProfileView({ username }: { username: string }) {
                   Artists
                 </Link>
 
-                <div className="mt-5 flex flex-col gap-5 sm:mt-6 sm:flex-row sm:items-end sm:gap-6">
+                <div className="mt-5 flex items-start gap-4 sm:mt-6 sm:gap-6">
                   <UserAvatar
                     src={artist.avatarUrl}
                     name={artist.displayName}
-                    size="lg"
-                    className="h-28 w-28 shrink-0 border-2 border-background text-3xl shadow-2xl ring-1 ring-border sm:h-36 sm:w-36 sm:text-4xl"
+                    size="xl"
+                    className="h-32 w-32 shrink-0 border-2 border-border text-4xl shadow-md sm:h-40 sm:w-40 sm:text-5xl"
                   />
 
-                  <div className="min-w-0 flex-1 pb-0.5">
+                  <div className="min-w-0 flex-1 pt-0.5 sm:pt-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                         Artist
@@ -368,10 +345,10 @@ export function ArtistProfileView({ username }: { username: string }) {
                       )}
                     </div>
 
-                    <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
+                    <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl lg:leading-[1.15]">
                       {artist.displayName}
                     </h1>
-                    <p className="mt-1 text-sm text-muted">@{artist.username}</p>
+                    <p className="mt-0.5 text-sm text-muted">@{artist.username}</p>
 
                     {artist.bio?.trim() && (
                       <p className="mt-3 max-w-xl text-sm leading-relaxed text-foreground/80 line-clamp-3">

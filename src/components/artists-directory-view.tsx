@@ -8,15 +8,6 @@ import { UserAvatar } from "@/components/user-avatar";
 import { VaultShell } from "@/components/vault-shell";
 import type { ArtistSummary } from "@/types";
 
-function avatarTone(seed: string) {
-  const hues = [262, 198, 32, 152, 340, 220];
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash + seed.charCodeAt(i) * (i + 1)) % 997;
-  }
-  return hues[hash % hues.length];
-}
-
 export function ArtistsDirectoryView() {
   const router = useRouter();
   const [artists, setArtists] = useState<ArtistSummary[]>([]);
@@ -150,7 +141,6 @@ export function ArtistsDirectoryView() {
             ) : (
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
                 {artists.map((artist, index) => {
-                  const hue = avatarTone(artist.username || artist.id);
                   const featured = index === 0 && !q.trim();
                   return (
                     <li
@@ -166,16 +156,10 @@ export function ArtistsDirectoryView() {
                     >
                       <Link
                         href={`/vault/artists/${artist.username}`}
-                        className={`relative flex h-full overflow-hidden rounded-[1.35rem] border border-border/70 bg-card outline-none transition duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_18px_40px_-28px_rgba(124,58,237,0.55)] focus-visible:ring-2 focus-visible:ring-accent ${
+                        className={`relative flex h-full overflow-hidden rounded-[1.35rem] border border-border bg-card outline-none transition duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent ${
                           featured ? "min-h-[18rem] sm:min-h-full" : "aspect-[3/4]"
                         }`}
                       >
-                        <div
-                          className="absolute inset-0 opacity-90 transition duration-500 group-hover:scale-105"
-                          style={{
-                            background: `hsl(${hue} 70% 46% / 0.22)`,
-                          }}
-                        />
                         <div className="relative z-[1] flex h-full w-full flex-col p-3.5 sm:p-4">
                           <div className="flex items-start justify-between gap-2">
                             <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted backdrop-blur">
