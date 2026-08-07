@@ -3,6 +3,7 @@
 import { FolderInput } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/modal";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import type { Song } from "@/types";
 
 type AddSongsToFolderModalProps = {
@@ -88,7 +89,7 @@ export function AddSongsToFolderModal({
     >
       <div className="space-y-4">
         {loading ? (
-          <p className="py-6 text-center text-sm text-muted">Loading songs...</p>
+          <RapVaultLoading compact label="Loading..." className="min-h-[8rem]" />
         ) : songs.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">
             All your songs are already in this folder.

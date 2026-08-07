@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
 
 type ChatMessage = {
@@ -88,9 +89,7 @@ export function MessageThreadView({
     <VaultShell centerLabel={thread?.other?.displayName || "Messages"}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {loading ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-muted">
-            Loading...
-          </div>
+          <RapVaultLoading label="Loading..." />
         ) : notFound || !thread ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-muted">
             <p>Conversation not found.</p>

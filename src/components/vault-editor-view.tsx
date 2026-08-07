@@ -20,6 +20,7 @@ import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { CollaboratorsModal } from "@/components/collaborators-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
@@ -239,11 +240,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background text-muted">
-        Loading...
-      </div>
-    );
+    return <RapVaultLoading fullScreen label="Loading..." />;
   }
 
   if (notFound || !song) {

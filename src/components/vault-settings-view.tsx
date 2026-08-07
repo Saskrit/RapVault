@@ -4,10 +4,13 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
+  Eye,
   ImagePlus,
   KeyRound,
   Link2,
   Mail,
+  Pencil,
+  Save,
   Share2,
   Shield,
   Trash2,
@@ -24,7 +27,7 @@ import {
 } from "react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { AvatarCropModal } from "@/components/avatar-crop-modal";
-import { Logo, BrandWordmark } from "@/components/logo";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
 import {
@@ -106,7 +109,6 @@ export function VaultSettingsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
   const photoMenuRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [user, setUser] = useState<ProfileUser | null>(null);
@@ -124,6 +126,7 @@ export function VaultSettingsView() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const [newEmail, setNewEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
@@ -142,6 +145,7 @@ export function VaultSettingsView() {
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(emptySocialLinks());
   const [profileError, setProfileError] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);
 
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
@@ -238,7 +242,6 @@ export function VaultSettingsView() {
     setCropFile(file);
     setCropOpen(true);
     if (fileRef.current) fileRef.current.value = "";
-    if (cameraRef.current) cameraRef.current.value = "";
   }
 
   function handleCropCancel() {
@@ -330,6 +333,7 @@ export function VaultSettingsView() {
       }
 
       showToast("success", "Profile saved.");
+      setProfileEditing(false);
     } catch {
       setProfileError("Network error. Try again.");
     } finally {
@@ -414,6 +418,32 @@ export function VaultSettingsView() {
       setPasswordError("Network error. Try again.");
     } finally {
       setPasswordLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!user?.email || forgotLoading) return;
+    setPasswordError("");
+    setForgotLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPasswordError(data.error || "Could not send reset email.");
+        return;
+      }
+      showToast(
+        "success",
+        data.message || "Password reset link sent to your email.",
+      );
+    } catch {
+      setPasswordError("Network error. Try again.");
+    } finally {
+      setForgotLoading(false);
     }
   }
 
@@ -522,13 +552,7 @@ export function VaultSettingsView() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-background text-muted">
-        <Logo size={48} />
-        <BrandWordmark height={18} />
-        <p className="text-sm">Loading settings...</p>
-      </div>
-    );
+    return <RapVaultLoading fullScreen label="Loading..." />;
   }
 
   if (!user) return null;
@@ -597,7 +621,12 @@ export function VaultSettingsView() {
                   />
                   <button
                     type="button"
-                    onClick={() => setPhotoMenuOpen((open) => !open)}
+                    onClick={() => {
+                      if (!profileEditing) {
+                        setProfileEditing(true);
+                      }
+                      setPhotoMenuOpen((open) => !open);
+                    }}
                     disabled={profileLoading}
                     className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
                     aria-label="Photo options"
@@ -610,19 +639,11 @@ export function VaultSettingsView() {
                     <div className="absolute left-1/2 top-[calc(100%+0.5rem)] z-20 w-48 -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-card py-1 shadow-lg">
                       <button
                         type="button"
-                        onClick={() => cameraRef.current?.click()}
-                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition hover:bg-background"
-                      >
-                        <Camera className="h-4 w-4 text-muted" />
-                        Take photo
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => fileRef.current?.click()}
                         className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition hover:bg-background"
                       >
                         <ImagePlus className="h-4 w-4 text-muted" />
-                        Upload photo
+                        Change photo
                       </button>
                       {hasAvatar && (
                         <button
@@ -640,16 +661,6 @@ export function VaultSettingsView() {
                     ref={fileRef}
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleAvatarPick(e.target.files?.[0] ?? null)
-                    }
-                  />
-                  <input
-                    ref={cameraRef}
-                    type="file"
-                    accept="image/*"
-                    capture="user"
                     className="hidden"
                     onChange={(e) =>
                       handleAvatarPick(e.target.files?.[0] ?? null)
@@ -704,15 +715,68 @@ export function VaultSettingsView() {
             <div className="space-y-4">
             {tab === "profile" && (
               <section className="rounded-3xl border border-border bg-card">
-                <div className="border-b border-border px-5 py-4 sm:px-6">
-                  <h3 className="text-lg font-semibold tracking-tight">
-                    Artist profile
-                  </h3>
-                  <p className="mt-1 text-sm text-muted">
-                    How you appear on Artists, public songs, and messages.
-                  </p>
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold tracking-tight">
+                      Artist profile
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      How you appear on Artists, public songs, and messages.
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {profileEditing ? (
+                      <>
+                        <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-accent/30 bg-accent/10 px-3 text-sm font-medium text-accent">
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editing
+                        </span>
+                        <button
+                          type="submit"
+                          form="profile-form"
+                          disabled={profileLoading}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-foreground px-3 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          {profileLoading ? "Saving..." : "Save"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileError("");
+                            setProfileEditing(true);
+                          }}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        {user.username ? (
+                          <Link
+                            href={`/vault/artists/${user.username}`}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Preview
+                          </Link>
+                        ) : (
+                          <span
+                            className="inline-flex min-h-9 cursor-not-allowed items-center gap-1.5 rounded-xl border border-border px-3 text-sm font-medium text-muted opacity-50"
+                            title="Set a username to preview"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Preview
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
                 <form
+                  id="profile-form"
                   onSubmit={handleProfileSubmit}
                   className="space-y-4 px-5 py-5 sm:px-6"
                 >
@@ -732,6 +796,8 @@ export function VaultSettingsView() {
                         onChange={(e) => setDisplayName(e.target.value)}
                         className={inputClass}
                         required
+                        disabled={!profileEditing}
+                        readOnly={!profileEditing}
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -759,6 +825,8 @@ export function VaultSettingsView() {
                           className={inputClass}
                           required
                           pattern="[a-z0-9_]{3,20}"
+                          disabled={!profileEditing}
+                          readOnly={!profileEditing}
                         />
                       </div>
                       <p className="mt-1.5 text-xs text-muted">
@@ -780,6 +848,8 @@ export function VaultSettingsView() {
                         onChange={(e) => setBio(e.target.value)}
                         className={`${inputClass} min-h-[4.5rem] resize-y`}
                         placeholder="Hooks, freestyles, unfinished verses…"
+                        disabled={!profileEditing}
+                        readOnly={!profileEditing}
                       />
                       <p className="mt-1.5 text-right text-xs text-muted">
                         {bio.length}/280
@@ -787,12 +857,17 @@ export function VaultSettingsView() {
                     </div>
                   </div>
 
-                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                  <label
+                    className={`flex items-start gap-3 rounded-2xl border border-border bg-background px-4 py-3 ${
+                      profileEditing ? "cursor-pointer" : "cursor-default opacity-80"
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       checked={profilePublic}
                       onChange={(e) => setProfilePublic(e.target.checked)}
                       className="mt-0.5 h-4 w-4 rounded border-border"
+                      disabled={!profileEditing}
                     />
                     <span>
                       <span className="block text-sm font-medium">
@@ -805,24 +880,6 @@ export function VaultSettingsView() {
                   </label>
 
                   <FieldMessage error={profileError} />
-
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <button
-                      type="submit"
-                      disabled={profileLoading}
-                      className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
-                    >
-                      {profileLoading ? "Saving..." : "Save profile"}
-                    </button>
-                    {user.username && (
-                      <Link
-                        href={`/vault/artists/${user.username}`}
-                        className="inline-flex min-h-11 items-center rounded-xl border border-border px-5 text-sm font-medium transition hover:border-foreground/25"
-                      >
-                        Preview profile
-                      </Link>
-                    )}
-                  </div>
                 </form>
               </section>
             )}
@@ -1047,12 +1104,22 @@ export function VaultSettingsView() {
                 >
                   {user.hasPassword && (
                     <div>
-                      <label
-                        htmlFor="current-password"
-                        className="mb-1.5 block text-sm font-medium"
-                      >
-                        Current password
-                      </label>
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <label
+                          htmlFor="current-password"
+                          className="block text-sm font-medium"
+                        >
+                          Current password
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleForgotPassword}
+                          disabled={forgotLoading || passwordLoading}
+                          className="text-xs font-medium text-accent transition hover:underline disabled:opacity-50"
+                        >
+                          {forgotLoading ? "Sending..." : "Forgot password?"}
+                        </button>
+                      </div>
                       <input
                         id="current-password"
                         type="password"

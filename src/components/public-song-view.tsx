@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Flame, Globe, Music2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
 import { VaultHeader, iconBtn } from "@/components/vault-header";
 import { contentToHtml } from "@/lib/rich-text";
@@ -98,11 +99,7 @@ export function PublicSongView({ songId }: { songId: string }) {
     : { words: 0, lines: 0, estimatedSeconds: 0 };
 
   if (loading) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background text-muted">
-        Loading...
-      </div>
-    );
+    return <RapVaultLoading fullScreen label="Loading..." />;
   }
 
   if (notFound || !song) {

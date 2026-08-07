@@ -3,6 +3,7 @@
 import { Loader2, UserMinus, UserPlus, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/modal";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { UserAvatar } from "@/components/user-avatar";
 
 type Artist = {
@@ -102,10 +103,7 @@ export function CollaboratorsModal({
       }
     >
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading...
-        </div>
+        <RapVaultLoading compact label="Loading..." className="min-h-[8rem]" />
       ) : (
         <div className="space-y-6">
           <section>

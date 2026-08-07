@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { ArtistProfileView } from "@/components/artist-profile-view";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { getSession } from "@/lib/auth";
 
 type PageProps = {
@@ -12,13 +13,7 @@ export default async function ArtistPage({ params }: PageProps) {
   if (!user) redirect("/login");
   const { username } = await params;
   return (
-    <Suspense
-      fallback={
-        <div className="flex h-[100dvh] items-center justify-center bg-background text-sm text-muted">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<RapVaultLoading fullScreen label="Loading..." />}>
       <ArtistProfileView username={username} />
     </Suspense>
   );

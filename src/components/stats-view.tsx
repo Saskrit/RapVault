@@ -5,13 +5,13 @@ import {
   Eye,
   Flame,
   Globe,
-  Loader2,
   Network,
   TrendingUp,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
 
 type StatsPayload = {
@@ -107,10 +107,7 @@ export function StatsView() {
           </header>
 
           {loading || !data ? (
-            <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading analytics...
-            </div>
+            <RapVaultLoading compact label="Loading..." className="min-h-[12rem]" />
           ) : (
             <div className="space-y-8">
               <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">

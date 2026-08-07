@@ -28,7 +28,7 @@ import {
 } from "@/components/vault-mobile-nav";
 import { VaultShell } from "@/components/vault-shell";
 import { contentSnippet } from "@/lib/rich-text";
-import { Logo, BrandWordmark } from "@/components/logo";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import type { Folder, Song } from "@/types";
 import { suggestUsernameFromEmail } from "@/lib/username";
 
@@ -776,13 +776,7 @@ export function VaultSongsView() {
     >
       <div className="flex min-h-0 flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
         {loading ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 text-muted">
-            <div className="flex flex-col items-center gap-3">
-              <Logo size={56} href={null} priority />
-              <BrandWordmark height={24} href={null} priority />
-            </div>
-            <p className="text-sm">Loading your vault...</p>
-          </div>
+          <RapVaultLoading label="Loading..." />
         ) : (
           renderSongList("min-h-0 flex-1")
         )}

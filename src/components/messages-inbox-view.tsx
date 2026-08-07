@@ -4,6 +4,7 @@ import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
 
 type ConversationRow = {
@@ -57,7 +58,7 @@ export function MessagesInboxView() {
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {loading ? (
-            <p className="text-sm text-muted">Loading...</p>
+            <RapVaultLoading compact label="Loading..." className="min-h-[12rem]" />
           ) : conversations.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted">
               No conversations yet.{" "}

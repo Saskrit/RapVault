@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultSongsView } from "@/components/vault-songs-view";
 import { getSession } from "@/lib/auth";
 
@@ -8,13 +9,7 @@ export default async function VaultPage() {
   if (!user) redirect("/login");
 
   return (
-    <Suspense
-      fallback={
-        <div className="flex h-[100dvh] items-center justify-center bg-background text-sm text-muted">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<RapVaultLoading fullScreen label="Loading..." />}>
       <VaultSongsView />
     </Suspense>
   );

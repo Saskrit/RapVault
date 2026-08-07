@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
 
 type NetworkArtist = {
@@ -237,10 +238,7 @@ export function NetworkView() {
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-5xl">
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading network...
-                </div>
+                <RapVaultLoading compact label="Loading..." className="min-h-[12rem]" />
               ) : rows.length === 0 ? (
                 <div className="flex min-h-[18rem] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-border px-6 text-center">
                   <Link2 className="mb-3 h-7 w-7 text-muted" />

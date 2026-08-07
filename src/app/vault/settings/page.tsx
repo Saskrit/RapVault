@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultSettingsView } from "@/components/vault-settings-view";
 import { getSession } from "@/lib/auth";
 
@@ -8,7 +9,7 @@ export default async function VaultSettingsPage() {
   if (!user) redirect("/login");
 
   return (
-    <Suspense>
+    <Suspense fallback={<RapVaultLoading fullScreen label="Loading..." />}>
       <VaultSettingsView />
     </Suspense>
   );

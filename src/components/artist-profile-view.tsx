@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
 import { ArtistSocialLinks } from "@/components/artist-social-links";
+import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
 import type { ConnectionRelation } from "@/types";
 
@@ -297,9 +298,7 @@ export function ArtistProfileView({ username }: { username: string }) {
     <VaultShell centerLabel={artist?.displayName || "Artist"}>
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {loading ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-muted">
-            Loading profile...
-          </div>
+          <RapVaultLoading label="Loading..." />
         ) : notFound || !artist ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-muted">
             <p>Artist not found.</p>
