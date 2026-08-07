@@ -344,7 +344,7 @@ export function ArtistProfileView({ username }: { username: string }) {
                     className="h-28 w-28 shrink-0 border-4 border-background text-3xl shadow-md sm:h-36 sm:w-36 sm:text-4xl"
                   />
 
-                  <div className="min-w-0 flex-1 pt-1.5 sm:pt-2">
+                  <div className="min-w-0 flex-1 pt-11 sm:pt-[3.25rem]">
                     {artist.connectionRelation === "connected" && (
                       <span className="mb-1.5 inline-flex rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-500">
                         Connected
