@@ -81,10 +81,11 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Avatar upload error:", error);
-    return NextResponse.json(
-      { error: "Could not upload photo" },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error && error.message.includes("CLOUDINARY_URL")
+        ? "Cloudinary is not configured"
+        : "Could not upload photo";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

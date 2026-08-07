@@ -1,15 +1,26 @@
-import { del, put } from "@vercel/blob";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { v2 as cloudinary } from "cloudinary";
 
-const LOCAL_PREFIX = "/uploads/avatars/";
+let configured = false;
 
-function hasBlobToken() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+function ensureCloudinary() {
+  const url = process.env.CLOUDINARY_URL;
+  if (!url) {
+    throw new Error("CLOUDINARY_URL is not set");
+  }
+  if (!configured) {
+    cloudinary.config({ cloudinary_url: url });
+    configured = true;
+  }
 }
 
-function isVercel() {
-  return process.env.VERCEL === "1";
+function isCloudinaryUrl(url: string) {
+  return /res\.cloudinary\.com\//.test(url);
+}
+
+function publicIdFromUrl(url: string): string | null {
+  // https://res.cloudinary.com/<cloud>/image/upload/v123/rapvault/avatars/userId.jpg
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z0-9]+)?$/);
+  return match?.[1] ?? null;
 }
 
 export async function storeAvatar(params: {
@@ -18,42 +29,40 @@ export async function storeAvatar(params: {
   contentType: string;
   ext: string;
 }): Promise<string> {
-  const { userId, buffer, contentType, ext } = params;
-  const filename = `avatars/${userId}-${Date.now()}.${ext}`;
+  ensureCloudinary();
+  const { userId, buffer, contentType } = params;
+  const dataUri = `data:${contentType};base64,${buffer.toString("base64")}`;
 
-  if (hasBlobToken()) {
-    const blob = await put(filename, buffer, {
-      access: "public",
-      contentType,
-      addRandomSuffix: false,
-    });
-    return blob.url;
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: "rapvault/avatars",
+    public_id: userId,
+    overwrite: true,
+    invalidate: true,
+    resource_type: "image",
+    transformation: [
+      { width: 512, height: 512, crop: "fill", gravity: "auto" },
+      { quality: "auto", fetch_format: "auto" },
+    ],
+  });
+
+  if (!result.secure_url) {
+    throw new Error("Cloudinary did not return a URL");
   }
 
-  // Vercel has a read-only filesystem — persist as a data URL when Blob is not configured.
-  if (isVercel()) {
-    return `data:${contentType};base64,${buffer.toString("base64")}`;
-  }
-
-  const dir = path.join(process.cwd(), "public", "uploads", "avatars");
-  await mkdir(dir, { recursive: true });
-  const diskName = `${userId}-${Date.now()}.${ext}`;
-  await writeFile(path.join(dir, diskName), buffer);
-  return `${LOCAL_PREFIX}${diskName}`;
+  return result.secure_url;
 }
 
 export async function deleteStoredAvatar(avatarUrl: string | null | undefined) {
-  if (!avatarUrl) return;
+  if (!avatarUrl || !isCloudinaryUrl(avatarUrl)) return;
 
-  if (avatarUrl.startsWith("data:")) return;
-
-  if (hasBlobToken() && /blob\.vercel-storage\.com/.test(avatarUrl)) {
-    await del(avatarUrl).catch(() => {});
+  try {
+    ensureCloudinary();
+  } catch {
     return;
   }
 
-  if (avatarUrl.startsWith(LOCAL_PREFIX)) {
-    const oldPath = path.join(process.cwd(), "public", avatarUrl);
-    await unlink(oldPath).catch(() => {});
-  }
+  const publicId = publicIdFromUrl(avatarUrl);
+  if (!publicId) return;
+
+  await cloudinary.uploader.destroy(publicId).catch(() => {});
 }
