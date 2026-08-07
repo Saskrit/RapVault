@@ -168,6 +168,10 @@ export function ArtistProfileView({ username }: { username: string }) {
         await load();
         notifyNotificationsUpdated();
       }
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   function renderActions() {
     if (!artist) return null;

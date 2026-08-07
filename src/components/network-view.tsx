@@ -162,6 +162,10 @@ export function NetworkView() {
         await load();
         notifyNotificationsUpdated();
       }
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function startMessage(username: string | null, userId: string) {
     if (!username) return;
