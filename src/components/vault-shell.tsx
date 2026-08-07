@@ -255,17 +255,7 @@ export function VaultShell({
               <VaultFoldersPanel {...folderPanelProps} />
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center py-3">
-              <button
-                type="button"
-                onClick={toggleSidebar}
-                className={iconBtn}
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-              >
-                <PanelLeftOpen className="h-4 w-4" />
-              </button>
-            </div>
+            <VaultFoldersPanel {...folderPanelProps} collapsed />
           )}
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

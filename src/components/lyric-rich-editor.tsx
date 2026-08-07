@@ -32,6 +32,10 @@ type LyricRichEditorProps = {
   spellCheck?: boolean;
   onSpellCheckChange?: (enabled: boolean) => void;
   toolbarStats?: ReactNode;
+  /** Hex color for this writer's new text. Collaborators use blue; owner leaves unset. */
+  writerColor?: string | null;
+  /** Show a small “your color” hint when collaborating */
+  writerLabel?: string | null;
 };
 
 const toolBtn =
@@ -43,6 +47,25 @@ const structureBtn =
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28] as const;
 const DEFAULT_FONT_SIZE = 16;
 const FONT_SIZE_KEY = "rapvault-lyric-font-size";
+
+/** Invited collaborators write in this blue */
+export const COLLAB_WRITER_COLOR = "#3b82f6";
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function getOwnerForegroundColor() {
+  if (typeof window === "undefined") return "#18181b";
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue("--foreground")
+    .trim();
+  return value || "#18181b";
+}
 
 function saveSelection(container: HTMLElement) {
   const sel = window.getSelection();
@@ -100,9 +123,27 @@ function restoreSelection(
   sel.addRange(range);
 }
 
-function insertPlainText(editor: HTMLElement, text: string) {
+function insertPlainText(
+  editor: HTMLElement,
+  text: string,
+  writerColor?: string | null,
+) {
   editor.focus();
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const color = writerColor?.trim() || null;
+
+  if (color) {
+    const html = normalized
+      .split("\n")
+      .map((line, index, lines) => {
+        const body = escapeHtml(line);
+        const span = `<span data-writer="collab" style="color:${color}">${body || "\u200b"}</span>`;
+        return index < lines.length - 1 ? `${span}<br>` : span;
+      })
+      .join("");
+    document.execCommand("insertHTML", false, html);
+    return;
+  }
 
   if (document.queryCommandSupported("insertText")) {
     document.execCommand("insertText", false, normalized);
@@ -133,14 +174,36 @@ export function LyricRichEditor({
   spellCheck = true,
   onSpellCheckChange,
   toolbarStats,
+  writerColor = null,
+  writerLabel = null,
 }: LyricRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastHtml = useRef("");
   const emittedValue = useRef<string | null>(null);
+  const writerColorRef = useRef(writerColor);
   const [showSyllables, setShowSyllables] = useState(false);
   const [showRhymes, setShowRhymes] = useState(false);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
+
+  writerColorRef.current = writerColor;
+
+  function applyWriterColor() {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    try {
+      document.execCommand("styleWithCSS", false, "true");
+    } catch {
+      // ignore
+    }
+    const color = writerColorRef.current?.trim();
+    document.execCommand(
+      "foreColor",
+      false,
+      color || getOwnerForegroundColor(),
+    );
+  }
 
   useEffect(() => {
     const saved = preferenceStorageGet("rapvault-rap-tools");
@@ -151,6 +214,13 @@ export function LyricRichEditor({
       setFontSize(savedSize);
     }
   }, []);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || document.activeElement !== editor) return;
+    applyWriterColor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply when color changes while focused
+  }, [writerColor]);
 
   function changeFontSize(direction: -1 | 1) {
     setFontSize((current) => {
@@ -200,6 +270,8 @@ export function LyricRichEditor({
 
   useEffect(() => {
     editorRef.current?.focus({ preventScroll: true });
+    applyWriterColor();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function syncContent() {
@@ -214,6 +286,7 @@ export function LyricRichEditor({
   function runCommand(command: string, arg?: string) {
     editorRef.current?.focus();
     document.execCommand(command, false, arg);
+    applyWriterColor();
     syncContent();
   }
 
@@ -226,7 +299,8 @@ export function LyricRichEditor({
   function insertStructure(label: string) {
     const editor = editorRef.current;
     if (!editor) return;
-    insertPlainText(editor, `${label}\n`);
+    insertPlainText(editor, `${label}\n`, writerColorRef.current);
+    applyWriterColor();
     syncContent();
   }
 
@@ -234,8 +308,18 @@ export function LyricRichEditor({
     const editor = editorRef.current;
     if (!editor) return;
 
+    if (
+      event.key.length === 1 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey
+    ) {
+      applyWriterColor();
+    }
+
     if (event.key === "Enter") {
       event.preventDefault();
+      applyWriterColor();
       document.execCommand("insertLineBreak");
       syncContent();
       return;
@@ -243,7 +327,7 @@ export function LyricRichEditor({
 
     if (event.key === "Tab") {
       event.preventDefault();
-      insertPlainText(editor, "  ");
+      insertPlainText(editor, "  ", writerColorRef.current);
       syncContent();
       return;
     }
@@ -270,7 +354,8 @@ export function LyricRichEditor({
     const text = event.clipboardData.getData("text/plain");
     if (!text) return;
 
-    insertPlainText(editor, text);
+    insertPlainText(editor, text, writerColorRef.current);
+    applyWriterColor();
     syncContent();
   }
 
@@ -282,7 +367,8 @@ export function LyricRichEditor({
     const text = event.dataTransfer.getData("text/plain");
     if (!text) return;
 
-    insertPlainText(editor, text);
+    insertPlainText(editor, text, writerColorRef.current);
+    applyWriterColor();
     syncContent();
   }
 
@@ -354,6 +440,20 @@ export function LyricRichEditor({
           {toolbarStats && (
             <div className="mx-auto flex min-w-0 flex-1 justify-center px-2">
               {toolbarStats}
+            </div>
+          )}
+
+          {(writerColor || writerLabel) && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 text-[11px] text-muted">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: writerColor || "var(--foreground)",
+                }}
+              />
+              <span className="hidden sm:inline">
+                {writerLabel || "Your writing color"}
+              </span>
             </div>
           )}
 
@@ -443,6 +543,8 @@ export function LyricRichEditor({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         onDrop={handleDrop}
+        onFocus={applyWriterColor}
+        onMouseUp={applyWriterColor}
         onDragOver={(event) => event.preventDefault()}
         spellCheck={spellCheck}
         data-placeholder="Drop your bars here..."

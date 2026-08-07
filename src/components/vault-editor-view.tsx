@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { CollaboratorsModal } from "@/components/collaborators-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { LyricRichEditor } from "@/components/lyric-rich-editor";
+import { LyricRichEditor, COLLAB_WRITER_COLOR } from "@/components/lyric-rich-editor";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
 import { iconBtn, VaultHeader } from "@/components/vault-header";
@@ -591,6 +591,16 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               onChange={(content) => scheduleSave({ content })}
               spellCheck={spellCheck}
               onSpellCheckChange={toggleSpellCheck}
+              writerColor={
+                song.isCollaborator ? COLLAB_WRITER_COLOR : null
+              }
+              writerLabel={
+                song.isCollaborator
+                  ? "You write in blue"
+                  : (song.collaborators?.length ?? 0) > 0
+                    ? "Owner text · Collabs write in blue"
+                    : null
+              }
               toolbarStats={
                 <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted sm:text-xs">
                   <span>{stats.words} words</span>

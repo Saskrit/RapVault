@@ -29,6 +29,7 @@ type VaultFoldersPanelProps = {
   showTrash: boolean;
   showCollaborations?: boolean;
   trashCount?: number;
+  collapsed?: boolean;
   onSelectAll: () => void;
   onSelectFavorites: () => void;
   onSelectTrash: () => void;
@@ -43,6 +44,12 @@ type VaultFoldersPanelProps = {
 const navBtn =
   "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition active:scale-[0.98]";
 
+const collapsedBtn =
+  "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-transparent text-muted transition hover:border-border hover:bg-background hover:text-foreground active:scale-95";
+
+const collapsedActive =
+  "border-accent/30 bg-accent/10 text-accent hover:border-accent/40 hover:bg-accent/15 hover:text-accent";
+
 export function VaultFoldersPanel({
   folders,
   selectedFolderId,
@@ -50,6 +57,7 @@ export function VaultFoldersPanel({
   showTrash,
   showCollaborations = false,
   trashCount = 0,
+  collapsed = false,
   onSelectAll,
   onSelectFavorites,
   onSelectTrash,
@@ -66,6 +74,8 @@ export function VaultFoldersPanel({
   const onNetwork = pathname.startsWith("/vault/network");
   const onMessages = pathname.startsWith("/vault/messages");
   const onStats = pathname.startsWith("/vault/stats");
+  const onAllSongs =
+    !selectedFolderId && !showFavorites && !showTrash && !showCollaborations;
 
   function wrap(action: () => void) {
     return () => {
@@ -80,6 +90,139 @@ export function VaultFoldersPanel({
       : "border border-transparent text-foreground hover:bg-background";
   }
 
+  if (collapsed) {
+    return (
+      <div className="flex h-full flex-col items-center gap-1 overflow-y-auto px-1 py-3">
+        <button
+          type="button"
+          onClick={wrap(onSelectAll)}
+          className={`${collapsedBtn} ${onAllSongs ? collapsedActive : ""}`}
+          aria-label="All Songs"
+          title="All Songs"
+        >
+          <ListMusic className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={wrap(onSelectFavorites)}
+          className={`${collapsedBtn} ${showFavorites ? collapsedActive : ""}`}
+          aria-label="Favorites"
+          title="Favorites"
+        >
+          <Star className="h-4 w-4" />
+        </button>
+        {onSelectCollaborations && (
+          <button
+            type="button"
+            onClick={wrap(onSelectCollaborations)}
+            className={`${collapsedBtn} ${showCollaborations ? collapsedActive : ""}`}
+            aria-label="Collaborations"
+            title="Collaborations"
+          >
+            <UsersRound className="h-4 w-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={wrap(onSelectTrash)}
+          className={`${collapsedBtn} ${showTrash ? collapsedActive : ""}`}
+          aria-label="Recycle Bin"
+          title="Recycle Bin"
+        >
+          <Recycle className="h-4 w-4" />
+          {trashCount > 0 && (
+            <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
+          )}
+        </button>
+
+        <div className="my-1.5 h-px w-6 bg-border" />
+
+        <Link
+          href="/vault/artists"
+          onClick={() => onNavigate?.()}
+          className={`${collapsedBtn} ${onArtists ? collapsedActive : ""}`}
+          aria-label="Artists"
+          title="Artists"
+        >
+          <Users className="h-4 w-4" />
+        </Link>
+        <Link
+          href="/vault/network"
+          onClick={() => onNavigate?.()}
+          className={`${collapsedBtn} ${onNetwork ? collapsedActive : ""}`}
+          aria-label="Network"
+          title="Network"
+        >
+          <Network className="h-4 w-4" />
+        </Link>
+        <Link
+          href="/vault/messages"
+          onClick={() => onNavigate?.()}
+          className={`${collapsedBtn} ${onMessages ? collapsedActive : ""}`}
+          aria-label={
+            unreadCount > 0 ? `Messages, ${unreadCount} unread` : "Messages"
+          }
+          title="Messages"
+        >
+          <MessageSquare className="h-4 w-4" />
+          <UnreadBadge count={unreadCount} className="-right-0.5 -top-0.5" />
+        </Link>
+        <Link
+          href="/vault/stats"
+          onClick={() => onNavigate?.()}
+          className={`${collapsedBtn} ${onStats ? collapsedActive : ""}`}
+          aria-label="Stats"
+          title="Stats"
+        >
+          <BarChart3 className="h-4 w-4" />
+        </Link>
+
+        {folders.length > 0 && (
+          <>
+            <div className="my-1.5 h-px w-6 bg-border" />
+            {folders.slice(0, 8).map((folder) => {
+              const active = selectedFolderId === folder.id;
+              return (
+                <button
+                  key={folder.id}
+                  type="button"
+                  onClick={wrap(() => onSelectFolder(folder.id))}
+                  className={`${collapsedBtn} ${active ? collapsedActive : ""}`}
+                  aria-label={folder.name}
+                  title={folder.name}
+                >
+                  <Folder className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </>
+        )}
+
+        <div className="mt-auto flex flex-col items-center gap-1 pt-2">
+          <button
+            type="button"
+            onClick={onNewFolder}
+            className={collapsedBtn}
+            aria-label="New folder"
+            title="New folder"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={wrap(onNewSong)}
+            disabled={showTrash}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white transition hover:bg-accent/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="New song"
+            title="New song"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="border-b border-border px-3 pb-3 py-4">
@@ -90,7 +233,7 @@ export function VaultFoldersPanel({
           <button
             type="button"
             onClick={wrap(onSelectAll)}
-            className={`${navBtn} ${itemClass(!selectedFolderId && !showFavorites && !showTrash && !showCollaborations)}`}
+            className={`${navBtn} ${itemClass(onAllSongs)}`}
           >
             <ListMusic className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">All Songs</span>
