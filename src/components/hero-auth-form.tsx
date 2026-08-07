@@ -54,7 +54,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+            className="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-accent"
             placeholder="you@example.com"
           />
         </div>
@@ -65,7 +65,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
             {mode === "login" && (
               <Link
                 href="/forgot-password"
-                className="text-[11px] text-accent hover:underline"
+                className="text-xs text-accent hover:underline"
               >
                 Forgot password?
               </Link>
@@ -77,7 +77,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+            className="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:border-accent"
             placeholder="Min 6 characters"
           />
         </div>
@@ -105,7 +105,7 @@ export function HeroAuthForm({ mode, onSwitchMode }: HeroAuthFormProps) {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
-        <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+        <div className="relative flex justify-center text-xs uppercase tracking-wider">
           <span className="bg-editor px-2 text-muted">or</span>
         </div>
       </div>

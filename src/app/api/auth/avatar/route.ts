@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toPublicUser } from "@/lib/public-user";
 
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function extFor(type: string) {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     if (file.size > MAX_BYTES) {
       return NextResponse.json(
-        { error: "Image must be under 2MB" },
+        { error: "Image must be under 10MB" },
         { status: 400 },
       );
     }

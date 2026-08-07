@@ -71,10 +71,10 @@ export function AuthForm({ mode }: AuthFormProps) {
           <Logo size={56} priority />
           <BrandWordmark height={22} priority />
         </div>
-        <h1 className="mt-5 text-2xl font-bold text-foreground">
+        <h1 className="type-h2 mt-5 text-foreground">
           {mode === "login" ? "Welcome back" : "Create your vault"}
         </h1>
-        <p className="mt-2 text-sm text-muted">
+        <p className="measure mx-auto mt-2 text-sm text-muted">
           {mode === "login"
             ? "Sign in to access your lyrics."
             : "Start writing and never lose a bar."}

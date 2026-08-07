@@ -26,8 +26,27 @@ model User {
   songs             Song[]
   songViews         SongView[]
   songReactions     SongReaction[]
+  songCollaborations SongCollaborator[]
   conversations     ConversationParticipant[]
   messages          Message[]
+  connectionsSent     Connection[] @relation("ConnectionRequester")
+  connectionsReceived Connection[] @relation("ConnectionAddressee")
+}
+
+model Connection {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   User     @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User     @relation("ConnectionAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // pending | accepted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+  @@index([status])
 }
 
 model Folder {
@@ -63,11 +82,24 @@ model Song {
   deletedAt     DateTime?
   views         SongView[]
   reactions     SongReaction[]
+  collaborators SongCollaborator[]
 
   @@index([userId])
   @@index([folderId])
   @@index([userId, deletedAt])
   @@index([isPublic, deletedAt])
+}
+
+model SongCollaborator {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([songId, userId])
+  @@index([userId])
 }
 
 model SongView {

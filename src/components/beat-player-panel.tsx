@@ -210,7 +210,7 @@ export function BeatPlayerPanel({
 
       {!readOnly && (
       <div className="shrink-0 space-y-1.5 border-b border-border p-3">
-        <label htmlFor="beat-url" className="text-[11px] font-medium uppercase tracking-wide text-muted">
+        <label htmlFor="beat-url" className="text-xs font-medium uppercase tracking-wide text-muted">
           Paste beat link
         </label>
         <div className="flex gap-2">
@@ -272,7 +272,7 @@ export function BeatPlayerPanel({
               </a>
             </div>
             <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 border-t border-border px-3 py-4">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
                 Beat length
               </p>
               {duration !== null ? (

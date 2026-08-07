@@ -4,7 +4,7 @@ import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
-import { VaultHeader } from "@/components/vault-header";
+import { VaultShell } from "@/components/vault-shell";
 
 type ConversationRow = {
   id: string;
@@ -41,64 +41,68 @@ export function MessagesInboxView() {
   }, [load]);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
-      <VaultHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Inbox
-          </p>
-          <h1 className="mt-2 flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <MessageSquare className="h-7 w-7 text-accent" />
-            Messages
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Direct messages with other artists. Start a chat from an artist
-            profile.
-          </p>
-        </div>
-
-        {loading ? (
-          <p className="text-sm text-muted">Loading...</p>
-        ) : conversations.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted">
-            No conversations yet.{" "}
-            <Link href="/vault/artists" className="text-accent hover:underline">
-              Find artists
-            </Link>
+    <VaultShell centerLabel="Messages">
+      <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="mb-6">
+            <p className="type-eyebrow text-muted">
+              Inbox
+            </p>
+            <h1 className="type-h1 mt-2 flex items-center gap-2">
+              <MessageSquare className="h-7 w-7 text-accent" />
+              Messages
+            </h1>
+            <p className="measure mt-2 text-sm text-muted">
+              Direct messages with other artists. Start a chat from an artist
+              profile.
+            </p>
           </div>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {conversations.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/vault/messages/${c.id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-foreground/15"
-                >
-                  <UserAvatar
-                    src={c.other?.avatarUrl}
-                    name={c.other?.displayName || "Artist"}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate font-semibold">
-                        {c.other?.displayName || "Artist"}
+
+          {loading ? (
+            <p className="text-sm text-muted">Loading...</p>
+          ) : conversations.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted">
+              No conversations yet.{" "}
+              <Link
+                href="/vault/artists"
+                className="text-accent hover:underline"
+              >
+                Find artists
+              </Link>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {conversations.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/vault/messages/${c.id}`}
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-foreground/15"
+                  >
+                    <UserAvatar
+                      src={c.other?.avatarUrl}
+                      name={c.other?.displayName || "Artist"}
+                      size="md"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="truncate font-semibold">
+                          {c.other?.displayName || "Artist"}
+                        </p>
+                        <span className="shrink-0 text-xs text-muted">
+                          {new Date(c.updatedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-sm text-muted">
+                        {c.lastMessage?.body || "No messages yet"}
                       </p>
-                      <span className="shrink-0 text-[10px] text-muted">
-                        {new Date(c.updatedAt).toLocaleDateString()}
-                      </span>
                     </div>
-                    <p className="mt-0.5 truncate text-sm text-muted">
-                      {c.lastMessage?.body || "No messages yet"}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </main>
-    </div>
+    </VaultShell>
   );
 }

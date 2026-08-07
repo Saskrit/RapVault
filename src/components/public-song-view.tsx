@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Eye, Music2, Pencil } from "lucide-react";
+import { ArrowLeft, Eye, Flame, Globe, Music2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
@@ -172,11 +172,11 @@ export function PublicSongView({ songId }: { songId: string }) {
             </button>
 
             <span
-              className={`${iconBtn} pointer-events-none border-emerald-500/40 bg-emerald-500/10 text-base leading-none text-emerald-500`}
+              className={`${iconBtn} pointer-events-none border-emerald-500/40 bg-emerald-500/10 text-emerald-500`}
               title="Public"
               aria-label="Public song"
             >
-              <span aria-hidden>🌐</span>
+              <Globe className="h-4 w-4" aria-hidden />
             </span>
 
             {song.isOwner && (
@@ -195,7 +195,7 @@ export function PublicSongView({ songId }: { songId: string }) {
               type="button"
               onClick={toggleFire}
               disabled={firing}
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 text-base leading-none sm:px-3 ${
+              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3 ${
                 song.fired
                   ? "border-orange-500/40 bg-orange-500/15 text-orange-500"
                   : "hover:border-orange-500/40 hover:text-orange-500"
@@ -203,7 +203,10 @@ export function PublicSongView({ songId }: { songId: string }) {
               aria-label={song.fired ? "Remove fire" : "React with fire"}
               title="Fire"
             >
-              <span aria-hidden>🔥</span>
+              <Flame
+                className={`h-4 w-4 ${song.fired ? "fill-orange-500" : ""}`}
+                aria-hidden
+              />
               <span className="text-sm font-semibold tabular-nums">
                 {song.fireCount}
               </span>
@@ -220,7 +223,7 @@ export function PublicSongView({ songId }: { songId: string }) {
           defaultSecondarySize={360}
           primary={
             <div className="flex h-full min-h-0 flex-col bg-editor">
-              <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-border px-3 py-2 text-[11px] text-muted sm:text-xs">
+              <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-border px-3 py-2 text-xs text-muted sm:text-xs">
                 <span>{stats.words} words</span>
                 <span className="text-border">·</span>
                 <span>{stats.lines} lines</span>

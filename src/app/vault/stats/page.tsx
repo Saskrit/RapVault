@@ -1,16 +1,11 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { MessageThreadView } from "@/components/message-thread-view";
+import { StatsView } from "@/components/stats-view";
 import { getSession } from "@/lib/auth";
 
-type PageProps = {
-  params: Promise<{ conversationId: string }>;
-};
-
-export default async function MessageThreadPage({ params }: PageProps) {
+export default async function StatsPage() {
   const user = await getSession();
   if (!user) redirect("/login");
-  const { conversationId } = await params;
   return (
     <Suspense
       fallback={
@@ -19,7 +14,7 @@ export default async function MessageThreadPage({ params }: PageProps) {
         </div>
       }
     >
-      <MessageThreadView conversationId={conversationId} />
+      <StatsView />
     </Suspense>
   );
 }

@@ -84,14 +84,6 @@ export function VaultHeader({
             href="/vault"
             priority
           />
-          <Link
-            href="/vault/messages"
-            className={`${iconBtn} h-9 w-9 border-transparent bg-transparent hover:border-border hover:bg-background`}
-            aria-label="Messages"
-            title="Messages"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </Link>
         </div>
 
         {showSearch && (
@@ -102,7 +94,7 @@ export function VaultHeader({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search title, lyrics, tags..."
-              className="w-full min-h-10 rounded-2xl border border-border bg-background py-2 pl-11 pr-4 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+              className="w-full min-h-10 rounded-2xl border border-border bg-background py-2 pl-11 pr-4 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
         )}
@@ -124,6 +116,14 @@ export function VaultHeader({
               <Search className="h-4 w-4" />
             </button>
           )}
+          <Link
+            href="/vault/messages"
+            className={iconBtn}
+            aria-label="Messages"
+            title="Messages"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Link>
           {label && (
             <Link
               href="/vault/settings"

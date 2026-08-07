@@ -1,9 +1,21 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, Download, Eye, Star, Trash2, Music2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Download,
+  Eye,
+  Globe,
+  Lock,
+  Music2,
+  Star,
+  Trash2,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
+import { CollaboratorsModal } from "@/components/collaborators-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { ResizableSplit } from "@/components/resizable-split";
@@ -24,6 +36,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [notFound, setNotFound] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCollabModal, setShowCollabModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [spellCheck, setSpellCheck] = useState(true);
   const [beatsOpen, setBeatsOpen] = useState(false);
@@ -204,6 +217,25 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     ? calculateLyricStats(song.content)
     : { words: 0, lines: 0, estimatedSeconds: 0 };
 
+  const isOwner = song?.isOwner !== false;
+
+  async function refreshSongMeta() {
+    const res = await fetch(`/api/songs/${songId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setSong((prev) =>
+        prev
+          ? {
+              ...data.song,
+              content: prev.content,
+              title: prev.title,
+              beatUrl: prev.beatUrl,
+            }
+          : data.song,
+      );
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-background text-muted">
@@ -267,41 +299,64 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             </button>
             <button
               type="button"
-              onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-              className={iconBtn}
-              aria-label="Toggle favorite"
+              onClick={() => setShowCollabModal(true)}
+              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+              aria-label="Collaborators"
+              title="Collaborators"
             >
-              <Star
-                className={`h-4 w-4 ${
-                  song.isFavorite
-                    ? "fill-amber-400 text-amber-400"
-                    : "text-muted"
+              <Users className="h-4 w-4 shrink-0" />
+              <span className="hidden text-sm sm:inline">
+                Collab
+                {(song.collaborators?.length || 0) > 0
+                  ? ` (${song.collaborators?.length})`
+                  : ""}
+              </span>
+            </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
+                className={iconBtn}
+                aria-label="Toggle favorite"
+              >
+                <Star
+                  className={`h-4 w-4 ${
+                    song.isFavorite
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted"
+                  }`}
+                />
+              </button>
+            )}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() =>
+                  scheduleSave({ isPublic: !Boolean(song.isPublic) })
+                }
+                className={`${iconBtn} ${
+                  song.isPublic
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
                 }`}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                scheduleSave({ isPublic: !Boolean(song.isPublic) })
-              }
-              className={`${iconBtn} text-base leading-none ${
-                song.isPublic
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
-                  : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
-              }`}
-              aria-label={
-                song.isPublic
-                  ? "Public — click to make personal"
-                  : "Personal — click to make public"
-              }
-              title={
-                song.isPublic
-                  ? "Public — click to make personal"
-                  : "Personal — click to make public"
-              }
-            >
-              <span aria-hidden>{song.isPublic ? "🌐" : "🔒"}</span>
-            </button>
+                aria-label={
+                  song.isPublic
+                    ? "Public — click to make personal"
+                    : "Personal — click to make public"
+                }
+                title={
+                  song.isPublic
+                    ? "Public — click to make personal"
+                    : "Personal — click to make public"
+                }
+              >
+                {song.isPublic ? (
+                  <Globe className="h-4 w-4" aria-hidden />
+                ) : (
+                  <Lock className="h-4 w-4" aria-hidden />
+                )}
+              </button>
+            )}
             {song.isPublic && (
               <Link
                 href={`/vault/s/${song.id}`}
@@ -312,6 +367,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 <Eye className="h-4 w-4 shrink-0" />
                 <span className="hidden text-sm sm:inline">Public view</span>
               </Link>
+            )}
+            {!isOwner && song.owner && (
+              <p className="hidden text-xs text-muted sm:inline">
+                with {song.owner.displayName}
+              </p>
             )}
             <div ref={downloadMenuRef} className="relative">
               <button
@@ -355,14 +415,16 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 </div>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
-              aria-label="Delete song"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+                aria-label="Delete song"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -380,7 +442,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               spellCheck={spellCheck}
               onSpellCheckChange={toggleSpellCheck}
               toolbarStats={
-                <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted sm:text-xs">
+                <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted sm:text-xs">
                   <span>{stats.words} words</span>
                   <span className="text-border">·</span>
                   <span>{stats.lines} lines</span>
@@ -429,6 +491,14 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         confirmLabel="Move to bin"
         destructive
         loading={deleting}
+      />
+
+      <CollaboratorsModal
+        open={showCollabModal}
+        onClose={() => setShowCollabModal(false)}
+        songId={song.id}
+        isOwner={isOwner}
+        onChanged={refreshSongMeta}
       />
     </div>
   );

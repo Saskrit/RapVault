@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { serializeSong, songAccessInclude } from "@/lib/song-access";
 
 export async function GET(request: Request) {
   const user = await getSession();
@@ -11,35 +12,77 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const folderId = searchParams.get("folderId");
   const favorites = searchParams.get("favorites");
+  const collaborations = searchParams.get("collaborations") === "true";
   const trash = searchParams.get("trash") === "true";
   const q = searchParams.get("q")?.trim();
 
+  const textFilter = q
+    ? {
+        OR: [
+          { title: { contains: q } },
+          { content: { contains: q } },
+          { moodTags: { contains: q } },
+          { genre: { contains: q } },
+        ],
+      }
+    : null;
+
+  if (collaborations) {
+    const songs = await prisma.song.findMany({
+      where: {
+        deletedAt: null,
+        collaborators: { some: { userId: user.id } },
+        ...(textFilter ? textFilter : {}),
+      },
+      orderBy: { updatedAt: "desc" },
+      include: songAccessInclude,
+    });
+    return NextResponse.json({
+      songs: songs.map((song) => serializeSong(song, user.id)),
+    });
+  }
+
+  if (trash) {
+    const songs = await prisma.song.findMany({
+      where: {
+        userId: user.id,
+        deletedAt: { not: null },
+        ...(textFilter ? textFilter : {}),
+      },
+      orderBy: { deletedAt: "desc" },
+      include: songAccessInclude,
+    });
+    return NextResponse.json({
+      songs: songs.map((song) => serializeSong(song, user.id)),
+    });
+  }
+
   const songs = await prisma.song.findMany({
     where: {
-      userId: user.id,
-      deletedAt: trash ? { not: null } : null,
-      ...(trash
-        ? {}
-        : {
-            ...(folderId ? { folderId } : {}),
-            ...(favorites === "true" ? { isFavorite: true } : {}),
-          }),
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q } },
-              { content: { contains: q } },
-              { moodTags: { contains: q } },
-              { genre: { contains: q } },
-            ],
-          }
-        : {}),
+      deletedAt: null,
+      AND: [
+        {
+          OR: [
+            {
+              userId: user.id,
+              ...(folderId ? { folderId } : {}),
+              ...(favorites === "true" ? { isFavorite: true } : {}),
+            },
+            ...(!folderId && favorites !== "true"
+              ? [{ collaborators: { some: { userId: user.id } } }]
+              : []),
+          ],
+        },
+        ...(textFilter ? [textFilter] : []),
+      ],
     },
-    orderBy: trash ? { deletedAt: "desc" } : { updatedAt: "desc" },
-    include: { folder: { select: { id: true, name: true } } },
+    orderBy: { updatedAt: "desc" },
+    include: songAccessInclude,
   });
 
-  return NextResponse.json({ songs });
+  return NextResponse.json({
+    songs: songs.map((song) => serializeSong(song, user.id)),
+  });
 }
 
 export async function POST(request: Request) {
@@ -69,8 +112,8 @@ export async function POST(request: Request) {
       folderId: targetFolderId,
       userId: user.id,
     },
-    include: { folder: { select: { id: true, name: true } } },
+    include: songAccessInclude,
   });
 
-  return NextResponse.json({ song });
+  return NextResponse.json({ song: serializeSong(song, user.id) });
 }

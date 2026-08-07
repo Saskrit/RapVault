@@ -34,7 +34,7 @@ const toolBtn =
   "flex h-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-muted transition hover:border-border hover:bg-background hover:text-foreground active:scale-95";
 
 const structureBtn =
-  "shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95";
+  "shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28] as const;
 const DEFAULT_FONT_SIZE = 16;
@@ -330,9 +330,9 @@ export function LyricRichEditor({
               onClick={() => changeFontSize(-1)}
               disabled={fontSize <= FONT_SIZES[0]!}
             >
-              <span className="text-[11px] font-semibold leading-none">A−</span>
+              <span className="text-xs font-semibold leading-none">A−</span>
             </button>
-            <span className="min-w-[2rem] text-center text-[11px] font-medium tabular-nums text-muted">
+            <span className="min-w-[2rem] text-center text-xs font-medium tabular-nums text-muted">
               {fontSize}
             </span>
             <button

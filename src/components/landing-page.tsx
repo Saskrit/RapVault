@@ -171,14 +171,14 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
           <div className="grid items-stretch gap-10 sm:gap-14 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:gap-8 xl:gap-10">
             <div className="flex flex-col">
-              <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+              <h1 className="type-h1">
                 Your bars.
                 <br />
                 <span className="bg-gradient-to-r from-accent to-accent-muted bg-clip-text text-transparent">
                   Locked in the vault.
                 </span>
               </h1>
-              <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
+              <p className="measure mt-5 text-base text-muted sm:mt-6 sm:text-lg">
                 RapVault is a private notebook built for hooks, punchlines,
                 freestyles, and unfinished verses. Write to beats, organize fast,
                 and never lose a line.
@@ -275,14 +275,14 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                       <p className="mt-auto pt-6 text-accent/60">|</p>
                     </div>
                     <div className="flex min-h-0 flex-col bg-sidebar">
-                      <div className="shrink-0 border-b border-border px-2 py-2 text-[10px] font-medium text-muted sm:text-xs">
+                      <div className="shrink-0 border-b border-border px-2 py-2 text-xs font-medium text-muted sm:text-xs">
                         Beat
                       </div>
                       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-black/90 p-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600">
                           <Music2 className="h-5 w-5 text-white" />
                         </div>
-                        <p className="text-center text-[10px] text-muted sm:text-xs">
+                        <p className="text-center text-xs text-muted sm:text-xs">
                           YouTube beat
                         </p>
                       </div>
@@ -339,10 +339,10 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
         <section className="border-t border-border/60 bg-card/30 py-14 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mb-12 max-w-2xl">
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+              <h2 className="type-h2">
                 Built for the writing session
               </h2>
-              <p className="mt-3 text-muted">
+              <p className="measure mt-3 text-muted">
                 Everything you need to capture ideas, finish songs, and keep your
                 catalog clean — without the clutter.
               </p>
@@ -356,7 +356,7 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
                   <div className="mb-4 inline-flex rounded-xl bg-accent/10 p-3 text-accent transition group-hover:bg-accent/20">
                     <feature.icon className="h-5 w-5" />
                   </div>
-                  <h3 className="font-semibold text-foreground">{feature.title}</h3>
+                  <h3 className="type-h3">{feature.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
                     {feature.description}
                   </p>
@@ -368,7 +368,7 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
 
         <section className="py-14 sm:py-20">
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+            <h2 className="type-h2">
               Ready to fill the vault?
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-muted">

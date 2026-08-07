@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { getConnectionRelation } from "@/lib/network";
 import { prisma } from "@/lib/prisma";
 import { normalizeUsername } from "@/lib/username";
 
@@ -39,9 +40,18 @@ export async function GET(_request: Request, context: RouteContext) {
     },
   });
 
-  if (!artist || !artist.username || (!artist.profilePublic && artist.id !== session.id)) {
+  if (
+    !artist ||
+    !artist.username ||
+    (!artist.profilePublic && artist.id !== session.id)
+  ) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const connection =
+    artist.id === session.id
+      ? { relation: "none" as const, connectionId: null }
+      : await getConnectionRelation(session.id, artist.id);
 
   return NextResponse.json({
     artist: {
@@ -52,6 +62,8 @@ export async function GET(_request: Request, context: RouteContext) {
       avatarUrl: artist.avatarUrl,
       isSelf: artist.id === session.id,
       createdAt: artist.createdAt.toISOString(),
+      connectionRelation: connection.relation,
+      connectionId: connection.connectionId,
       songs: artist.songs.map((s) => ({
         id: s.id,
         title: s.title,

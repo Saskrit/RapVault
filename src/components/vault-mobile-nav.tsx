@@ -37,7 +37,7 @@ export function VaultMobileNav({
               type="button"
               onClick={tab.onClick}
               disabled={tab.disabled}
-              className={`flex min-h-[3.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-semibold tracking-wide transition active:scale-95 disabled:opacity-40 sm:text-xs ${
+              className={`flex min-h-[3.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-xs font-semibold tracking-wide transition active:scale-95 disabled:opacity-40 sm:text-xs ${
                 isActive ? "bg-accent/10 text-accent" : "text-muted hover:text-foreground"
               }`}
             >

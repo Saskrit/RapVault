@@ -19,9 +19,30 @@ export type Song = {
   voiceMemoPath: string;
   folderId: string | null;
   folder: { id: string; name: string } | null;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  isOwner?: boolean;
+  isCollaborator?: boolean;
+  owner?: {
+    id: string;
+    username: string | null;
+    displayName: string;
+    avatarUrl: string | null;
+  } | null;
+  collaborators?: Array<{
+    id: string;
+    userId: string;
+    createdAt: string;
+    artist: {
+      id: string;
+      username: string | null;
+      displayName: string;
+      bio: string;
+      avatarUrl: string | null;
+    };
+  }>;
 };
 
 export type ArtistSummary = {
@@ -32,3 +53,9 @@ export type ArtistSummary = {
   avatarUrl: string | null;
   publicSongCount: number;
 };
+
+export type ConnectionRelation =
+  | "none"
+  | "pending_sent"
+  | "pending_received"
+  | "connected";

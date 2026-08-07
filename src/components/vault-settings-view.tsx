@@ -54,7 +54,7 @@ const GOOGLE_ERRORS: Record<string, string> = {
 };
 
 const inputClass =
-  "w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted/70 focus:border-foreground/30";
+  "w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none transition placeholder:text-muted/70 focus:border-foreground/30";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof UserRound }[] = [
   { id: "profile", label: "Profile", icon: UserRound },
@@ -433,10 +433,10 @@ export function VaultSettingsView() {
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-20 sm:px-6 lg:py-10">
         <div className="mb-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          <p className="type-eyebrow text-muted">
             Account
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="type-h1 mt-2">
             Profile &amp; settings
           </h1>
           <p className="mt-2 max-w-xl text-sm text-muted sm:text-base">
@@ -526,8 +526,8 @@ export function VaultSettingsView() {
                 {avatarError && (
                   <p className="mt-2 text-xs text-red-400">{avatarError}</p>
                 )}
-                <p className="mt-3 text-[11px] text-muted">
-                  JPG, PNG, or WebP · max 2MB
+                <p className="mt-3 text-xs text-muted">
+                  JPG, PNG, or WebP · max 10MB
                 </p>
               </div>
             </div>
