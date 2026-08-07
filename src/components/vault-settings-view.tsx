@@ -4,9 +4,11 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
+  ImagePlus,
   KeyRound,
   Link2,
   Mail,
+  Share2,
   Shield,
   Trash2,
   UserRound,
@@ -52,7 +54,7 @@ type ProfileUser = {
   createdAt?: string;
 };
 
-type SettingsTab = "profile" | "account" | "security" | "connected";
+type SettingsTab = "profile" | "social" | "account" | "security" | "connected";
 
 const GOOGLE_ERRORS: Record<string, string> = {
   google_config: "Google sign-in is not configured yet.",
@@ -70,6 +72,7 @@ const inputClass =
 
 const TABS: { id: SettingsTab; label: string; icon: typeof UserRound }[] = [
   { id: "profile", label: "Profile", icon: UserRound },
+  { id: "social", label: "Social Links", icon: Share2 },
   { id: "account", label: "Account", icon: Mail },
   { id: "security", label: "Security", icon: KeyRound },
   { id: "connected", label: "Connected", icon: Link2 },
@@ -103,6 +106,8 @@ export function VaultSettingsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const photoMenuRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +115,9 @@ export function VaultSettingsView() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+  const [socialError, setSocialError] = useState("");
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -160,6 +168,24 @@ export function VaultSettingsView() {
     };
   }, [pendingAvatarPreview]);
 
+  useEffect(() => {
+    if (!photoMenuOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!photoMenuRef.current?.contains(event.target as Node)) {
+        setPhotoMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setPhotoMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [photoMenuOpen]);
+
   const loadProfile = useCallback(async () => {
     const res = await fetch("/api/auth/me");
     if (!res.ok) {
@@ -208,9 +234,11 @@ export function VaultSettingsView() {
   function handleAvatarPick(file: File | null) {
     if (!file) return;
     setAvatarError("");
+    setPhotoMenuOpen(false);
     setCropFile(file);
     setCropOpen(true);
     if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   }
 
   function handleCropCancel() {
@@ -230,6 +258,7 @@ export function VaultSettingsView() {
 
   function handleRemoveAvatar() {
     setAvatarError("");
+    setPhotoMenuOpen(false);
     clearPendingAvatarPreview();
     setPendingAvatarFile(null);
     setPendingRemoveAvatar(true);
@@ -274,7 +303,6 @@ export function VaultSettingsView() {
           username,
           bio,
           profilePublic,
-          ...socialLinks,
         }),
       });
       const data = await res.json();
@@ -306,6 +334,36 @@ export function VaultSettingsView() {
       setProfileError("Network error. Try again.");
     } finally {
       setProfileLoading(false);
+    }
+  }
+
+  async function handleSocialSubmit(event: FormEvent) {
+    event.preventDefault();
+    setSocialError("");
+    setSocialLoading(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(socialLinks),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSocialError(data.error || "Could not save social links.");
+        return;
+      }
+      if (data.user) {
+        setUser({
+          ...data.user,
+          avatarUrl: data.user.avatarUrl ?? user?.avatarUrl ?? null,
+        });
+        setSocialLinks(pickSocialLinks(data.user));
+      }
+      showToast("success", "Social links saved.");
+    } catch {
+      setSocialError("Network error. Try again.");
+    } finally {
+      setSocialLoading(false);
     }
   }
 
@@ -530,7 +588,7 @@ export function VaultSettingsView() {
             <div className="overflow-hidden rounded-3xl border border-border bg-card">
               <div className="h-14 bg-sidebar" />
               <div className="-mt-10 flex flex-col items-center px-4 pb-4 text-center">
-                <div className="relative">
+                <div className="relative" ref={photoMenuRef}>
                   <UserAvatar
                     src={avatarSrc}
                     name={display}
@@ -539,18 +597,59 @@ export function VaultSettingsView() {
                   />
                   <button
                     type="button"
-                    onClick={() => fileRef.current?.click()}
+                    onClick={() => setPhotoMenuOpen((open) => !open)}
                     disabled={profileLoading}
                     className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:border-foreground/30 disabled:opacity-50"
-                    aria-label="Upload profile photo"
-                    title="Upload photo"
+                    aria-label="Photo options"
+                    aria-expanded={photoMenuOpen}
+                    title="Photo options"
                   >
                     <Camera className="h-4 w-4" />
                   </button>
+                  {photoMenuOpen && (
+                    <div className="absolute left-1/2 top-[calc(100%+0.5rem)] z-20 w-48 -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-card py-1 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => cameraRef.current?.click()}
+                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition hover:bg-background"
+                      >
+                        <Camera className="h-4 w-4 text-muted" />
+                        Take photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition hover:bg-background"
+                      >
+                        <ImagePlus className="h-4 w-4 text-muted" />
+                        Upload photo
+                      </button>
+                      {hasAvatar && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-red-400 transition hover:bg-background"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remove photo
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <input
                     ref={fileRef}
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleAvatarPick(e.target.files?.[0] ?? null)
+                    }
+                  />
+                  <input
+                    ref={cameraRef}
+                    type="file"
+                    accept="image/*"
+                    capture="user"
                     className="hidden"
                     onChange={(e) =>
                       handleAvatarPick(e.target.files?.[0] ?? null)
@@ -564,28 +663,6 @@ export function VaultSettingsView() {
                 <p className="mt-0.5 text-sm text-muted">
                   {username ? `@${username}` : user.email}
                 </p>
-
-                <div className="mt-3 flex w-full flex-col gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    disabled={profileLoading}
-                    className="min-h-9 rounded-xl border border-border text-sm font-medium transition hover:border-foreground/25 hover:bg-background disabled:opacity-50"
-                  >
-                    Change photo
-                  </button>
-                  {hasAvatar && (
-                    <button
-                      type="button"
-                      onClick={handleRemoveAvatar}
-                      disabled={profileLoading}
-                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl text-sm font-medium text-muted transition hover:text-red-400 disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove photo
-                    </button>
-                  )}
-                </div>
                 {photoDirty && (
                   <p className="mt-2 text-xs text-accent">
                     Photo changes save with profile
@@ -594,7 +671,6 @@ export function VaultSettingsView() {
                 {avatarError && (
                   <p className="mt-2 text-xs text-red-400">{avatarError}</p>
                 )}
-                <p className="mt-2 text-xs text-muted">JPG, PNG, or WebP</p>
               </div>
             </div>
 
@@ -728,40 +804,6 @@ export function VaultSettingsView() {
                     </span>
                   </label>
 
-                  <div className="space-y-3 rounded-2xl border border-border bg-background px-4 py-4">
-                    <div>
-                      <p className="text-sm font-medium">Social & streaming</p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        Optional links shown on your public artist profile.
-                      </p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {SOCIAL_LINK_META.map((item) => (
-                        <div key={item.key}>
-                          <label
-                            htmlFor={item.key}
-                            className="mb-1.5 block text-xs font-medium text-muted"
-                          >
-                            {item.label}
-                          </label>
-                          <input
-                            id={item.key}
-                            type="url"
-                            value={socialLinks[item.key]}
-                            onChange={(e) =>
-                              setSocialLinks((prev) => ({
-                                ...prev,
-                                [item.key]: e.target.value,
-                              }))
-                            }
-                            placeholder={item.placeholder}
-                            className={inputClass}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   <FieldMessage error={profileError} />
 
                   <div className="flex flex-wrap gap-2 pt-1">
@@ -781,6 +823,58 @@ export function VaultSettingsView() {
                       </Link>
                     )}
                   </div>
+                </form>
+              </section>
+            )}
+
+            {tab === "social" && (
+              <section className="rounded-3xl border border-border bg-card">
+                <div className="border-b border-border px-5 py-4 sm:px-6">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    Social Links
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    Add YouTube, Instagram, Spotify, and more to your public
+                    profile.
+                  </p>
+                </div>
+                <form
+                  onSubmit={handleSocialSubmit}
+                  className="space-y-4 px-5 py-5 sm:px-6"
+                >
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {SOCIAL_LINK_META.map((item) => (
+                      <div key={item.key} className="sm:col-span-1">
+                        <label
+                          htmlFor={item.key}
+                          className="mb-1.5 block text-sm font-medium"
+                        >
+                          {item.label}
+                        </label>
+                        <input
+                          id={item.key}
+                          type="url"
+                          value={socialLinks[item.key]}
+                          onChange={(e) =>
+                            setSocialLinks((prev) => ({
+                              ...prev,
+                              [item.key]: e.target.value,
+                            }))
+                          }
+                          placeholder={item.placeholder}
+                          className={inputClass}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <FieldMessage error={socialError} />
+                  <button
+                    type="submit"
+                    disabled={socialLoading}
+                    className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    {socialLoading ? "Saving..." : "Save social links"}
+                  </button>
                 </form>
               </section>
             )}

@@ -321,15 +321,39 @@ export function VaultSongsView() {
     ? folders.find((f) => f.id === selectedFolderId)
     : null;
 
-  const folderLabel = showTrash
-    ? "Recycle Bin"
-    : showCollaborations
-      ? "Collaborations"
-      : showFavorites
-        ? "Favorites"
-        : selectedFolderId
-          ? folders.find((f) => f.id === selectedFolderId)?.name ?? "Folder"
-          : "All Songs";
+  const collectionTitle = useMemo(() => {
+    if (showTrash) return "Recycle Bin";
+    if (showCollaborations) return "Collaborations";
+    if (showFavorites) return "Favorites";
+    if (selectedFolderId) {
+      return folders.find((f) => f.id === selectedFolderId)?.name ?? "Folder";
+    }
+
+    const statusPart =
+      statusFilter === "draft"
+        ? "Draft"
+        : statusFilter === "finished"
+          ? "Finished"
+          : "All";
+    const visibilityPart =
+      visibilityFilter === "public"
+        ? "Public"
+        : visibilityFilter === "personal"
+          ? "Personal"
+          : null;
+
+    return visibilityPart
+      ? `${statusPart} ${visibilityPart} Songs`
+      : `${statusPart} Songs`;
+  }, [
+    showTrash,
+    showCollaborations,
+    showFavorites,
+    selectedFolderId,
+    folders,
+    statusFilter,
+    visibilityFilter,
+  ]);
 
   const mobileTab: MobileTab = folderDrawerOpen ? "folders" : "songs";
 
@@ -337,11 +361,11 @@ export function VaultSongsView() {
     return (
       <section className={`flex min-h-0 min-w-0 flex-1 flex-col bg-background ${className}`}>
         <div className="shrink-0 border-b border-border bg-card px-4 py-3 lg:px-6">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                  {folderLabel}
+                  {collectionTitle}
                 </h1>
                 {selectedFolder && !showTrash && (
                   <button
@@ -354,9 +378,33 @@ export function VaultSongsView() {
                   </button>
                 )}
               </div>
+            </div>
 
+            {!showTrash ? (
+              <div className="flex shrink-0 items-center gap-2 justify-self-center">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                  Total Songs
+                  <span className="ml-1.5 tabular-nums text-foreground">
+                    {filtersActive ? filteredSongs.length : songs.length}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={handleNewSong}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-white transition hover:bg-accent/90 active:scale-95"
+                  aria-label="New song"
+                  title="New song"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
               {!showTrash && (
-                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <>
                   <div
                     className="inline-flex items-center rounded-lg bg-background p-0.5 ring-1 ring-border"
                     role="group"
@@ -399,29 +447,9 @@ export function VaultSongsView() {
                       Clear
                     </button>
                   )}
-                </div>
+                </>
               )}
             </div>
-
-            {!showTrash && (
-              <div className="flex shrink-0 items-center gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                  Total Songs
-                  <span className="ml-1.5 tabular-nums text-foreground">
-                    {filtersActive ? filteredSongs.length : songs.length}
-                  </span>
-                </p>
-                <button
-                  type="button"
-                  onClick={handleNewSong}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-white transition hover:bg-accent/90 active:scale-95"
-                  aria-label="New song"
-                  title="New song"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -732,7 +760,7 @@ export function VaultSongsView() {
       onSearchChange={setSearchQuery}
       mobileSearchOpen={mobileSearchOpen}
       onMobileSearchOpen={setMobileSearchOpen}
-      centerLabel={folderLabel}
+      centerLabel={collectionTitle}
       folderDrawerOpen={folderDrawerOpen}
       onFolderDrawerOpenChange={setFolderDrawerOpen}
       onFoldersChange={setFolders}
