@@ -461,11 +461,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             value={song.title}
             onChange={(e) => scheduleSave({ title: e.target.value })}
             spellCheck={spellCheck}
-            className="min-w-0 w-full flex-1 rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:min-w-[12rem] lg:text-2xl"
+            className="min-w-0 w-full rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:w-[min(100%,18rem)] lg:max-w-[18rem] lg:flex-none lg:shrink-0 lg:text-xl xl:w-[min(100%,22rem)] xl:max-w-[22rem] xl:text-2xl"
             placeholder="Untitled track"
           />
 
-          <div className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:ml-auto lg:w-auto lg:shrink-0 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-full min-w-0 flex-1 items-center justify-start gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
