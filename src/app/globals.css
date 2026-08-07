@@ -285,6 +285,13 @@ textarea {
   margin: 0;
 }
 
+.lyric-editor a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .lyric-editor:empty::before {
   content: attr(data-placeholder);
   color: var(--muted);

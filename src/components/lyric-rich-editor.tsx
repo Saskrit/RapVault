@@ -14,7 +14,19 @@ import {
   Sparkles,
   Type,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type DragEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
+import { Modal } from "@/components/modal";
 import {
   RAP_STRUCTURE_LABELS,
   RHYME_GROUP_COLORS,
@@ -185,6 +197,41 @@ function preserveCollabColors(root: HTMLElement) {
     });
 }
 
+function ensureLinksOpenInNewTab(root: HTMLElement) {
+  root.querySelectorAll("a[href]").forEach((node) => {
+    const anchor = node as HTMLAnchorElement;
+    anchor.setAttribute("target", "_blank");
+    anchor.setAttribute("rel", "noopener noreferrer");
+  });
+}
+
+function isLikelyUrl(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  if (/^(https?:\/\/|www\.)/i.test(trimmed)) return true;
+  return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/[^\s]*)?$/i.test(
+    trimmed,
+  );
+}
+
+function normalizeLinkUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  let candidate = trimmed;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(candidate)) {
+    candidate = `https://${candidate}`;
+  }
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 function saveSelection(container: HTMLElement) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -308,6 +355,12 @@ export function LyricRichEditor({
   const [showRhymes, setShowRhymes] = useState(false);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("https://");
+  const [linkError, setLinkError] = useState("");
+  const [linkPastePlain, setLinkPastePlain] = useState<string | null>(null);
+  const savedSelectionRef = useRef<{ start: number; end: number } | null>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
 
   writerColorRef.current = activeWriterColor;
 
@@ -423,6 +476,7 @@ export function LyricRichEditor({
     const selection = saveSelection(editor);
     editor.innerHTML = html || "";
     preserveCollabColors(editor);
+    ensureLinksOpenInNewTab(editor);
     lastHtml.current = editor.innerHTML;
     emittedValue.current = value;
     restoreSelection(editor, selection);
@@ -438,6 +492,7 @@ export function LyricRichEditor({
     const editor = editorRef.current;
     if (!editor) return;
     preserveCollabColors(editor);
+    ensureLinksOpenInNewTab(editor);
     const html = editor.innerHTML;
     lastHtml.current = html;
     emittedValue.current = html;
@@ -451,10 +506,114 @@ export function LyricRichEditor({
     syncContent();
   }
 
+  function openLinkModal(prefill = "https://", pastePlain: string | null = null) {
+    const editor = editorRef.current;
+    if (editor) {
+      savedSelectionRef.current = saveSelection(editor);
+    }
+    setLinkUrl(prefill);
+    setLinkPastePlain(pastePlain);
+    setLinkError("");
+    setLinkModalOpen(true);
+  }
+
+  function closeLinkModal() {
+    setLinkModalOpen(false);
+    setLinkError("");
+    setLinkPastePlain(null);
+    const editor = editorRef.current;
+    if (editor) {
+      editor.focus();
+      restoreSelection(editor, savedSelectionRef.current);
+    }
+  }
+
   function insertLink() {
-    const url = window.prompt("Link URL", "https://");
-    if (!url) return;
-    runCommand("createLink", url);
+    const sel = window.getSelection();
+    const selected = sel?.toString().trim() || "";
+    const prefill =
+      selected && isLikelyUrl(selected)
+        ? selected.startsWith("http")
+          ? selected
+          : `https://${selected}`
+        : "https://";
+    openLinkModal(prefill);
+  }
+
+  function applyLinkFromModal(event: FormEvent) {
+    event.preventDefault();
+    const normalized = normalizeLinkUrl(linkUrl);
+    if (!normalized) {
+      setLinkError("Enter a valid web link (https://…)");
+      return;
+    }
+
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+    restoreSelection(editor, savedSelectionRef.current);
+
+    const sel = window.getSelection();
+    const hasSelection =
+      Boolean(sel) &&
+      sel!.rangeCount > 0 &&
+      !sel!.getRangeAt(0).collapsed &&
+      editor.contains(sel!.getRangeAt(0).commonAncestorContainer);
+
+    if (hasSelection) {
+      document.execCommand("createLink", false, normalized);
+    } else {
+      const label = escapeHtml(linkPastePlain?.trim() || normalized);
+      document.execCommand(
+        "insertHTML",
+        false,
+        `<a href="${escapeHtml(normalized)}" target="_blank" rel="noopener noreferrer">${label}</a>`,
+      );
+    }
+
+    ensureLinksOpenInNewTab(editor);
+    applyWriterColor();
+    syncContent();
+    setLinkModalOpen(false);
+    setLinkPastePlain(null);
+    setLinkError("");
+  }
+
+  function pasteAsPlainFromModal() {
+    const editor = editorRef.current;
+    const plain = linkPastePlain;
+    setLinkModalOpen(false);
+    setLinkError("");
+    setLinkPastePlain(null);
+    if (!editor || !plain) return;
+    editor.focus();
+    restoreSelection(editor, savedSelectionRef.current);
+    insertPlainText(editor, plain, writerColorRef.current);
+    applyWriterColor();
+    syncContent();
+  }
+
+  useEffect(() => {
+    if (!linkModalOpen) return;
+    const timer = window.setTimeout(() => {
+      linkInputRef.current?.focus();
+      linkInputRef.current?.select();
+    }, 30);
+    return () => window.clearTimeout(timer);
+  }, [linkModalOpen]);
+
+  function handleEditorClick(event: ReactMouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement | null;
+    const anchor = target?.closest?.("a[href]") as HTMLAnchorElement | null;
+    const editor = editorRef.current;
+    if (!anchor || !editor || !editor.contains(anchor)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const href = anchor.href;
+    if (!href) return;
+    window.open(href, "_blank", "noopener,noreferrer");
   }
 
   function insertStructure(label: string) {
@@ -519,6 +678,14 @@ export function LyricRichEditor({
     const text = event.clipboardData.getData("text/plain");
     if (!text) return;
 
+    if (isLikelyUrl(text)) {
+      const prefill = text.trim().startsWith("http")
+        ? text.trim()
+        : `https://${text.trim()}`;
+      openLinkModal(prefill, text);
+      return;
+    }
+
     insertPlainText(editor, text, writerColorRef.current);
     applyWriterColor();
     syncContent();
@@ -531,6 +698,14 @@ export function LyricRichEditor({
 
     const text = event.dataTransfer.getData("text/plain");
     if (!text) return;
+
+    if (isLikelyUrl(text)) {
+      const prefill = text.trim().startsWith("http")
+        ? text.trim()
+        : `https://${text.trim()}`;
+      openLinkModal(prefill, text);
+      return;
+    }
 
     insertPlainText(editor, text, writerColorRef.current);
     applyWriterColor();
@@ -742,6 +917,7 @@ export function LyricRichEditor({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         onDrop={handleDrop}
+        onClick={handleEditorClick}
         onFocus={applyWriterColor}
         onMouseUp={applyWriterColor}
         onDragOver={(event) => event.preventDefault()}
@@ -750,6 +926,76 @@ export function LyricRichEditor({
         style={{ fontSize: `${fontSize}px` }}
         className="lyric-markdown lyric-editor h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 leading-relaxed outline-none lg:px-8 lg:py-5"
       />
+
+      <Modal
+        open={linkModalOpen}
+        onClose={() => {
+          if (linkPastePlain) {
+            pasteAsPlainFromModal();
+            return;
+          }
+          closeLinkModal();
+        }}
+        title={linkPastePlain ? "Add pasted link?" : "Add link"}
+        description={
+          linkPastePlain
+            ? "Turn this into a clickable link. It will open in a new tab."
+            : "Paste or type a URL. Links open in a new tab when clicked."
+        }
+      >
+        <form onSubmit={applyLinkFromModal} className="space-y-4">
+          <div>
+            <label
+              htmlFor="lyric-link-url"
+              className="mb-1.5 block text-sm font-medium"
+            >
+              Link URL
+            </label>
+            <input
+              ref={linkInputRef}
+              id="lyric-link-url"
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              value={linkUrl}
+              onChange={(e) => {
+                setLinkUrl(e.target.value);
+                setLinkError("");
+              }}
+              placeholder="https://example.com"
+              className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none transition placeholder:text-muted/70 focus:border-foreground/30"
+            />
+            {linkError && (
+              <p className="mt-2 text-sm text-red-400">{linkError}</p>
+            )}
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {linkPastePlain ? (
+              <button
+                type="button"
+                onClick={pasteAsPlainFromModal}
+                className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium text-muted transition hover:text-foreground"
+              >
+                Paste as plain text
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={closeLinkModal}
+                className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium text-muted transition hover:text-foreground"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition hover:bg-violet-500"
+            >
+              {linkPastePlain ? "Add as link" : "Insert link"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
