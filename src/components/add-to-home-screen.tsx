@@ -90,11 +90,11 @@ export function AddToHomeScreen() {
         <div className="flex w-full max-w-xl flex-col items-center gap-4 rounded-3xl border border-border bg-card px-5 py-6 text-center shadow-sm sm:px-8 sm:py-7">
           <div className="flex items-center gap-3">
             <Image
-              src="/apple-touch-icon.png"
+              src="/apple-touch-icon.png?v=4"
               alt="RapVault"
               width={56}
               height={56}
-              className="rounded-2xl border border-border shadow-sm"
+              className="rounded-2xl border border-border bg-white shadow-sm"
               unoptimized
             />
             <div className="text-left">
