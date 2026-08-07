@@ -16,7 +16,7 @@ export function Logo({
 }: LogoProps) {
   const image = (
     <Image
-      src="/logo.png"
+      src="/rapvault-mark.png"
       alt="RapVault"
       width={size}
       height={size}

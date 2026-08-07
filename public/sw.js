@@ -8,6 +8,7 @@ const PRECACHE_URLS = [
   "/",
   "/~offline",
   "/manifest.json",
+  "/rapvault-mark.png",
   "/logo.png",
   "/rvtxt.png",
   "/favicon.ico",
