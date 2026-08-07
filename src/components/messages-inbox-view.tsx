@@ -6,10 +6,15 @@ import { useCallback, useEffect, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
+import {
+  UnreadBadge,
+  useUnreadMessages,
+} from "@/hooks/use-unread-messages";
 
 type ConversationRow = {
   id: string;
   updatedAt: string;
+  unreadCount?: number;
   other: {
     id: string;
     username: string | null;
@@ -27,6 +32,7 @@ type ConversationRow = {
 export function MessagesInboxView() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { unreadCount, refreshUnread } = useUnreadMessages();
 
   const load = useCallback(async () => {
     const res = await fetch("/api/messages/conversations");
@@ -35,7 +41,8 @@ export function MessagesInboxView() {
       setConversations(data.conversations);
     }
     setLoading(false);
-  }, []);
+    void refreshUnread();
+  }, [refreshUnread]);
 
   useEffect(() => {
     load();
@@ -47,8 +54,19 @@ export function MessagesInboxView() {
         <div className="shrink-0 border-b border-border px-4 py-5 sm:px-6 lg:px-8">
           <p className="type-eyebrow text-muted">Inbox</p>
           <h1 className="type-h1 mt-2 flex items-center gap-2">
-            <MessageSquare className="h-7 w-7 text-accent" />
+            <span className="relative inline-flex">
+              <MessageSquare className="h-7 w-7 text-accent" />
+              <UnreadBadge
+                count={unreadCount}
+                className="-right-2 -top-1 h-5 min-w-5 text-[11px]"
+              />
+            </span>
             Messages
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-sm font-semibold text-accent">
+                {unreadCount} unread
+              </span>
+            )}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
             Direct messages with other artists. Start a chat from an artist
@@ -71,33 +89,62 @@ export function MessagesInboxView() {
             </div>
           ) : (
             <ul className="flex flex-col gap-2">
-              {conversations.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/vault/messages/${c.id}`}
-                    className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-foreground/15"
-                  >
-                    <UserAvatar
-                      src={c.other?.avatarUrl}
-                      name={c.other?.displayName || "Artist"}
-                      size="md"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate font-semibold">
-                          {c.other?.displayName || "Artist"}
-                        </p>
-                        <span className="shrink-0 text-xs text-muted">
-                          {new Date(c.updatedAt).toLocaleDateString()}
-                        </span>
+              {conversations.map((c) => {
+                const unread = c.unreadCount ?? 0;
+                return (
+                  <li key={c.id}>
+                    <Link
+                      href={`/vault/messages/${c.id}`}
+                      className={`flex items-center gap-3 rounded-2xl border p-4 transition hover:border-foreground/15 ${
+                        unread > 0
+                          ? "border-accent/30 bg-accent/5"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        <UserAvatar
+                          src={c.other?.avatarUrl}
+                          name={c.other?.displayName || "Artist"}
+                          size="md"
+                        />
+                        {unread > 0 && (
+                          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-card" />
+                        )}
                       </div>
-                      <p className="mt-0.5 truncate text-sm text-muted">
-                        {c.lastMessage?.body || "No messages yet"}
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p
+                            className={`truncate ${
+                              unread > 0 ? "font-bold" : "font-semibold"
+                            }`}
+                          >
+                            {c.other?.displayName || "Artist"}
+                          </p>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {unread > 0 && (
+                              <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {unread > 99 ? "99+" : unread}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted">
+                              {new Date(c.updatedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <p
+                          className={`mt-0.5 truncate text-sm ${
+                            unread > 0
+                              ? "font-medium text-foreground"
+                              : "text-muted"
+                          }`}
+                        >
+                          {c.lastMessage?.body || "No messages yet"}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { UserAvatar } from "@/components/user-avatar";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
+import { notifyMessagesRead } from "@/hooks/use-unread-messages";
 
 type ChatMessage = {
   id: string;
@@ -48,6 +49,7 @@ export function MessageThreadView({
     const data = await res.json();
     setThread(data.conversation);
     setLoading(false);
+    notifyMessagesRead();
   }, [conversationId]);
 
   useEffect(() => {

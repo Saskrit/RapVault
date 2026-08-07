@@ -24,6 +24,16 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // Mark incoming messages as read when opening the thread.
+  await prisma.message.updateMany({
+    where: {
+      conversationId: id,
+      senderId: { not: session.id },
+      readAt: null,
+    },
+    data: { readAt: new Date() },
+  });
+
   const conversation = await prisma.conversation.findUnique({
     where: { id },
     include: {

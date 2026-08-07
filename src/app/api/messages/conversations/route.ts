@@ -40,6 +40,19 @@ export async function GET() {
     },
   });
 
+  const unreadGroups = await prisma.message.groupBy({
+    by: ["conversationId"],
+    where: {
+      senderId: { not: session.id },
+      readAt: null,
+      conversationId: { in: participations.map((p) => p.conversationId) },
+    },
+    _count: { _all: true },
+  });
+  const unreadByConversation = new Map(
+    unreadGroups.map((g) => [g.conversationId, g._count._all]),
+  );
+
   const conversations = participations
     .map((p) => {
       const other = p.conversation.participants.find(
@@ -49,6 +62,7 @@ export async function GET() {
       return {
         id: p.conversation.id,
         updatedAt: p.conversation.updatedAt.toISOString(),
+        unreadCount: unreadByConversation.get(p.conversation.id) ?? 0,
         other: other
           ? {
               id: other.id,

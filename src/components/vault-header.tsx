@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, MessageSquare, Search, Settings, X } from "lucide-react";
+import { LogOut, MessageSquare, Search, Settings, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  UnreadBadge,
+  useUnreadMessages,
+} from "@/hooks/use-unread-messages";
 
 type VaultHeaderProps = {
   searchQuery?: string;
@@ -28,6 +32,7 @@ export function VaultHeader({
 }: VaultHeaderProps) {
   const showSearch = onSearchChange !== undefined;
   const [label, setLabel] = useState<string | null>(null);
+  const { unreadCount } = useUnreadMessages();
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -118,29 +123,38 @@ export function VaultHeader({
           )}
           <Link
             href="/vault/messages"
-            className={iconBtn}
-            aria-label="Messages"
+            className={`relative ${iconBtn}`}
+            aria-label={
+              unreadCount > 0
+                ? `Messages, ${unreadCount} unread`
+                : "Messages"
+            }
             title="Messages"
           >
             <MessageSquare className="h-4 w-4" />
+            <UnreadBadge count={unreadCount} />
           </Link>
           {label && (
             <Link
               href="/vault/settings"
-              className="hidden max-w-[12rem] items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs text-muted transition hover:border-foreground/20 hover:text-foreground xl:flex"
+              className="hidden max-w-[14rem] items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs text-muted transition hover:border-foreground/20 hover:text-foreground xl:flex"
               title="Profile & settings"
             >
-              <Settings className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex items-center gap-1 text-foreground/80">
+                <UserRound className="h-3.5 w-3.5 shrink-0" />
+                <Settings className="h-3.5 w-3.5 shrink-0" />
+              </span>
               <span className="truncate">{label}</span>
             </Link>
           )}
           <Link
             href="/vault/settings"
-            className={`${iconBtn} xl:hidden`}
+            className={`${iconBtn} w-auto gap-1 px-2.5 xl:hidden`}
             aria-label="Profile & settings"
             title="Profile & settings"
           >
-            <Settings className="h-4 w-4" />
+            <UserRound className="h-4 w-4" />
+            <Settings className="h-3.5 w-3.5" />
           </Link>
           <ThemeToggle />
           <button
