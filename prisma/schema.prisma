@@ -27,6 +27,7 @@ model User {
   recoveryEmail     String?   @unique
   resetToken        String?   @unique
   resetTokenExpires DateTime?
+  notificationsSeenAt DateTime?
   createdAt         DateTime  @default(now())
   folders           Folder[]
   songs             Song[]

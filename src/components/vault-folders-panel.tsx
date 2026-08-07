@@ -75,7 +75,7 @@ export function VaultFoldersPanel({
 }: VaultFoldersPanelProps) {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
-  const { count: networkRequestCount } = useNotifications();
+  const { count: networkRequestCount } = useNotifications(20000);
   const onArtists = pathname.startsWith("/vault/artists");
   const onNetwork = pathname.startsWith("/vault/network");
   const onMessages = pathname.startsWith("/vault/messages");

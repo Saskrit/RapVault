@@ -1,8 +1,16 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  FormEvent,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { UserAvatar } from "@/components/user-avatar";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
@@ -13,6 +21,7 @@ type ChatMessage = {
   body: string;
   senderId: string;
   createdAt: string;
+  readAt?: string | null;
   mine: boolean;
 };
 
@@ -26,6 +35,70 @@ type Thread = {
   } | null;
   messages: ChatMessage[];
 };
+
+type ThreadItem =
+  | { kind: "day"; key: string; label: string }
+  | { kind: "message"; key: string; message: ChatMessage };
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function dayKey(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function formatDayLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const today = startOfDay(new Date());
+  const target = startOfDay(date);
+  const diffDays = Math.round(
+    (today.getTime() - target.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) {
+    return date.toLocaleDateString(undefined, { weekday: "long" });
+  }
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year:
+      date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+  });
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function buildThreadItems(messages: ChatMessage[]): ThreadItem[] {
+  const items: ThreadItem[] = [];
+  let lastDay: string | null = null;
+
+  for (const message of messages) {
+    const key = dayKey(message.createdAt);
+    if (key !== lastDay) {
+      items.push({
+        kind: "day",
+        key: `day-${key}`,
+        label: formatDayLabel(message.createdAt),
+      });
+      lastDay = key;
+    }
+    items.push({ kind: "message", key: message.id, message });
+  }
+
+  return items;
+}
 
 export function MessageThreadView({
   conversationId,
@@ -54,13 +127,18 @@ export function MessageThreadView({
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 8000);
+    const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, [load]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [thread?.messages.length]);
+
+  const items = useMemo(
+    () => buildThreadItems(thread?.messages || []),
+    [thread?.messages],
+  );
 
   async function handleSend(event: FormEvent) {
     event.preventDefault();
@@ -78,7 +156,16 @@ export function MessageThreadView({
         setDraft("");
         setThread((prev) =>
           prev
-            ? { ...prev, messages: [...prev.messages, data.message] }
+            ? {
+                ...prev,
+                messages: [
+                  ...prev.messages,
+                  {
+                    ...data.message,
+                    readAt: data.message.readAt ?? null,
+                  },
+                ],
+              }
             : prev,
         );
       }
@@ -129,38 +216,72 @@ export function MessageThreadView({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-3 sm:px-6 lg:px-8">
               {thread.messages.length === 0 && (
-                <p className="text-center text-sm text-muted">
+                <p className="py-8 text-center text-sm text-muted">
                   Say hello — send the first message.
                 </p>
               )}
-              {thread.messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex ${m.mine ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[min(42rem,85%)] rounded-2xl px-3.5 py-2.5 text-sm ${
-                      m.mine
-                        ? "bg-accent text-white"
-                        : "border border-border bg-card text-foreground"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                    <p
-                      className={`mt-1 text-xs ${
-                        m.mine ? "text-white/70" : "text-muted"
-                      }`}
+
+              {items.map((item) => {
+                if (item.kind === "day") {
+                  return (
+                    <div
+                      key={item.key}
+                      className="flex items-center justify-center py-2"
                     >
-                      {new Date(m.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                      <span className="rounded-md border border-border bg-card px-2.5 py-0.5 text-[11px] font-medium text-muted shadow-sm">
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const m = item.message;
+                const read = Boolean(m.readAt);
+
+                return (
+                  <Fragment key={item.key}>
+                    <div
+                      className={`flex ${m.mine ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[min(18rem,78%)] rounded-2xl px-2.5 py-1.5 text-[13px] leading-snug sm:max-w-[min(22rem,72%)] ${
+                          m.mine
+                            ? "rounded-br-md bg-accent text-white"
+                            : "rounded-bl-md border border-border bg-card text-foreground"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap break-words">
+                          {m.body}
+                        </p>
+                        <div
+                          className={`mt-0.5 flex items-center justify-end gap-1 ${
+                            m.mine ? "text-white/75" : "text-muted"
+                          }`}
+                        >
+                          <span className="text-[10px] tabular-nums leading-none">
+                            {formatTime(m.createdAt)}
+                          </span>
+                          {m.mine && (
+                            <span
+                              className="inline-flex"
+                              title={read ? "Read" : "Sent"}
+                              aria-label={read ? "Read" : "Sent"}
+                            >
+                              {read ? (
+                                <CheckCheck className="h-3.5 w-3.5 shrink-0 text-sky-200" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Fragment>
+                );
+              })}
               <div ref={bottomRef} />
             </div>
 

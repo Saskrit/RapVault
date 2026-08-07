@@ -11,6 +11,7 @@ export type AppNotification = {
   body: string;
   href: string;
   createdAt: string;
+  unread?: boolean;
   artist?: {
     id: string;
     username: string | null;
@@ -24,26 +25,47 @@ export function notifyNotificationsUpdated() {
   window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
 }
 
-export function useNotifications(pollMs = 20000) {
+export function useNotifications(pollMs = 20000, limit?: number) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [count, setCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/notifications");
+      const qs = limit ? `?limit=${limit}` : "";
+      const res = await fetch(`/api/notifications${qs}`);
       if (!res.ok) return;
       const data = (await res.json()) as {
         notifications?: AppNotification[];
-        counts?: { total?: number };
+        counts?: { unread?: number; total?: number };
       };
       setNotifications(data.notifications || []);
-      setCount(
-        typeof data.counts?.total === "number"
-          ? data.counts.total
-          : data.notifications?.length || 0,
+      setUnreadCount(
+        typeof data.counts?.unread === "number"
+          ? data.counts.unread
+          : (data.notifications || []).filter((n) => n.unread).length,
       );
     } catch {
       // ignore offline
+    } finally {
+      setLoading(false);
+    }
+  }, [limit]);
+
+  const markAllRead = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+      if (!res.ok) return false;
+      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+      setUnreadCount(0);
+      notifyNotificationsUpdated();
+      return true;
+    } catch {
+      return false;
     }
   }, []);
 
@@ -65,5 +87,12 @@ export function useNotifications(pollMs = 20000) {
     };
   }, [pollMs, refresh]);
 
-  return { notifications, count, refresh };
+  return {
+    notifications,
+    count: unreadCount,
+    unreadCount,
+    loading,
+    refresh,
+    markAllRead,
+  };
 }

@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, MessageSquare, Search, Settings, UserRound, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Bell,
+  CheckCheck,
+  LogOut,
+  MessageSquare,
+  Search,
+  Settings,
+  UserPlus,
+  UserRound,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Logo, BrandWordmark } from "@/components/logo";
 import { Modal } from "@/components/modal";
+import { UserAvatar } from "@/components/user-avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useNotifications } from "@/hooks/use-notifications";
 import {
   UnreadBadge,
   useUnreadMessages,
@@ -32,6 +44,20 @@ const iconBtn =
 const logoutBtn =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400";
 
+function formatNotifTime(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString();
+}
+
 export function VaultHeader({
   searchQuery = "",
   onSearchChange,
@@ -46,7 +72,16 @@ export function VaultHeader({
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [skipConfirm, setSkipConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [marking, setMarking] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
   const { unreadCount } = useUnreadMessages();
+  const {
+    notifications,
+    unreadCount: notifCount,
+    refresh: refreshNotifs,
+    markAllRead,
+  } = useNotifications(20000, 5);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -65,6 +100,25 @@ export function VaultHeader({
   useEffect(() => {
     setSkipConfirm(preferenceStorageGet(SKIP_LOGOUT_CONFIRM_KEY) === "1");
   }, []);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    void refreshNotifs();
+    function onPointerDown(event: PointerEvent) {
+      if (!notifRef.current?.contains(event.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setNotifOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [notifOpen, refreshNotifs]);
 
   async function performLogout() {
     setLoggingOut(true);
@@ -92,6 +146,15 @@ export function VaultHeader({
     }
     setLogoutOpen(false);
     void performLogout();
+  }
+
+  async function handleMarkAllRead() {
+    setMarking(true);
+    try {
+      await markAllRead();
+    } finally {
+      setMarking(false);
+    }
   }
 
   return (
@@ -162,6 +225,124 @@ export function VaultHeader({
               <Search className="h-4 w-4" />
             </button>
           )}
+
+          <div className="relative" ref={notifRef}>
+            <button
+              type="button"
+              onClick={() => setNotifOpen((open) => !open)}
+              className={`relative ${iconBtn}`}
+              aria-label={
+                notifCount > 0
+                  ? `Notifications, ${notifCount} unread`
+                  : "Notifications"
+              }
+              aria-expanded={notifOpen}
+              title="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              <UnreadBadge count={notifCount} />
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 top-[calc(100%+0.4rem)] z-40 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+                <div className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold tracking-tight">
+                      Notifications
+                    </p>
+                    {notifCount > 0 && (
+                      <p className="text-[11px] text-muted">
+                        {notifCount} unread
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleMarkAllRead()}
+                    disabled={marking || notifCount === 0}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-muted transition hover:bg-sidebar hover:text-foreground disabled:opacity-40"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Mark all as read
+                  </button>
+                </div>
+
+                <div className="max-h-[20rem] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-10 text-center">
+                      <Bell className="mx-auto mb-2 h-7 w-7 text-muted opacity-50" />
+                      <p className="text-sm font-medium">All caught up</p>
+                      <p className="mt-1 text-xs text-muted">
+                        Connection requests will show up here.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul>
+                      {notifications.slice(0, 5).map((item) => (
+                        <li
+                          key={item.id}
+                          className="border-b border-border last:border-b-0"
+                        >
+                          <Link
+                            href={item.href}
+                            onClick={() => setNotifOpen(false)}
+                            className={`flex gap-3 px-3.5 py-3 transition hover:bg-sidebar ${
+                              item.unread ? "bg-accent/[0.04]" : ""
+                            }`}
+                          >
+                            <div className="relative shrink-0">
+                              {item.artist ? (
+                                <UserAvatar
+                                  src={item.artist.avatarUrl}
+                                  name={item.artist.displayName}
+                                  size="sm"
+                                />
+                              ) : (
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-muted">
+                                  <UserPlus className="h-4 w-4" />
+                                </span>
+                              )}
+                              {item.unread && (
+                                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent ring-2 ring-card" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`text-sm leading-snug ${
+                                  item.unread
+                                    ? "font-semibold"
+                                    : "font-medium text-foreground/90"
+                                }`}
+                              >
+                                {item.body}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-muted">
+                                {item.title}
+                                {item.createdAt
+                                  ? ` · ${formatNotifTime(item.createdAt)}`
+                                  : ""}
+                              </p>
+                            </div>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="border-t border-border p-2">
+                  <Link
+                    href="/vault/notifications"
+                    onClick={() => setNotifOpen(false)}
+                    className="flex min-h-9 items-center justify-center rounded-xl text-sm font-semibold text-accent transition hover:bg-accent/10"
+                  >
+                    See all notifications
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+
           <Link
             href="/vault/messages"
             className={`relative ${iconBtn}`}

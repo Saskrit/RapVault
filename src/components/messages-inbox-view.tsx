@@ -29,6 +29,31 @@ type ConversationRow = {
   } | null;
 };
 
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function formatInboxDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const today = startOfDay(new Date());
+  const target = startOfDay(date);
+  const diffDays = Math.round(
+    (today.getTime() - target.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) {
+    return date.toLocaleDateString(undefined, { weekday: "short" });
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function MessagesInboxView() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +152,9 @@ export function MessagesInboxView() {
                               </span>
                             )}
                             <span className="text-xs text-muted">
-                              {new Date(c.updatedAt).toLocaleDateString()}
+                              {formatInboxDate(
+                                c.lastMessage?.createdAt || c.updatedAt,
+                              )}
                             </span>
                           </div>
                         </div>

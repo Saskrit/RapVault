@@ -602,11 +602,17 @@ export function VaultSongsView() {
                           song.isOwner !== false &&
                           !showTrash && (
                             <span
-                              className="inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums text-sky-500"
-                              title="Collaborators"
+                              className="inline-flex max-w-[10rem] items-center gap-0.5 truncate text-xs font-semibold text-sky-500 sm:max-w-[14rem]"
+                              title={song.collaborators
+                                ?.map((c) => c.artist.displayName)
+                                .join(", ")}
                             >
-                              <UsersRound className="h-3 w-3" />
-                              {song.collaborators?.length}
+                              <UsersRound className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                {song.collaborators!.length === 1
+                                  ? song.collaborators![0]!.artist.displayName
+                                  : `${song.collaborators!.length}`}
+                              </span>
                             </span>
                           )}
                         {song.folder && (
@@ -627,7 +633,12 @@ export function VaultSongsView() {
                         ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
                         : song.isCollaborator && song.owner
                           ? `Collab with ${song.owner.displayName} · ${new Date(song.updatedAt).toLocaleDateString()}`
-                          : `${song.status === "draft" ? "Draft" : "Finished"} · ${new Date(song.updatedAt).toLocaleDateString()}`}
+                          : (song.collaborators?.length || 0) > 0 &&
+                              song.isOwner !== false
+                            ? `Collab with ${song.collaborators!
+                                .map((c) => c.artist.displayName)
+                                .join(", ")} · ${new Date(song.updatedAt).toLocaleDateString()}`
+                            : `${song.status === "draft" ? "Draft" : "Finished"} · ${new Date(song.updatedAt).toLocaleDateString()}`}
                     </p>
                   </button>
 

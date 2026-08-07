@@ -469,16 +469,23 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             <button
               type="button"
               onClick={() => setShowCollabModal(true)}
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+              className={`${iconBtn} w-auto max-w-[14rem] gap-1.5 px-2.5 sm:max-w-[18rem] sm:px-3`}
               aria-label="Collaborators"
-              title="Collaborators"
+              title={
+                (song.collaborators?.length || 0) > 0
+                  ? `With ${song.collaborators!
+                      .map((c) => c.artist.displayName)
+                      .join(", ")}`
+                  : "Collaborators"
+              }
             >
               <Users className="h-4 w-4 shrink-0" />
-              <span className="hidden text-sm sm:inline">
-                Collab
+              <span className="hidden min-w-0 truncate text-sm sm:inline">
                 {(song.collaborators?.length || 0) > 0
-                  ? ` (${song.collaborators?.length})`
-                  : ""}
+                  ? song.collaborators!.length === 1
+                    ? song.collaborators![0]!.artist.displayName
+                    : `${song.collaborators!.length} collabs`
+                  : "Collab"}
               </span>
             </button>
             {isOwner && (
@@ -649,7 +656,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 song.isCollaborator
                   ? "You write in blue"
                   : (song.collaborators?.length ?? 0) > 0
-                    ? "Owner text · Collabs write in blue"
+                    ? "Blue = collaborator · Your text = default"
                     : null
               }
               toolbarStats={

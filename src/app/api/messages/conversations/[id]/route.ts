@@ -52,6 +52,7 @@ export async function GET(_request: Request, context: RouteContext) {
           body: true,
           createdAt: true,
           senderId: true,
+          readAt: true,
         },
       },
     },
@@ -81,6 +82,7 @@ export async function GET(_request: Request, context: RouteContext) {
         body: m.body,
         senderId: m.senderId,
         createdAt: m.createdAt.toISOString(),
+        readAt: m.readAt?.toISOString() ?? null,
         mine: m.senderId === session.id,
       })),
     },
@@ -130,6 +132,7 @@ export async function POST(request: Request, context: RouteContext) {
       body: message.body,
       senderId: message.senderId,
       createdAt: message.createdAt.toISOString(),
+      readAt: null,
       mine: true,
     },
   });

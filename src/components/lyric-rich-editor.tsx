@@ -67,6 +67,64 @@ function getOwnerForegroundColor() {
   return value || "#18181b";
 }
 
+function parseCssColorToRgb(input: string): { r: number; g: number; b: number } | null {
+  const value = input.trim().toLowerCase();
+  if (!value) return null;
+  if (value.startsWith("#")) {
+    const hex = value.slice(1);
+    const full =
+      hex.length === 3
+        ? hex
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : hex.length === 6
+          ? hex
+          : null;
+    if (!full) return null;
+    return {
+      r: parseInt(full.slice(0, 2), 16),
+      g: parseInt(full.slice(2, 4), 16),
+      b: parseInt(full.slice(4, 6), 16),
+    };
+  }
+  const rgb = value.match(
+    /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/,
+  );
+  if (!rgb) return null;
+  return { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) };
+}
+
+function isCollabBlueColor(color: string) {
+  const rgb = parseCssColorToRgb(color);
+  if (!rgb) return false;
+  const target = parseCssColorToRgb(COLLAB_WRITER_COLOR)!;
+  return (
+    Math.abs(rgb.r - target.r) <= 25 &&
+    Math.abs(rgb.g - target.g) <= 25 &&
+    Math.abs(rgb.b - target.b) <= 25
+  );
+}
+
+/** Keep collaborator blue visible for every viewer (owner + invitee). */
+function preserveCollabColors(root: HTMLElement) {
+  root.querySelectorAll("font[color], span[style*='color']").forEach((node) => {
+    const el = node as HTMLElement;
+    const raw =
+      el.getAttribute("color") ||
+      el.style.color ||
+      getComputedStyle(el).color;
+    if (!isCollabBlueColor(raw) && el.getAttribute("data-writer") !== "collab") {
+      return;
+    }
+    el.setAttribute("data-writer", "collab");
+    el.style.color = COLLAB_WRITER_COLOR;
+    if (el.tagName === "FONT") {
+      el.removeAttribute("color");
+    }
+  });
+}
+
 function saveSelection(container: HTMLElement) {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -189,6 +247,11 @@ export function LyricRichEditor({
   writerColorRef.current = writerColor;
 
   function applyWriterColor() {
+    const color = writerColorRef.current?.trim();
+    // Only collaborators force a write color. Owners must not call foreColor —
+    // it recolors existing blue collab text when the caret is inside it.
+    if (!color) return;
+
     const editor = editorRef.current;
     if (!editor) return;
     editor.focus();
@@ -197,11 +260,31 @@ export function LyricRichEditor({
     } catch {
       // ignore
     }
-    const color = writerColorRef.current?.trim();
+    document.execCommand("foreColor", false, color);
+  }
+
+  /** If owner types inside blue collab text, break into default-colored text. */
+  function breakOutOfCollabColorIfNeeded() {
+    if (writerColorRef.current?.trim()) return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+    const node = sel.anchorNode;
+    if (!node || !editor.contains(node)) return;
+    const el =
+      node.nodeType === Node.TEXT_NODE
+        ? node.parentElement
+        : (node as Element | null);
+    const collab = el?.closest?.(
+      '[data-writer="collab"]',
+    ) as HTMLElement | null;
+    if (!collab || !editor.contains(collab)) return;
+
     document.execCommand(
-      "foreColor",
+      "insertHTML",
       false,
-      color || getOwnerForegroundColor(),
+      `<span data-writer="owner" style="color:${getOwnerForegroundColor()}">\u200b</span>`,
     );
   }
 
@@ -263,7 +346,8 @@ export function LyricRichEditor({
 
     const selection = saveSelection(editor);
     editor.innerHTML = html || "";
-    lastHtml.current = html;
+    preserveCollabColors(editor);
+    lastHtml.current = editor.innerHTML;
     emittedValue.current = value;
     restoreSelection(editor, selection);
   }, [value]);
@@ -277,6 +361,7 @@ export function LyricRichEditor({
   function syncContent() {
     const editor = editorRef.current;
     if (!editor) return;
+    preserveCollabColors(editor);
     const html = editor.innerHTML;
     lastHtml.current = html;
     emittedValue.current = html;
@@ -314,7 +399,11 @@ export function LyricRichEditor({
       !event.ctrlKey &&
       !event.altKey
     ) {
-      applyWriterColor();
+      if (writerColorRef.current?.trim()) {
+        applyWriterColor();
+      } else {
+        breakOutOfCollabColorIfNeeded();
+      }
     }
 
     if (event.key === "Enter") {
