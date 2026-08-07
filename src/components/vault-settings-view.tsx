@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
+  Cookie,
   Eye,
   ImagePlus,
   KeyRound,
@@ -27,6 +28,8 @@ import {
 } from "react";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { AvatarCropModal } from "@/components/avatar-crop-modal";
+import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
+import { useCookieConsent } from "@/components/cookie-consent-provider";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { UserAvatar } from "@/components/user-avatar";
 import { VaultHeader } from "@/components/vault-header";
@@ -57,7 +60,13 @@ type ProfileUser = {
   createdAt?: string;
 };
 
-type SettingsTab = "profile" | "social" | "account" | "security" | "connected";
+type SettingsTab =
+  | "profile"
+  | "social"
+  | "account"
+  | "security"
+  | "connected"
+  | "privacy";
 
 const GOOGLE_ERRORS: Record<string, string> = {
   google_config: "Google sign-in is not configured yet.",
@@ -79,6 +88,7 @@ const TABS: { id: SettingsTab; label: string; icon: typeof UserRound }[] = [
   { id: "account", label: "Account", icon: Mail },
   { id: "security", label: "Security", icon: KeyRound },
   { id: "connected", label: "Connected", icon: Link2 },
+  { id: "privacy", label: "Privacy", icon: Cookie },
 ];
 
 function FieldMessage({
@@ -108,6 +118,7 @@ function FieldMessage({
 export function VaultSettingsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { consent } = useCookieConsent();
   const fileRef = useRef<HTMLInputElement>(null);
   const photoMenuRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<SettingsTab>("profile");
@@ -1214,6 +1225,66 @@ export function VaultSettingsView() {
                       />
                     </div>
                   )}
+                </div>
+              </section>
+            )}
+
+            {tab === "privacy" && (
+              <section className="rounded-3xl border border-border bg-card">
+                <div className="border-b border-border px-5 py-5 sm:px-7">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    Cookies &amp; storage
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    Control optional preferences and offline cache. Essential
+                    sign-in cookies always stay on.
+                  </p>
+                </div>
+                <div className="space-y-5 px-5 py-6 sm:px-7">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                      {
+                        label: "Essential",
+                        value: "Always on",
+                        on: true,
+                      },
+                      {
+                        label: "Preferences",
+                        value: consent?.preferences ? "Allowed" : "Off",
+                        on: Boolean(consent?.preferences),
+                      },
+                      {
+                        label: "Offline & cache",
+                        value: consent?.functional ? "Allowed" : "Off",
+                        on: Boolean(consent?.functional),
+                      },
+                    ].map((row) => (
+                      <div
+                        key={row.label}
+                        className="rounded-2xl border border-border bg-background px-4 py-3"
+                      >
+                        <p className="text-xs uppercase tracking-wide text-muted">
+                          {row.label}
+                        </p>
+                        <p
+                          className={`mt-1 text-sm font-semibold ${
+                            row.on ? "text-emerald-500" : "text-muted"
+                          }`}
+                        >
+                          {row.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <CookiePreferencesButton label="Manage preferences" />
+                    <Link
+                      href="/cookies"
+                      className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-muted transition hover:border-foreground/20 hover:text-foreground"
+                    >
+                      Cookie policy
+                    </Link>
+                  </div>
                 </div>
               </section>
             )}

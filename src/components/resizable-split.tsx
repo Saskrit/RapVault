@@ -2,6 +2,10 @@
 
 import { Lock, Unlock } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  preferenceStorageGet,
+  preferenceStorageSet,
+} from "@/lib/safe-storage";
 
 type ResizableSplitProps = {
   primary: ReactNode;
@@ -31,7 +35,7 @@ export function ResizableSplit({
   const [locked, setLocked] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
+    const saved = preferenceStorageGet(storageKey);
     if (saved) {
       const parsed = Number(saved);
       if (!Number.isNaN(parsed) && parsed >= minSecondary) {
@@ -39,7 +43,7 @@ export function ResizableSplit({
         setSecondarySize(parsed);
       }
     }
-    setLocked(localStorage.getItem(lockKey) === "true");
+    setLocked(preferenceStorageGet(lockKey) === "true");
   }, [storageKey, lockKey, minSecondary]);
 
   useEffect(() => {
@@ -69,7 +73,7 @@ export function ResizableSplit({
 
     function onUp() {
       setIsDragging(false);
-      localStorage.setItem(storageKey, String(sizeRef.current));
+      preferenceStorageSet(storageKey, String(sizeRef.current));
     }
 
     document.addEventListener("pointermove", onMove);
@@ -88,7 +92,7 @@ export function ResizableSplit({
   function toggleLocked() {
     setLocked((prev) => {
       const next = !prev;
-      localStorage.setItem(lockKey, String(next));
+      preferenceStorageSet(lockKey, String(next));
       if (next) setIsDragging(false);
       return next;
     });

@@ -1,4 +1,10 @@
 import type { Folder, Song } from "@/types";
+import { hasFunctionalConsent } from "@/lib/cookie-consent";
+import {
+  functionalStorageGet,
+  functionalStorageRemove,
+  functionalStorageSet,
+} from "@/lib/safe-storage";
 
 const CACHE_PREFIX = "rapvault-song-v1:";
 const PENDING_KEY = "rapvault-pending-patches-v1";
@@ -29,13 +35,13 @@ type PendingEntry = {
 type PendingStore = Record<string, PendingEntry>;
 
 function canUseStorage() {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
+  return hasFunctionalConsent();
 }
 
 function readPendingStore(): PendingStore {
   if (!canUseStorage()) return {};
   try {
-    const raw = localStorage.getItem(PENDING_KEY);
+    const raw = functionalStorageGet(PENDING_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as PendingStore;
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -46,17 +52,13 @@ function readPendingStore(): PendingStore {
 
 function writePendingStore(store: PendingStore) {
   if (!canUseStorage()) return;
-  try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(store));
-  } catch {
-    // Quota / private mode — ignore; in-memory editor state still works.
-  }
+  functionalStorageSet(PENDING_KEY, JSON.stringify(store));
 }
 
 function readIndex(): string[] {
   if (!canUseStorage()) return [];
   try {
-    const raw = localStorage.getItem(INDEX_KEY);
+    const raw = functionalStorageGet(INDEX_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as string[];
     return Array.isArray(parsed) ? parsed : [];
@@ -67,22 +69,14 @@ function readIndex(): string[] {
 
 function writeIndex(ids: string[]) {
   if (!canUseStorage()) return;
-  try {
-    localStorage.setItem(INDEX_KEY, JSON.stringify([...new Set(ids)]));
-  } catch {
-    // ignore
-  }
+  functionalStorageSet(INDEX_KEY, JSON.stringify([...new Set(ids)]));
 }
 
 export function cacheSong(song: Song) {
   if (!canUseStorage()) return;
-  try {
-    localStorage.setItem(`${CACHE_PREFIX}${song.id}`, JSON.stringify(song));
-    const index = readIndex();
-    if (!index.includes(song.id)) writeIndex([...index, song.id]);
-  } catch {
-    // ignore
-  }
+  functionalStorageSet(`${CACHE_PREFIX}${song.id}`, JSON.stringify(song));
+  const index = readIndex();
+  if (!index.includes(song.id)) writeIndex([...index, song.id]);
 }
 
 export function cacheSongs(songs: Song[]) {
@@ -92,7 +86,7 @@ export function cacheSongs(songs: Song[]) {
 export function getCachedSong(id: string): Song | null {
   if (!canUseStorage()) return null;
   try {
-    const raw = localStorage.getItem(`${CACHE_PREFIX}${id}`);
+    const raw = functionalStorageGet(`${CACHE_PREFIX}${id}`);
     if (!raw) return null;
     return JSON.parse(raw) as Song;
   } catch {
@@ -109,16 +103,12 @@ export function getCachedSongs(): Song[] {
 
 export function removeCachedSong(id: string) {
   if (!canUseStorage()) return;
-  try {
-    localStorage.removeItem(`${CACHE_PREFIX}${id}`);
-    writeIndex(readIndex().filter((item) => item !== id));
-    const store = readPendingStore();
-    if (store[id]) {
-      delete store[id];
-      writePendingStore(store);
-    }
-  } catch {
-    // ignore
+  functionalStorageRemove(`${CACHE_PREFIX}${id}`);
+  writeIndex(readIndex().filter((item) => item !== id));
+  const store = readPendingStore();
+  if (store[id]) {
+    delete store[id];
+    writePendingStore(store);
   }
 }
 
@@ -244,17 +234,13 @@ export function isBrowserOffline() {
 
 export function cacheFolders(folders: Folder[]) {
   if (!canUseStorage()) return;
-  try {
-    localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
-  } catch {
-    // ignore
-  }
+  functionalStorageSet(FOLDERS_KEY, JSON.stringify(folders));
 }
 
 export function getCachedFolders(): Folder[] {
   if (!canUseStorage()) return [];
   try {
-    const raw = localStorage.getItem(FOLDERS_KEY);
+    const raw = functionalStorageGet(FOLDERS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Folder[];
     return Array.isArray(parsed) ? parsed : [];

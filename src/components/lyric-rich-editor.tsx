@@ -21,6 +21,10 @@ import {
   analyzeLyricLines,
 } from "@/lib/lyric-tools";
 import { contentToHtml, stripRichText } from "@/lib/rich-text";
+import {
+  preferenceStorageGet,
+  preferenceStorageSet,
+} from "@/lib/safe-storage";
 
 type LyricRichEditorProps = {
   value: string;
@@ -139,10 +143,10 @@ export function LyricRichEditor({
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
 
   useEffect(() => {
-    const saved = localStorage.getItem("rapvault-rap-tools");
+    const saved = preferenceStorageGet("rapvault-rap-tools");
     if (saved === "true") setRapToolsOpen(true);
 
-    const savedSize = Number(localStorage.getItem(FONT_SIZE_KEY));
+    const savedSize = Number(preferenceStorageGet(FONT_SIZE_KEY));
     if (FONT_SIZES.includes(savedSize as (typeof FONT_SIZES)[number])) {
       setFontSize(savedSize);
     }
@@ -153,7 +157,7 @@ export function LyricRichEditor({
       const index = FONT_SIZES.indexOf(current as (typeof FONT_SIZES)[number]);
       const nextIndex = Math.max(0, Math.min(FONT_SIZES.length - 1, (index === -1 ? 1 : index) + direction));
       const next = FONT_SIZES[nextIndex]!;
-      localStorage.setItem(FONT_SIZE_KEY, String(next));
+      preferenceStorageSet(FONT_SIZE_KEY, String(next));
       return next;
     });
   }
@@ -161,7 +165,7 @@ export function LyricRichEditor({
   function toggleRapTools() {
     setRapToolsOpen((open) => {
       const next = !open;
-      localStorage.setItem("rapvault-rap-tools", String(next));
+      preferenceStorageSet("rapvault-rap-tools", String(next));
       if (!next) {
         setShowSyllables(false);
         setShowRhymes(false);

@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
+import { useCookieConsentOptional } from "@/components/cookie-consent-provider";
 
 const WARM_PATHS = ["/", "/vault", "/~offline", "/manifest.json"];
 
 export function PwaRegister() {
+  const consent = useCookieConsentOptional();
+  const functional = Boolean(consent?.consent?.functional);
+
   useEffect(() => {
+    if (!functional) return;
     if (!("serviceWorker" in navigator)) return;
 
     const register = async () => {
@@ -47,7 +52,7 @@ export function PwaRegister() {
     };
 
     void register();
-  }, []);
+  }, [functional]);
 
   return null;
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { CookieBanner } from "@/components/cookie-banner";
+import { CookieConsentProvider } from "@/components/cookie-consent-provider";
 import { OfflineProvider } from "@/components/offline-provider";
 import { PwaRegister } from "@/components/pwa-register";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -62,10 +64,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <ThemeProvider>
-          <OfflineProvider>{children}</OfflineProvider>
-          <PwaRegister />
-        </ThemeProvider>
+        <CookieConsentProvider>
+          <ThemeProvider>
+            <OfflineProvider>{children}</OfflineProvider>
+            <PwaRegister />
+            <CookieBanner />
+          </ThemeProvider>
+        </CookieConsentProvider>
       </body>
     </html>
   );

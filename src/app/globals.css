@@ -393,3 +393,32 @@ textarea {
     animation: none;
   }
 }
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-reveal-pending {
+  opacity: 0;
+}
+
+.landing-reveal {
+  animation: landing-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal-pending {
+    opacity: 1;
+  }
+
+  .landing-reveal {
+    animation: none;
+  }
+}

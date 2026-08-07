@@ -26,6 +26,10 @@ import { iconBtn, VaultHeader } from "@/components/vault-header";
 import { useOfflineSync } from "@/components/offline-provider";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import {
+  preferenceStorageGet,
+  preferenceStorageSet,
+} from "@/lib/safe-storage";
+import {
   applyPendingToSong,
   cacheSong,
   flushPendingSong,
@@ -67,7 +71,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   }, [song]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("rapvault-spellcheck");
+    const saved = preferenceStorageGet("rapvault-spellcheck");
     if (saved === "false") setSpellCheck(false);
   }, []);
 
@@ -112,7 +116,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   function toggleSpellCheck() {
     setSpellCheck((prev) => {
       const next = !prev;
-      localStorage.setItem("rapvault-spellcheck", String(next));
+      preferenceStorageSet("rapvault-spellcheck", String(next));
       return next;
     });
   }

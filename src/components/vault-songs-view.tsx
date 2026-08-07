@@ -30,6 +30,10 @@ import { VaultShell } from "@/components/vault-shell";
 import { contentSnippet } from "@/lib/rich-text";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import {
+  preferenceStorageGet,
+  preferenceStorageSet,
+} from "@/lib/safe-storage";
+import {
   applyPendingToSong,
   cacheFolders,
   cacheSongs,
@@ -197,7 +201,7 @@ export function VaultSongsView() {
   ]);
 
   useEffect(() => {
-    const savedSize = Number(localStorage.getItem(PAGE_SIZE_KEY));
+    const savedSize = Number(preferenceStorageGet(PAGE_SIZE_KEY));
     if (PAGE_SIZE_OPTIONS.includes(savedSize as (typeof PAGE_SIZE_OPTIONS)[number])) {
       setPageSize(savedSize);
     }
@@ -253,7 +257,7 @@ export function VaultSongsView() {
 
   function changePageSize(next: number) {
     setPageSize(next);
-    localStorage.setItem(PAGE_SIZE_KEY, String(next));
+    preferenceStorageSet(PAGE_SIZE_KEY, String(next));
   }
 
   useEffect(() => {

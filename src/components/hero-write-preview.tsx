@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Bold,
+  CheckCircle2,
   ChevronDown,
   CircleDashed,
   Download,
+  Eye,
+  Globe,
   Italic,
   Link2,
   List,
@@ -27,29 +30,65 @@ import {
   Users,
 } from "lucide-react";
 import { BrandWordmark, Logo } from "@/components/logo";
+import type { HeroPreviewSong, HeroPreviewScriptLine } from "@/lib/hero-preview-song";
 import { RAP_STRUCTURE_LABELS } from "@/lib/lyric-tools";
 
-const SCRIPT = [
-  { kind: "tag" as const, text: "[Verse 1]" },
-  { kind: "line" as const, text: "Started with a vision, pen hit the pad" },
-  { kind: "line" as const, text: "Lines in the vault, never lookin' back" },
-  { kind: "blank" as const, text: "" },
-  { kind: "tag" as const, text: "[Hook]" },
-  { kind: "line" as const, text: "Locked in, never fold" },
-  { kind: "line" as const, text: "Bars on ice, story told" },
+const DEFAULT_SCRIPT: HeroPreviewScriptLine[] = [
+  { kind: "tag", text: "[Verse 1]" },
+  { kind: "line", text: "Started with a vision, pen hit the pad" },
+  { kind: "line", text: "Lines in the vault, never lookin' back" },
+  { kind: "blank", text: "" },
+  { kind: "tag", text: "[Hook]" },
+  { kind: "line", text: "Locked in, never fold" },
+  { kind: "line", text: "Bars on ice, story told" },
 ];
 
 const iconBtn =
   "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted";
 
+function shortBeatUrl(url: string) {
+  try {
+    const u = new URL(url);
+    return `${u.hostname.replace(/^www\./, "")}/…`;
+  } catch {
+    return url.slice(0, 22) || "youtube.com/…";
+  }
+}
+
+type HeroWritePreviewProps = {
+  song?: HeroPreviewSong | null;
+};
+
 /**
  * Scaled-down replica of the real write page — same chrome and panels,
  * compact sizing so the full UI fits in the hero box.
  */
-export function HeroWritePreview() {
+export function HeroWritePreview({ song = null }: HeroWritePreviewProps) {
+  const script = useMemo(
+    () => (song?.script?.length ? song.script : DEFAULT_SCRIPT),
+    [song],
+  );
+  const title = song?.title?.trim() || "Midnight Freestyle";
+  const isFinished = (song?.status ?? "draft") === "finished";
+  const isFavorite = song?.isFavorite ?? true;
+  const isPublic = song?.isPublic ?? false;
+  const beatUrl = song?.beatUrl?.trim() || "";
+  const usernameLabel = song?.username
+    ? song.username.startsWith("@")
+      ? song.username
+      : `@${song.username}`
+    : "@artist";
+
   const [lineIndex, setLineIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [done, setDone] = useState(false);
+  const scriptKey = song?.id ?? "demo";
+
+  useEffect(() => {
+    setLineIndex(0);
+    setCharIndex(0);
+    setDone(false);
+  }, [scriptKey]);
 
   useEffect(() => {
     if (done) {
@@ -61,7 +100,7 @@ export function HeroWritePreview() {
       return () => window.clearTimeout(pause);
     }
 
-    const current = SCRIPT[lineIndex];
+    const current = script[lineIndex];
     if (!current) {
       setDone(true);
       return;
@@ -84,16 +123,16 @@ export function HeroWritePreview() {
     }
 
     const next = window.setTimeout(() => {
-      if (lineIndex >= SCRIPT.length - 1) setDone(true);
+      if (lineIndex >= script.length - 1) setDone(true);
       else {
         setLineIndex((i) => i + 1);
         setCharIndex(0);
       }
     }, current.kind === "tag" ? 300 : 400);
     return () => window.clearTimeout(next);
-  }, [lineIndex, charIndex, done]);
+  }, [lineIndex, charIndex, done, script]);
 
-  const visible = SCRIPT.slice(0, lineIndex + 1).map((row, i) => {
+  const visible = script.slice(0, lineIndex + 1).map((row, i) => {
     if (i < lineIndex) return row.text;
     if (row.kind === "blank") return "";
     return row.text.slice(0, charIndex);
@@ -101,10 +140,25 @@ export function HeroWritePreview() {
 
   const typedText = visible.filter(Boolean).join("\n");
   const words = typedText.trim() ? typedText.trim().split(/\s+/).length : 0;
-  const lines = visible.filter((v, i) => SCRIPT[i]?.kind !== "blank" && v).length;
+  const lines = visible.filter((v, i) => script[i]?.kind !== "blank" && v).length;
+
+  const syllableSamples = script
+    .map((row, i) => ({ row, text: visible[i] ?? row.text, i }))
+    .filter(({ row, text }) => row.kind === "line" && text.trim())
+    .slice(0, 2);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background" aria-hidden>
+      {/* Mac traffic lights — matches sign-in / register chrome */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3 py-2 sm:px-4 sm:py-2.5">
+        <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+        <div className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+        <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
+        <span className="ml-1.5 min-w-0 flex-1 truncate text-[10px] text-muted sm:text-xs">
+          write · {title}
+        </span>
+      </div>
+
       {/* VaultHeader */}
       <div className="flex shrink-0 items-center gap-1.5 border-b border-border bg-card px-2 py-1.5">
         <span className={`${iconBtn} w-auto gap-1 px-1.5`}>
@@ -121,7 +175,7 @@ export function HeroWritePreview() {
           </span>
           <span className="hidden h-6 max-w-[5.5rem] items-center gap-1 truncate rounded-md border border-border bg-background px-1.5 text-[8px] font-medium text-muted sm:inline-flex">
             <Settings className="h-2.5 w-2.5 shrink-0" />
-            @artist
+            {usernameLabel}
           </span>
           <span className={`${iconBtn} sm:hidden`}>
             <Settings className="h-3 w-3" />
@@ -139,7 +193,7 @@ export function HeroWritePreview() {
       <div className="shrink-0 border-b border-border bg-card/50 px-2 py-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <div className="min-w-0 flex-1 basis-24 truncate rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-semibold tracking-tight sm:text-xs">
-            Midnight Freestyle
+            {title}
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             <span className={iconBtn} title="Beat">
@@ -150,15 +204,48 @@ export function HeroWritePreview() {
               <span className="hidden text-[8px] sm:inline">Collab</span>
             </span>
             <span className={iconBtn}>
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <Star
+                className={`h-3 w-3 ${
+                  isFavorite
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-muted"
+                }`}
+              />
             </span>
-            <span className={`${iconBtn} w-auto gap-0.5 px-1.5`}>
-              <CircleDashed className="h-3 w-3" />
-              <span className="hidden text-[8px] sm:inline">Draft</span>
+            <span
+              className={`${iconBtn} w-auto gap-0.5 px-1.5 ${
+                isFinished
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                  : ""
+              }`}
+            >
+              {isFinished ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <CircleDashed className="h-3 w-3" />
+              )}
+              <span className="hidden text-[8px] sm:inline">
+                {isFinished ? "Finished" : "Draft"}
+              </span>
             </span>
-            <span className={`${iconBtn} border-amber-500/40 bg-amber-500/10 text-amber-500`}>
-              <Lock className="h-3 w-3" />
+            <span
+              className={`${iconBtn} ${
+                isPublic
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-500"
+              }`}
+            >
+              {isPublic ? (
+                <Globe className="h-3 w-3" />
+              ) : (
+                <Lock className="h-3 w-3" />
+              )}
             </span>
+            {isPublic && (
+              <span className={`${iconBtn} w-auto gap-0.5 px-1`}>
+                <Eye className="h-3 w-3" />
+              </span>
+            )}
             <span className={`${iconBtn} w-auto gap-0.5 px-1`}>
               <Download className="h-3 w-3" />
               <span className="hidden text-[8px] sm:inline">Download</span>
@@ -174,7 +261,6 @@ export function HeroWritePreview() {
       {/* Lyrics | Beat split */}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_5.5rem] sm:grid-cols-[minmax(0,1fr)_8rem]">
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-border">
-          {/* Lyric toolbar */}
           <div className="shrink-0 border-b border-border">
             <div className="flex flex-wrap items-center gap-0.5 px-1.5 py-1">
               <span className={iconBtn}><Bold className="h-3 w-3" /></span>
@@ -198,8 +284,6 @@ export function HeroWritePreview() {
                   <span className="text-border">·</span>
                   <span>{lines} lines</span>
                   <span className="text-border">·</span>
-                  <span>~0:18</span>
-                  <span className="text-border">·</span>
                   <span className={done || lineIndex > 1 ? "text-green-400" : "text-accent"}>
                     {done || lineIndex > 1 ? "Saved" : "Saving..."}
                   </span>
@@ -211,7 +295,6 @@ export function HeroWritePreview() {
               </span>
             </div>
 
-            {/* Rap tools row (open) */}
             <div className="flex flex-wrap items-center gap-0.5 border-t border-border px-1.5 py-1">
               <span className={`${iconBtn} w-auto gap-0.5 border-accent bg-accent/10 px-1.5 text-accent`}>
                 <Type className="h-3 w-3" />
@@ -234,27 +317,29 @@ export function HeroWritePreview() {
             </div>
           </div>
 
-          {/* Syllable analysis strip */}
           <div className="max-h-12 shrink-0 overflow-hidden border-b border-border bg-sidebar/80 px-2 py-1 text-[8px]">
-            <div className="flex items-baseline gap-2 py-0.5">
-              <span className="min-w-0 flex-1 truncate text-foreground/90">
-                {visible[1] || "Started with a vision…"}
-              </span>
-              <span className="shrink-0 text-muted">10 syl</span>
-            </div>
-            <div className="flex items-baseline gap-2 py-0.5">
-              <span className="min-w-0 flex-1 truncate text-foreground/90">
-                {visible[2] || "Lines in the vault…"}
-              </span>
-              <span className="shrink-0 text-muted">8 syl</span>
-            </div>
+            {(syllableSamples.length
+              ? syllableSamples
+              : [
+                  { text: "Started with a vision…", i: 0 },
+                  { text: "Lines in the vault…", i: 1 },
+                ]
+            ).map((sample) => (
+              <div key={sample.i} className="flex items-baseline gap-2 py-0.5">
+                <span className="min-w-0 flex-1 truncate text-foreground/90">
+                  {sample.text}
+                </span>
+                <span className="shrink-0 text-muted">
+                  {Math.max(1, sample.text.trim().split(/\s+/).length)} syl
+                </span>
+              </div>
+            ))}
           </div>
 
-          {/* Editor surface */}
           <div className="relative min-h-0 flex-1 overflow-hidden bg-editor px-2.5 py-2 font-mono text-[11px] leading-relaxed sm:px-3 sm:py-2.5 sm:text-[12px]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(139,92,246,0.06),_transparent_55%)]" />
             <div className="relative space-y-1">
-              {SCRIPT.map((row, i) => {
+              {script.map((row, i) => {
                 if (i > lineIndex) return null;
                 const text = visible[i] ?? "";
                 const isActive = i === lineIndex && !done;
@@ -280,7 +365,6 @@ export function HeroWritePreview() {
           </div>
         </div>
 
-        {/* BeatPlayerPanel */}
         <div className="flex min-h-0 flex-col bg-sidebar">
           <div className="flex shrink-0 items-center justify-between border-b border-border px-1.5 py-1.5">
             <span className="text-[8px] font-semibold uppercase tracking-wide text-muted sm:text-[9px]">
@@ -294,7 +378,7 @@ export function HeroWritePreview() {
             </p>
             <div className="flex gap-1">
               <div className="min-w-0 flex-1 truncate rounded-md border border-border bg-background px-1.5 py-1 text-[7px] text-muted sm:text-[8px]">
-                youtube.com/…
+                {beatUrl ? shortBeatUrl(beatUrl) : "youtube.com/…"}
               </div>
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border text-muted">
                 <Trash2 className="h-2.5 w-2.5" />
@@ -305,23 +389,35 @@ export function HeroWritePreview() {
             <div className="relative w-full shrink-0 bg-black pt-[56%]">
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
                 <div className="relative flex h-6 w-6 items-center justify-center rounded-full bg-red-600 sm:h-7 sm:w-7">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-red-500/35" />
+                  {beatUrl ? (
+                    <span className="absolute inset-0 animate-ping rounded-full bg-red-500/35" />
+                  ) : null}
                   <Music2 className="relative h-2.5 w-2.5 text-white sm:h-3 sm:w-3" />
                 </div>
-                <p className="px-1 text-center text-[7px] text-muted">YouTube</p>
+                <p className="px-1 text-center text-[7px] text-muted">
+                  {beatUrl ? "YouTube" : "No beat"}
+                </p>
               </div>
             </div>
             <div className="flex shrink-0 items-center justify-between border-t border-border px-1.5 py-1">
-              <span className="truncate text-[7px] text-muted">Synced to this song</span>
+              <span className="truncate text-[7px] text-muted">
+                {beatUrl ? "Synced to this song" : "Paste a beat link"}
+              </span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 border-t border-border px-1.5 py-2">
               <p className="text-[7px] font-medium uppercase tracking-wide text-muted">
                 Beat length
               </p>
               <div className="h-1 overflow-hidden rounded-full bg-border">
-                <div className="hero-beat-bar h-full w-2/5 rounded-full bg-accent" />
+                <div
+                  className={`h-full w-2/5 rounded-full bg-accent ${
+                    beatUrl ? "hero-beat-bar" : ""
+                  }`}
+                />
               </div>
-              <p className="text-[7px] tabular-nums text-muted">0:42 / 2:18</p>
+              <p className="text-[7px] tabular-nums text-muted">
+                {beatUrl ? "0:42 / 2:18" : "— / —"}
+              </p>
             </div>
           </div>
         </div>

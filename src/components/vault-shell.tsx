@@ -13,6 +13,10 @@ import {
   getCachedFolders,
   isBrowserOffline,
 } from "@/lib/offline-songs";
+import {
+  preferenceStorageGet,
+  preferenceStorageSet,
+} from "@/lib/safe-storage";
 
 type VaultShellProps = {
   children: ReactNode;
@@ -106,7 +110,7 @@ export function VaultShell({
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem("rapvault-sidebar");
+    const saved = preferenceStorageGet("rapvault-sidebar");
     if (saved === "closed") setSidebarOpen(false);
   }, []);
 
@@ -128,7 +132,7 @@ export function VaultShell({
   function toggleSidebar() {
     setSidebarOpen((open) => {
       const next = !open;
-      localStorage.setItem("rapvault-sidebar", next ? "open" : "closed");
+      preferenceStorageSet("rapvault-sidebar", next ? "open" : "closed");
       return next;
     });
   }
