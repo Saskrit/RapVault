@@ -454,19 +454,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       </VaultHeader>
 
       <div className="shrink-0 border-b border-border bg-card/50 px-2 py-2 sm:px-3 sm:py-3 lg:px-4">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-center lg:gap-3">
           <input
             id="song-title"
             type="text"
             value={song.title}
             onChange={(e) => scheduleSave({ title: e.target.value })}
             spellCheck={spellCheck}
-            className="min-w-0 w-full rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:w-[min(100%,18rem)] lg:max-w-[18rem] lg:flex-none lg:shrink-0 lg:text-xl xl:w-[min(100%,22rem)] xl:max-w-[22rem] xl:text-2xl"
+            className="min-w-0 w-full rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-xl xl:text-2xl"
             placeholder="Untitled track"
           />
 
-          <div className="flex w-full min-w-0 flex-1 items-center justify-start gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex min-w-0 w-full items-center justify-start gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:overflow-x-auto lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setBeatsOpen((open) => !open)}
