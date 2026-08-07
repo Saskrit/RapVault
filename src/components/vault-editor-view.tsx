@@ -49,6 +49,14 @@ type VaultEditorViewProps = {
   songId: string;
 };
 
+/** Square icon control — fixed size, no label. */
+const toolIcon =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:w-10";
+
+/** Chip control — auto width so icon + label never overflow/overlap. */
+const toolChip =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-background px-2.5 text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:px-3";
+
 export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const { online, refreshPending } = useOfflineSync();
   const [song, setSong] = useState<Song | null>(null);
@@ -454,23 +462,23 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       </VaultHeader>
 
       <div className="shrink-0 border-b border-border bg-card/50 px-2 py-2 sm:px-3 sm:py-3 lg:px-4">
-        <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-center lg:gap-3">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-[60%_40%] lg:items-center lg:gap-4">
           <input
             id="song-title"
             type="text"
             value={song.title}
             onChange={(e) => scheduleSave({ title: e.target.value })}
             spellCheck={spellCheck}
-            className="min-w-0 w-full rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-xl xl:text-2xl"
+            className="box-border min-w-0 w-full max-w-full rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-xl xl:text-2xl"
             placeholder="Untitled track"
           />
 
-          <div className="flex min-w-0 w-full items-center justify-start gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:overflow-x-auto lg:pb-0 [&::-webkit-scrollbar]:hidden">
-            <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+          <div className="box-border flex min-w-0 w-full max-w-full items-center justify-start overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:justify-end lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="inline-flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setBeatsOpen((open) => !open)}
-                className={`${iconBtn} lg:hidden ${
+                className={`${toolIcon} lg:hidden ${
                   beatsOpen
                     ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
                     : ""
@@ -484,7 +492,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               <button
                 type="button"
                 onClick={() => setShowCollabModal(true)}
-                className={`${iconBtn} w-auto max-w-[10rem] gap-1.5 px-2.5 xl:max-w-[14rem] xl:px-3`}
+                className={`${toolChip} max-w-[10rem] xl:max-w-[14rem]`}
                 aria-label="Collaborators"
                 title={
                   (song.collaborators?.length || 0) > 0
@@ -508,7 +516,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 <button
                   type="button"
                   onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-                  className={iconBtn}
+                  className={toolIcon}
                   aria-label="Toggle favorite"
                   title="Favorite"
                 >
@@ -529,7 +537,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                     status: song.status === "finished" ? "draft" : "finished",
                   })
                 }
-                className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
+                className={`${toolChip} ${
                   song.status === "finished"
                     ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
                     : ""
@@ -561,7 +569,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                   onClick={() =>
                     scheduleSave({ isPublic: !Boolean(song.isPublic) })
                   }
-                  className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
+                  className={`${toolChip} ${
                     song.isPublic
                       ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
                       : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
@@ -591,7 +599,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
               {song.isPublic && (
                 <Link
                   href={`/vault/s/${song.id}`}
-                  className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3`}
+                  className={toolChip}
                   title="Public view"
                   aria-label="Open public view"
                 >
@@ -606,11 +614,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 </p>
               )}
 
-              <div ref={downloadMenuRef} className="relative">
+              <div ref={downloadMenuRef} className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setDownloadOpen((open) => !open)}
-                  className={`${iconBtn} w-auto gap-1.5 px-2.5 xl:px-3 ${
+                  className={`${toolChip} ${
                     downloadOpen
                       ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
                       : ""
@@ -655,7 +663,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 <button
                   type="button"
                   onClick={() => setShowDeleteModal(true)}
-                  className={`${iconBtn} hover:border-red-500/50 hover:text-red-400`}
+                  className={`${toolIcon} hover:border-red-500/50 hover:text-red-400`}
                   aria-label="Delete song"
                   title="Delete"
                 >
