@@ -8,7 +8,13 @@ import {
   type BeforeInstallPromptEvent,
 } from "@/lib/pwa-install";
 
-const WARM_PATHS = ["/", "/vault", "/~offline", "/manifest.json"];
+const WARM_PATHS = [
+  "/",
+  "/vault",
+  "/vault/write/local",
+  "/~offline",
+  "/manifest.json",
+];
 
 export function PwaRegister() {
   const consent = useCookieConsentOptional();

@@ -40,6 +40,7 @@ import {
   isOfflineSongId,
   queueSongPatch,
   removeCachedSong,
+  setActiveLocalSongId,
   SONG_ID_REMAP_EVENT,
   type SongPatch,
 } from "@/lib/offline-songs";
@@ -232,6 +233,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     function onRemap(event: Event) {
       const detail = (event as CustomEvent<{ from: string; to: string }>).detail;
       if (!detail || detail.from !== songId) return;
+      setActiveLocalSongId(detail.to);
       router.replace(`/vault/write/${detail.to}`);
     }
     window.addEventListener(SONG_ID_REMAP_EVENT, onRemap);

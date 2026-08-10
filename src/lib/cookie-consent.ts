@@ -48,6 +48,7 @@ export const FUNCTIONAL_STORAGE_KEYS = [
   "rapvault-pending-creates-v1",
   "rapvault-song-index-v1",
   "rapvault-folders-v1",
+  "rapvault-active-local-song",
 ] as const;
 
 const FUNCTIONAL_PREFIX = "rapvault-song-v1:";

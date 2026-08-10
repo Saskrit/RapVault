@@ -41,9 +41,11 @@ import {
   getCachedFolders,
   getCachedSongs,
   isBrowserOffline,
+  navigateToSongEditor,
   queueSongPatch,
   removeCachedSong,
 } from "@/lib/offline-songs";
+import { hasFunctionalConsent } from "@/lib/cookie-consent";
 import type { Folder, Song } from "@/types";
 import { suggestUsernameFromEmail } from "@/lib/username";
 
@@ -282,14 +284,21 @@ export function VaultSongsView() {
   async function handleNewSong() {
     if (showTrash) return;
     const song = await createSong(selectedFolderId);
-    if (!song) return;
+    if (!song) {
+      if (isBrowserOffline() && !hasFunctionalConsent()) {
+        window.alert(
+          "Turn on Functional cookies (offline cache) in cookie settings to create songs offline.",
+        );
+      }
+      return;
+    }
     setFolderDrawerOpen(false);
-    router.push(`/vault/write/${song.id}`);
+    navigateToSongEditor(song.id, router);
   }
 
   function openSong(song: Song) {
     if (showTrash) return;
-    router.push(`/vault/write/${song.id}`);
+    navigateToSongEditor(song.id, router);
   }
 
   async function patchSongLocal(

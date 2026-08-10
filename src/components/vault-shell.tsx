@@ -13,7 +13,9 @@ import {
   createSong,
   getCachedFolders,
   isBrowserOffline,
+  navigateToSongEditor,
 } from "@/lib/offline-songs";
+import { hasFunctionalConsent } from "@/lib/cookie-consent";
 import {
   preferenceStorageGet,
   preferenceStorageSet,
@@ -179,9 +181,16 @@ export function VaultShell({
 
   async function handleNewSong() {
     const song = await createSong(selectedFolderId);
-    if (!song) return;
+    if (!song) {
+      if (isBrowserOffline() && !hasFunctionalConsent()) {
+        window.alert(
+          "Turn on Functional cookies (offline cache) in cookie settings to create songs offline.",
+        );
+      }
+      return;
+    }
     setFolderDrawerOpen(false);
-    router.push(`/vault/write/${song.id}`);
+    navigateToSongEditor(song.id, router);
   }
 
   const folderPanelProps = {

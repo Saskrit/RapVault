@@ -11,7 +11,11 @@ const PENDING_KEY = "rapvault-pending-patches-v1";
 const CREATES_KEY = "rapvault-pending-creates-v1";
 const INDEX_KEY = "rapvault-song-index-v1";
 const FOLDERS_KEY = "rapvault-folders-v1";
-const OFFLINE_ID_PREFIX = "offline:";
+const ACTIVE_LOCAL_KEY = "rapvault-active-local-song";
+/** Stable editor URL that can be precached for offline creates. */
+export const LOCAL_WRITE_PATH = "/vault/write/local";
+/** Avoid `:` in ids — it breaks path routing / caching offline. */
+const OFFLINE_ID_PREFIX = "offline_";
 export const SONG_ID_REMAP_EVENT = "rapvault:song-id-remapped";
 
 export type SongPatch = Partial<
@@ -43,7 +47,56 @@ function canUseStorage() {
 }
 
 export function isOfflineSongId(id: string) {
-  return id.startsWith(OFFLINE_ID_PREFIX);
+  return id.startsWith(OFFLINE_ID_PREFIX) || id.startsWith("offline:");
+}
+
+export function setActiveLocalSongId(id: string) {
+  if (canUseStorage()) {
+    functionalStorageSet(ACTIVE_LOCAL_KEY, id);
+  }
+  try {
+    sessionStorage.setItem(ACTIVE_LOCAL_KEY, id);
+  } catch {
+    // ignore
+  }
+}
+
+export function getActiveLocalSongId(): string | null {
+  const stored = functionalStorageGet(ACTIVE_LOCAL_KEY);
+  if (stored) return stored;
+  try {
+    return sessionStorage.getItem(ACTIVE_LOCAL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Open the editor. Offline + local drafts use a stable precached route so
+ * Next.js / SW soft-nav to a brand-new `/vault/write/[id]` does not 404.
+ */
+export function navigateToSongEditor(
+  songId: string,
+  router?: { push: (href: string) => void; replace?: (href: string) => void },
+  options?: { replace?: boolean },
+) {
+  const useLocal = isBrowserOffline() || isOfflineSongId(songId);
+  const href = useLocal ? LOCAL_WRITE_PATH : `/vault/write/${songId}`;
+
+  if (useLocal) {
+    setActiveLocalSongId(songId);
+  }
+
+  if (isBrowserOffline() || !router) {
+    window.location.assign(href);
+    return;
+  }
+
+  if (options?.replace && router.replace) {
+    router.replace(href);
+  } else {
+    router.push(href);
+  }
 }
 
 function readPendingStore(): PendingStore {

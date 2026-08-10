@@ -1,11 +1,13 @@
 /* RapVault service worker — cache app shell so /vault works offline. */
-const CACHE_VERSION = "rapvault-shell-v3";
+const CACHE_VERSION = "rapvault-shell-v4";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
 
 const PRECACHE_URLS = [
   "/",
+  "/vault",
+  "/vault/write/local",
   "/~offline",
   "/manifest.json",
   "/rapvault-mark.png",
@@ -110,9 +112,15 @@ async function matchByPathname(cacheName, pathname) {
 
 async function offlineFallback(url) {
   if (url.pathname.startsWith("/vault")) {
+    const writeShell = url.pathname.startsWith("/vault/write/")
+      ? (await matchByPathname(PAGE_CACHE, "/vault/write/local")) ||
+        (await matchByPathname(SHELL_CACHE, "/vault/write/local"))
+      : null;
     const vault =
       (await matchByPathname(PAGE_CACHE, url.pathname)) ||
-      (await matchByPathname(PAGE_CACHE, "/vault"));
+      writeShell ||
+      (await matchByPathname(PAGE_CACHE, "/vault")) ||
+      (await matchByPathname(SHELL_CACHE, "/vault"));
     if (vault) return vault;
     return Response.redirect(new URL("/~offline", self.location.origin), 303);
   }
