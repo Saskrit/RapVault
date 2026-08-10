@@ -2,17 +2,18 @@
 
 import {
   Bold,
-  ChevronDown,
-  ChevronUp,
   Italic,
   Link,
   List,
   ListOrdered,
   Quote,
+  Redo2,
   SpellCheck,
   Strikethrough,
   Sparkles,
   Type,
+  Undo2,
+  Wrench,
 } from "lucide-react";
 import {
   useEffect,
@@ -792,6 +793,27 @@ export function LyricRichEditor({
             </button>
           </div>
 
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              className={`${toolBtn} w-9`}
+              title="Undo"
+              aria-label="Undo"
+              onClick={() => runCommand("undo")}
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className={`${toolBtn} w-9`}
+              title="Redo"
+              aria-label="Redo"
+              onClick={() => runCommand("redo")}
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+          </div>
+
           {toolbarStats && (
             <div className="mx-auto flex min-w-0 flex-1 justify-center px-2">
               {toolbarStats}
@@ -854,12 +876,12 @@ export function LyricRichEditor({
           <button
             type="button"
             onClick={toggleRapTools}
-            className={`${toolBtn} hidden ${toolbarStats ? "" : "ml-auto "}gap-1 px-2.5 text-xs font-medium lg:inline-flex ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
-            title={rapToolsOpen ? "Hide rap tools" : "Show rap tools"}
+            className={`${toolBtn} ${toolbarStats ? "" : "ml-auto "}hidden w-9 lg:inline-flex ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : ""}`}
+            title={rapToolsOpen ? "Hide tools" : "Show tools"}
+            aria-label={rapToolsOpen ? "Hide tools" : "Show tools"}
             aria-expanded={rapToolsOpen}
           >
-            Rap tools
-            {rapToolsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <Wrench className="h-4 w-4" />
           </button>
         </div>
 

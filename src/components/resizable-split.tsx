@@ -24,73 +24,101 @@ export function ResizableSplit({
   storageKey = "rapvault-editor-split",
   defaultSecondarySize = 360,
   minPrimary = 280,
-  minSecondary = 240,
+  minSecondary = 280,
 }: ResizableSplitProps) {
   const lockKey = `${storageKey}-locked`;
+  const sizeKeyH = `${storageKey}-h`;
+  const sizeKeyV = `${storageKey}-v`;
   const containerRef = useRef<HTMLDivElement>(null);
   const sizeRef = useRef(defaultSecondarySize);
   const [secondarySize, setSecondarySize] = useState(defaultSecondarySize);
   const [isDragging, setIsDragging] = useState(false);
   const [isVertical, setIsVertical] = useState(false);
   const [locked, setLocked] = useState(false);
+  const dragPointerId = useRef<number | null>(null);
 
-  const effectiveMinPrimary = isVertical ? Math.min(minPrimary, 140) : minPrimary;
+  const effectiveMinPrimary = isVertical ? Math.min(minPrimary, 160) : minPrimary;
   const effectiveMinSecondary = isVertical
-    ? Math.min(minSecondary, 160)
+    ? Math.min(minSecondary, 140)
     : minSecondary;
 
+  function activeSizeKey(vertical: boolean) {
+    return vertical ? sizeKeyV : sizeKeyH;
+  }
+
+  function clampSize(raw: number, containerSize: number, vertical: boolean) {
+    const minP = vertical ? Math.min(minPrimary, 160) : minPrimary;
+    const minS = vertical ? Math.min(minSecondary, 140) : minSecondary;
+    const maxSecondary = Math.max(minS, containerSize - minP);
+    return Math.max(minS, Math.min(maxSecondary, raw));
+  }
+
   useEffect(() => {
-    const saved = preferenceStorageGet(storageKey);
-    if (saved) {
-      const parsed = Number(saved);
-      if (!Number.isNaN(parsed) && parsed >= 120) {
-        sizeRef.current = parsed;
-        setSecondarySize(parsed);
-      }
-    }
     setLocked(preferenceStorageGet(lockKey) === "true");
-  }, [storageKey, lockKey]);
+  }, [lockKey]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
-    const sync = () => setIsVertical(media.matches);
+    const sync = () => {
+      const vertical = media.matches;
+      setIsVertical(vertical);
+
+      const key = activeSizeKey(vertical);
+      const saved =
+        preferenceStorageGet(key) ??
+        // Migrate older single-key preference once.
+        preferenceStorageGet(storageKey);
+      const parsed = saved ? Number(saved) : defaultSecondarySize;
+      const fallback = vertical
+        ? Math.min(defaultSecondarySize, 220)
+        : defaultSecondarySize;
+      const next =
+        !Number.isNaN(parsed) && parsed >= 120 ? parsed : fallback;
+      sizeRef.current = next;
+      setSecondarySize(next);
+    };
     sync();
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keys derived from storageKey
+  }, [storageKey, defaultSecondarySize, sizeKeyH, sizeKeyV]);
 
-  // On phones, keep the beat panel from eating the whole editor.
+  // Keep size inside the container when the viewport/layout changes.
   useEffect(() => {
-    if (!isVertical || !secondaryVisible) return;
+    if (!secondaryVisible) return;
     const container = containerRef.current;
     if (!container) return;
 
-    function clamp() {
+    function clampToContainer() {
       const el = containerRef.current;
       if (!el) return;
-      const h = el.getBoundingClientRect().height;
-      if (h < 80) return;
-      const maxSec = Math.max(effectiveMinSecondary, Math.floor(h * 0.42));
-      const next = Math.max(
-        effectiveMinSecondary,
-        Math.min(maxSec, sizeRef.current),
-      );
-      if (next !== sizeRef.current) {
+      const rect = el.getBoundingClientRect();
+      const containerSize = isVertical ? rect.height : rect.width;
+      if (containerSize < 80) return;
+      const next = clampSize(sizeRef.current, containerSize, isVertical);
+      if (Math.abs(next - sizeRef.current) > 0.5) {
         sizeRef.current = next;
         setSecondarySize(next);
       }
     }
 
-    clamp();
-    const observer = new ResizeObserver(clamp);
+    clampToContainer();
+    const observer = new ResizeObserver(clampToContainer);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [isVertical, secondaryVisible, effectiveMinSecondary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVertical, secondaryVisible, minPrimary, minSecondary]);
 
   useEffect(() => {
     if (!isDragging || locked) return;
 
     function onMove(event: PointerEvent) {
+      if (
+        dragPointerId.current !== null &&
+        event.pointerId !== dragPointerId.current
+      ) {
+        return;
+      }
       const container = containerRef.current;
       if (!container) return;
 
@@ -99,49 +127,52 @@ export function ResizableSplit({
       const raw = isVertical
         ? rect.bottom - event.clientY
         : rect.right - event.clientX;
-      const maxSecondary = Math.max(
-        effectiveMinSecondary,
-        containerSize - effectiveMinPrimary,
-      );
-      const next = Math.max(
-        effectiveMinSecondary,
-        Math.min(maxSecondary, raw),
-      );
-
+      const next = clampSize(raw, containerSize, isVertical);
       sizeRef.current = next;
       setSecondarySize(next);
     }
 
-    function onUp() {
+    function onUp(event: PointerEvent) {
+      if (
+        dragPointerId.current !== null &&
+        event.pointerId !== dragPointerId.current
+      ) {
+        return;
+      }
+      dragPointerId.current = null;
       setIsDragging(false);
-      preferenceStorageSet(storageKey, String(sizeRef.current));
+      preferenceStorageSet(
+        activeSizeKey(isVertical),
+        String(Math.round(sizeRef.current)),
+      );
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     }
 
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onUp);
     document.body.style.cursor = isVertical ? "row-resize" : "col-resize";
     document.body.style.userSelect = "none";
 
     return () => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onUp);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [
-    isDragging,
-    isVertical,
-    locked,
-    effectiveMinPrimary,
-    effectiveMinSecondary,
-    storageKey,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging, isVertical, locked, minPrimary, minSecondary]);
 
   function toggleLocked() {
     setLocked((prev) => {
       const next = !prev;
       preferenceStorageSet(lockKey, String(next));
-      if (next) setIsDragging(false);
+      if (next) {
+        dragPointerId.current = null;
+        setIsDragging(false);
+      }
       return next;
     });
   }
@@ -179,12 +210,20 @@ export function ResizableSplit({
           if (locked) return;
           if ((event.target as HTMLElement).closest("button")) return;
           event.preventDefault();
+          dragPointerId.current = event.pointerId;
+          try {
+            (event.currentTarget as HTMLElement).setPointerCapture(
+              event.pointerId,
+            );
+          } catch {
+            // Older browsers may not support capture.
+          }
           setIsDragging(true);
         }}
         className={`group relative z-10 flex shrink-0 touch-none select-none items-center justify-center ${
           isVertical
-            ? "h-10 w-full border-y border-border lg:h-8"
-            : "w-8 border-x border-border"
+            ? "h-8 w-full border-y border-border"
+            : "w-3 border-x border-border lg:w-2"
         } ${isDragging ? "bg-accent/15" : "bg-sidebar hover:bg-accent/10"} ${
           locked
             ? "cursor-default"
@@ -201,7 +240,7 @@ export function ResizableSplit({
         <button
           type="button"
           onClick={toggleLocked}
-          className={`absolute z-20 flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-muted shadow-sm transition hover:border-accent hover:text-accent lg:h-7 lg:w-7 ${
+          className={`absolute z-20 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-muted shadow-sm transition hover:border-accent hover:text-accent lg:h-7 lg:w-7 ${
             isVertical
               ? "right-2 top-1/2 -translate-y-1/2"
               : "bottom-2 left-1/2 -translate-x-1/2"
@@ -221,8 +260,8 @@ export function ResizableSplit({
         className="min-h-0 shrink-0 overflow-hidden"
         style={
           isVertical
-            ? { height: secondarySize, minHeight: effectiveMinSecondary }
-            : { width: secondarySize, minWidth: effectiveMinSecondary }
+            ? { height: secondarySize }
+            : { width: secondarySize }
         }
       >
         {secondary}
