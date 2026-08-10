@@ -10,14 +10,11 @@ import {
   Redo2,
   SpellCheck,
   Strikethrough,
-  Sparkles,
-  Type,
   Undo2,
   Wrench,
 } from "lucide-react";
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ClipboardEvent,
@@ -30,10 +27,8 @@ import {
 import { Modal } from "@/components/modal";
 import {
   RAP_STRUCTURE_LABELS,
-  RHYME_GROUP_COLORS,
-  analyzeLyricLines,
 } from "@/lib/lyric-tools";
-import { contentToHtml, stripRichText } from "@/lib/rich-text";
+import { contentToHtml } from "@/lib/rich-text";
 import {
   preferenceStorageGet,
   preferenceStorageSet,
@@ -352,8 +347,6 @@ export function LyricRichEditor({
     ? pickedColor
     : writerColor;
   const writerColorRef = useRef(activeWriterColor);
-  const [showSyllables, setShowSyllables] = useState(false);
-  const [showRhymes, setShowRhymes] = useState(false);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -412,8 +405,6 @@ export function LyricRichEditor({
     function syncRapTools() {
       if (!media.matches) {
         setRapToolsOpen(false);
-        setShowSyllables(false);
-        setShowRhymes(false);
         return;
       }
       const saved = preferenceStorageGet("rapvault-rap-tools");
@@ -462,18 +453,9 @@ export function LyricRichEditor({
     setRapToolsOpen((open) => {
       const next = !open;
       preferenceStorageSet("rapvault-rap-tools", String(next));
-      if (!next) {
-        setShowSyllables(false);
-        setShowRhymes(false);
-      }
       return next;
     });
   }
-
-  const lineAnalysis = useMemo(() => {
-    if (!showSyllables && !showRhymes) return [];
-    return analyzeLyricLines(stripRichText(value));
-  }, [value, showSyllables, showRhymes]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -887,27 +869,6 @@ export function LyricRichEditor({
 
         {rapToolsOpen && (
           <div className="hidden lg:block">
-            <div className="flex flex-wrap items-center gap-0.5 border-t border-border px-3 py-1.5 lg:px-6">
-              <button
-                type="button"
-                onClick={() => setShowSyllables((on) => !on)}
-                className={`${toolBtn} gap-1.5 px-2.5 text-xs font-medium ${showSyllables ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
-                title="Toggle syllable count"
-              >
-                <Type className="h-4 w-4" />
-                <span>Syllables</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowRhymes((on) => !on)}
-                className={`${toolBtn} gap-1.5 px-2.5 text-xs font-medium ${showRhymes ? "border-accent bg-accent/10 text-accent" : "w-auto"}`}
-                title="Toggle rhyme highlighting"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span>Rhymes</span>
-              </button>
-            </div>
-
             <div className="flex gap-1.5 overflow-x-auto border-t border-border px-3 py-2 lg:px-6">
               {RAP_STRUCTURE_LABELS.map((label) => (
                 <button
@@ -923,30 +884,6 @@ export function LyricRichEditor({
           </div>
         )}
       </div>
-
-      {rapToolsOpen && (showSyllables || showRhymes) && lineAnalysis.length > 0 && (
-        <div className="hidden max-h-36 shrink-0 overflow-y-auto border-b border-border bg-sidebar/80 px-3 py-2 text-xs lg:block lg:px-6">
-          {lineAnalysis.map((item) => (
-            <div key={`${item.line}-${item.syllables}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-0.5">
-              <span className="min-w-0 flex-1 truncate text-foreground/90">{item.line}</span>
-              {showSyllables && (
-                <span className="shrink-0 text-muted">{item.syllables} syl</span>
-              )}
-              {showRhymes && item.endWord && (
-                <span
-                  className={`shrink-0 font-medium ${
-                    item.rhymeGroup >= 0
-                      ? RHYME_GROUP_COLORS[item.rhymeGroup % RHYME_GROUP_COLORS.length]
-                      : "text-muted"
-                  }`}
-                >
-                  {item.endWord}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
       <div
         ref={editorRef}
