@@ -8,8 +8,11 @@ import {
 
 const CACHE_PREFIX = "rapvault-song-v1:";
 const PENDING_KEY = "rapvault-pending-patches-v1";
+const CREATES_KEY = "rapvault-pending-creates-v1";
 const INDEX_KEY = "rapvault-song-index-v1";
 const FOLDERS_KEY = "rapvault-folders-v1";
+const OFFLINE_ID_PREFIX = "offline:";
+export const SONG_ID_REMAP_EVENT = "rapvault:song-id-remapped";
 
 export type SongPatch = Partial<
   Pick<
@@ -33,9 +36,14 @@ type PendingEntry = {
 };
 
 type PendingStore = Record<string, PendingEntry>;
+type CreatesStore = Record<string, { createdAt: number }>;
 
 function canUseStorage() {
   return hasFunctionalConsent();
+}
+
+export function isOfflineSongId(id: string) {
+  return id.startsWith(OFFLINE_ID_PREFIX);
 }
 
 function readPendingStore(): PendingStore {
@@ -53,6 +61,47 @@ function readPendingStore(): PendingStore {
 function writePendingStore(store: PendingStore) {
   if (!canUseStorage()) return;
   functionalStorageSet(PENDING_KEY, JSON.stringify(store));
+}
+
+function readCreatesStore(): CreatesStore {
+  if (!canUseStorage()) return {};
+  try {
+    const raw = functionalStorageGet(CREATES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as CreatesStore;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCreatesStore(store: CreatesStore) {
+  if (!canUseStorage()) return;
+  functionalStorageSet(CREATES_KEY, JSON.stringify(store));
+}
+
+function markPendingCreate(id: string) {
+  const store = readCreatesStore();
+  store[id] = { createdAt: Date.now() };
+  writeCreatesStore(store);
+}
+
+function clearPendingCreate(id: string) {
+  const store = readCreatesStore();
+  if (!store[id]) return;
+  delete store[id];
+  writeCreatesStore(store);
+}
+
+export function isPendingCreate(id: string) {
+  return Boolean(readCreatesStore()[id]) || isOfflineSongId(id);
+}
+
+function notifySongIdRemapped(from: string, to: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(SONG_ID_REMAP_EVENT, { detail: { from, to } }),
+  );
 }
 
 function readIndex(): string[] {
@@ -110,6 +159,87 @@ export function removeCachedSong(id: string) {
     delete store[id];
     writePendingStore(store);
   }
+  clearPendingCreate(id);
+}
+
+/**
+ * Create a local Untitled song that syncs via POST when back online.
+ */
+export function createOfflineSong(folderId: string | null = null): Song | null {
+  if (!canUseStorage()) return null;
+
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? `${OFFLINE_ID_PREFIX}${crypto.randomUUID()}`
+      : `${OFFLINE_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  const folders = getCachedFolders();
+  let resolvedFolderId = folderId;
+  let folderName: string | null = null;
+
+  if (resolvedFolderId) {
+    folderName = folders.find((f) => f.id === resolvedFolderId)?.name ?? null;
+  } else {
+    const wip = folders.find((f) => f.name === "Work In Progress");
+    if (wip) {
+      resolvedFolderId = wip.id;
+      folderName = wip.name;
+    }
+  }
+
+  const now = new Date().toISOString();
+  const song: Song = {
+    id,
+    title: "Untitled",
+    content: "",
+    genre: "",
+    moodTags: "",
+    status: "draft",
+    isFavorite: false,
+    isPublic: false,
+    viewCount: 0,
+    beatUrl: "",
+    voiceMemoPath: "",
+    folderId: resolvedFolderId,
+    folder:
+      resolvedFolderId && folderName
+        ? { id: resolvedFolderId, name: folderName }
+        : null,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+    isOwner: true,
+    isCollaborator: false,
+    collaborators: [],
+  };
+
+  cacheSong(song);
+  markPendingCreate(id);
+  return song;
+}
+
+/**
+ * POST a new song when online; fall back to a local offline draft.
+ */
+export async function createSong(folderId: string | null = null): Promise<Song | null> {
+  if (!isBrowserOffline()) {
+    try {
+      const res = await fetch("/api/songs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderId }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { song: Song };
+        cacheSong(data.song);
+        return data.song;
+      }
+    } catch {
+      // Network failure — create locally.
+    }
+  }
+
+  return createOfflineSong(folderId);
 }
 
 export function getPendingPatch(id: string): SongPatch | null {
@@ -145,7 +275,52 @@ export function applyPendingToSong(song: Song): Song {
 }
 
 export function getPendingSongIds(): string[] {
-  return Object.keys(readPendingStore());
+  return [
+    ...new Set([
+      ...Object.keys(readPendingStore()),
+      ...Object.keys(readCreatesStore()),
+    ]),
+  ];
+}
+
+function remainingPatchAfterSnapshot(
+  id: string,
+  snapshot: SongPatch,
+): SongPatch {
+  const current = readPendingStore()[id];
+  const remaining: SongPatch = {};
+  if (!current) return remaining;
+  for (const key of Object.keys(current.patch) as (keyof SongPatch)[]) {
+    if (current.patch[key] !== snapshot[key]) {
+      (remaining as Record<string, unknown>)[key] = current.patch[key];
+    }
+  }
+  return remaining;
+}
+
+function remapOfflineSong(
+  tempId: string,
+  serverSong: Song,
+  remaining: SongPatch,
+) {
+  functionalStorageRemove(`${CACHE_PREFIX}${tempId}`);
+  const index = readIndex().filter((item) => item !== tempId);
+  if (!index.includes(serverSong.id)) index.push(serverSong.id);
+  writeIndex(index);
+
+  clearPendingCreate(tempId);
+  clearPendingPatch(tempId);
+
+  if (Object.keys(remaining).length === 0) {
+    cacheSong(serverSong);
+  } else {
+    const next = readPendingStore();
+    next[serverSong.id] = { patch: remaining, updatedAt: Date.now() };
+    writePendingStore(next);
+    cacheSong({ ...serverSong, ...remaining });
+  }
+
+  notifySongIdRemapped(tempId, serverSong.id);
 }
 
 function toApiBody(patch: SongPatch): Record<string, unknown> {
@@ -164,12 +339,106 @@ function toApiBody(patch: SongPatch): Record<string, unknown> {
 }
 
 /**
+ * Create an offline song on the server, then remap local id → server id.
+ */
+export async function flushPendingCreate(
+  id: string,
+): Promise<"ok" | "fail" | "empty"> {
+  if (!readCreatesStore()[id] && !isOfflineSongId(id)) return "empty";
+
+  const cached = getCachedSong(id);
+  if (!cached) {
+    clearPendingCreate(id);
+    clearPendingPatch(id);
+    return "empty";
+  }
+
+  const pending = getPendingPatch(id) ?? {};
+  const snapshot: SongPatch = {
+    title: pending.title ?? cached.title,
+    content: pending.content ?? cached.content,
+    genre: pending.genre ?? cached.genre,
+    moodTags: pending.moodTags ?? cached.moodTags,
+    status: pending.status ?? cached.status,
+    folderId: pending.folderId !== undefined ? pending.folderId : cached.folderId,
+    beatUrl: pending.beatUrl ?? cached.beatUrl,
+    voiceMemoPath: pending.voiceMemoPath ?? cached.voiceMemoPath,
+    isFavorite: pending.isFavorite ?? cached.isFavorite,
+    isPublic: pending.isPublic ?? cached.isPublic,
+  };
+
+  try {
+    const res = await fetch("/api/songs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: snapshot.title,
+        content: snapshot.content,
+        genre: snapshot.genre,
+        moodTags: snapshot.moodTags,
+        status: snapshot.status,
+        folderId: snapshot.folderId,
+      }),
+    });
+    if (!res.ok) return "fail";
+
+    const data = (await res.json()) as { song: Song };
+    const serverSong = data.song;
+
+    // Fields not accepted on create stay as follow-up patches on the real id.
+    const createKeys: (keyof SongPatch)[] = [
+      "title",
+      "content",
+      "genre",
+      "moodTags",
+      "status",
+      "folderId",
+    ];
+    const createSnapshot: SongPatch = {};
+    for (const key of createKeys) {
+      if (snapshot[key] !== undefined) {
+        (createSnapshot as Record<string, unknown>)[key] = snapshot[key];
+      }
+    }
+    const remaining = remainingPatchAfterSnapshot(id, createSnapshot);
+    for (const key of Object.keys(snapshot) as (keyof SongPatch)[]) {
+      if (createKeys.includes(key)) continue;
+      const value = snapshot[key];
+      if (value === undefined) continue;
+      const defaults: Record<string, unknown> = {
+        beatUrl: "",
+        voiceMemoPath: "",
+        isFavorite: false,
+        isPublic: false,
+      };
+      if (value !== defaults[key]) {
+        (remaining as Record<string, unknown>)[key] = value;
+      }
+    }
+
+    remapOfflineSong(id, serverSong, remaining);
+
+    if (Object.keys(remaining).length > 0) {
+      await flushPendingSong(serverSong.id);
+    }
+
+    return "ok";
+  } catch {
+    return "fail";
+  }
+}
+
+/**
  * Flush one song's queued edits to the server.
  * Keeps any fields that changed again while the request was in flight.
  */
 export async function flushPendingSong(
   id: string,
 ): Promise<"ok" | "fail" | "empty"> {
+  if (readCreatesStore()[id] || isOfflineSongId(id)) {
+    return flushPendingCreate(id);
+  }
+
   const store = readPendingStore();
   const entry = store[id];
   if (!entry || Object.keys(entry.patch).length === 0) return "empty";
@@ -186,16 +455,7 @@ export async function flushPendingSong(
 
     const data = (await res.json()) as { song: Song };
     const serverSong = data.song;
-
-    const current = readPendingStore()[id];
-    const remaining: SongPatch = {};
-    if (current) {
-      for (const key of Object.keys(current.patch) as (keyof SongPatch)[]) {
-        if (current.patch[key] !== snapshot[key]) {
-          (remaining as Record<string, unknown>)[key] = current.patch[key];
-        }
-      }
-    }
+    const remaining = remainingPatchAfterSnapshot(id, snapshot);
 
     if (Object.keys(remaining).length === 0) {
       clearPendingPatch(id);
@@ -217,14 +477,25 @@ export async function flushAllPendingSongs(): Promise<{
   synced: number;
   failed: number;
 }> {
-  const ids = getPendingSongIds();
+  const createIds = Object.keys(readCreatesStore());
+  const patchIds = Object.keys(readPendingStore()).filter(
+    (id) => !createIds.includes(id) && !isOfflineSongId(id),
+  );
   let synced = 0;
   let failed = 0;
-  for (const id of ids) {
+
+  for (const id of createIds) {
+    const result = await flushPendingCreate(id);
+    if (result === "ok") synced += 1;
+    else if (result === "fail") failed += 1;
+  }
+
+  for (const id of patchIds) {
     const result = await flushPendingSong(id);
     if (result === "ok") synced += 1;
     else if (result === "fail") failed += 1;
   }
+
   return { synced, failed };
 }
 

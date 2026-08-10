@@ -175,8 +175,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               <>
                 <WifiOff className="h-4 w-4 shrink-0" />
                 <span>
-                  You&apos;re offline — edits save on this device and sync when
-                  you&apos;re back online
+                  You&apos;re offline — new songs and edits save on this device
+                  and sync when you&apos;re back online
                 </span>
               </>
             )}

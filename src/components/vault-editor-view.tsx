@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { CollaboratorsModal } from "@/components/collaborators-modal";
@@ -36,8 +37,10 @@ import {
   getCachedSong,
   getPendingPatch,
   isBrowserOffline,
+  isOfflineSongId,
   queueSongPatch,
   removeCachedSong,
+  SONG_ID_REMAP_EVENT,
   type SongPatch,
 } from "@/lib/offline-songs";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
@@ -58,6 +61,7 @@ const toolChip =
   "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-background px-2.5 text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:px-3";
 
 export function VaultEditorView({ songId }: VaultEditorViewProps) {
+  const router = useRouter();
   const { online, refreshPending } = useOfflineSync();
   const [song, setSong] = useState<Song | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,6 +155,20 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
       const applyLocal = (base: Song) => applyPendingToSong(base);
 
+      // Local-only drafts never exist on the server until sync.
+      if (isOfflineSongId(songId)) {
+        const cached = getCachedSong(songId);
+        if (cached) {
+          setSong(applyLocal(cached));
+          setNotFound(false);
+          setSaveState("offline");
+        } else {
+          setNotFound(true);
+        }
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/songs/${songId}`);
         if (cancelled) return;
@@ -209,6 +227,16 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       cancelled = true;
     };
   }, [songId, refreshPending]);
+
+  useEffect(() => {
+    function onRemap(event: Event) {
+      const detail = (event as CustomEvent<{ from: string; to: string }>).detail;
+      if (!detail || detail.from !== songId) return;
+      router.replace(`/vault/write/${detail.to}`);
+    }
+    window.addEventListener(SONG_ID_REMAP_EVENT, onRemap);
+    return () => window.removeEventListener(SONG_ID_REMAP_EVENT, onRemap);
+  }, [songId, router]);
 
   // Shared collab songs: poll for the other writer's saves while idle.
   const isSharedCollab =

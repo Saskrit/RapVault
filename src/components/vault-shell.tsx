@@ -10,6 +10,7 @@ import { VaultHeader, iconBtn } from "@/components/vault-header";
 import type { Folder } from "@/types";
 import {
   cacheFolders,
+  createSong,
   getCachedFolders,
   isBrowserOffline,
 } from "@/lib/offline-songs";
@@ -177,18 +178,10 @@ export function VaultShell({
   }
 
   async function handleNewSong() {
-    const res = await fetch("/api/songs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        folderId: selectedFolderId,
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setFolderDrawerOpen(false);
-      router.push(`/vault/write/${data.song.id}`);
-    }
+    const song = await createSong(selectedFolderId);
+    if (!song) return;
+    setFolderDrawerOpen(false);
+    router.push(`/vault/write/${song.id}`);
   }
 
   const folderPanelProps = {

@@ -45,6 +45,7 @@ export const PREFERENCE_STORAGE_KEYS = [
 
 export const FUNCTIONAL_STORAGE_KEYS = [
   "rapvault-pending-patches-v1",
+  "rapvault-pending-creates-v1",
   "rapvault-song-index-v1",
   "rapvault-folders-v1",
 ] as const;
