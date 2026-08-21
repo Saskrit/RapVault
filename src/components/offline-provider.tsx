@@ -18,6 +18,8 @@ import {
 } from "@/lib/offline-songs";
 import { useCookieConsentOptional } from "@/components/cookie-consent-provider";
 
+const BANNER_MS = 5000;
+
 type OfflineSyncContextValue = {
   online: boolean;
   pendingCount: number;
@@ -47,22 +49,35 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [banner, setBanner] = useState<"offline" | "back" | null>(null);
   const syncingRef = useRef(false);
   const hadOfflineRef = useRef(false);
-  const bannerTimerRef = useRef<number | null>(null);
-
-  const BANNER_MS = 5000;
+  /** Prevents re-showing / resetting the offline toast within one offline stretch. */
+  const offlineToastShownRef = useRef(false);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearBannerTimer = useCallback(() => {
     if (bannerTimerRef.current !== null) {
-      window.clearTimeout(bannerTimerRef.current);
+      clearTimeout(bannerTimerRef.current);
       bannerTimerRef.current = null;
     }
   }, []);
 
+  const dismissBanner = useCallback(() => {
+    setBanner(null);
+    clearBannerTimer();
+  }, [clearBannerTimer]);
+
   const showBannerFor = useCallback(
     (next: "offline" | "back") => {
+      // Offline toast: only once per offline session (ignore repeated offline events).
+      if (next === "offline") {
+        if (offlineToastShownRef.current) return;
+        offlineToastShownRef.current = true;
+      } else {
+        offlineToastShownRef.current = false;
+      }
+
       setBanner(next);
       clearBannerTimer();
-      bannerTimerRef.current = window.setTimeout(() => {
+      bannerTimerRef.current = setTimeout(() => {
         setBanner(null);
         bannerTimerRef.current = null;
       }, BANNER_MS);
@@ -98,14 +113,23 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshPending]);
 
+  // Keep latest handlers in refs so the listener effect mounts once and never
+  // clears the 5s dismiss timer on dependency churn.
+  const showBannerForRef = useRef(showBannerFor);
+  const dismissBannerRef = useRef(dismissBanner);
+  const refreshPendingRef = useRef(refreshPending);
+  showBannerForRef.current = showBannerFor;
+  dismissBannerRef.current = dismissBanner;
+  refreshPendingRef.current = refreshPending;
+
   useEffect(() => {
     function onOnline() {
       setOnline(true);
+      offlineToastShownRef.current = false;
       if (hadOfflineRef.current) {
-        showBannerFor("back");
+        showBannerForRef.current("back");
       } else {
-        setBanner(null);
-        clearBannerTimer();
+        dismissBannerRef.current();
       }
       hadOfflineRef.current = false;
     }
@@ -113,25 +137,31 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     function onOffline() {
       hadOfflineRef.current = true;
       setOnline(false);
-      showBannerFor("offline");
+      showBannerForRef.current("offline");
     }
 
     const initiallyOffline = isBrowserOffline();
     setOnline(!initiallyOffline);
     if (initiallyOffline) {
       hadOfflineRef.current = true;
-      showBannerFor("offline");
+      showBannerForRef.current("offline");
     }
-    refreshPending();
+    refreshPendingRef.current();
 
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      // Do not clearBannerTimer here — Strict Mode remount would cancel the toast.
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
       clearBannerTimer();
     };
-  }, [refreshPending, showBannerFor, clearBannerTimer]);
+  }, [clearBannerTimer]);
 
   useEffect(() => {
     if (!online) return;
@@ -161,42 +191,47 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     [online, pendingCount, syncing, refreshPending, syncNow],
   );
 
-  const showOffline = banner === "offline";
-  const showBack = banner === "back";
+  if (!banner) {
+    return (
+      <OfflineSyncContext.Provider value={value}>
+        {children}
+      </OfflineSyncContext.Provider>
+    );
+  }
+
+  const isBack = banner === "back";
 
   return (
     <OfflineSyncContext.Provider value={value}>
-      {(showOffline || showBack) && (
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 z-[90] flex justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
+        role="status"
+        aria-live="polite"
+      >
         <div
-          className="pointer-events-none fixed inset-x-0 top-0 z-[90] flex justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
-          role="status"
-          aria-live="polite"
+          className={`flex max-w-lg items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm shadow-lg backdrop-blur ${
+            isBack
+              ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+              : "border-amber-500/35 bg-amber-500/15 text-amber-900 dark:text-amber-200"
+          }`}
         >
-          <div
-            className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm shadow-lg backdrop-blur ${
-              showBack
-                ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-                : "border-amber-500/35 bg-amber-500/15 text-amber-900 dark:text-amber-200"
-            }`}
-          >
-            {showBack ? (
-              <>
-                <Wifi className="h-4 w-4 shrink-0" />
-                <span>You are back Online.</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-4 w-4 shrink-0" />
-                <span>
-                  {!functional
-                    ? "You're offline — turn on Offline & app cache in cookie settings so songs save on this device"
-                    : "You're offline — new songs and edits save on this device and sync when you're back online"}
-                </span>
-              </>
-            )}
-          </div>
+          {isBack ? (
+            <>
+              <Wifi className="h-4 w-4 shrink-0" />
+              <span>You are back Online.</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-4 w-4 shrink-0" />
+              <span>
+                {!functional
+                  ? "You're offline — turn on Offline & app cache in cookie settings so songs save on this device"
+                  : "You're offline — new songs and edits save on this device and sync when you're back online"}
+              </span>
+            </>
+          )}
         </div>
-      )}
+      </div>
       {children}
     </OfflineSyncContext.Provider>
   );
