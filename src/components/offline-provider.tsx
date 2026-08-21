@@ -47,7 +47,28 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [banner, setBanner] = useState<"offline" | "back" | null>(null);
   const syncingRef = useRef(false);
   const hadOfflineRef = useRef(false);
-  const backTimerRef = useRef<number | null>(null);
+  const bannerTimerRef = useRef<number | null>(null);
+
+  const BANNER_MS = 5000;
+
+  const clearBannerTimer = useCallback(() => {
+    if (bannerTimerRef.current !== null) {
+      window.clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = null;
+    }
+  }, []);
+
+  const showBannerFor = useCallback(
+    (next: "offline" | "back") => {
+      setBanner(next);
+      clearBannerTimer();
+      bannerTimerRef.current = window.setTimeout(() => {
+        setBanner(null);
+        bannerTimerRef.current = null;
+      }, BANNER_MS);
+    },
+    [clearBannerTimer],
+  );
 
   const refreshPending = useCallback(() => {
     void getPendingSongIds().then((ids) => setPendingCount(ids.length));
@@ -78,24 +99,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [refreshPending]);
 
   useEffect(() => {
-    function clearBackTimer() {
-      if (backTimerRef.current !== null) {
-        window.clearTimeout(backTimerRef.current);
-        backTimerRef.current = null;
-      }
-    }
-
     function onOnline() {
       setOnline(true);
       if (hadOfflineRef.current) {
-        setBanner("back");
-        clearBackTimer();
-        backTimerRef.current = window.setTimeout(() => {
-          setBanner(null);
-          backTimerRef.current = null;
-        }, 3500);
+        showBannerFor("back");
       } else {
         setBanner(null);
+        clearBannerTimer();
       }
       hadOfflineRef.current = false;
     }
@@ -103,15 +113,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     function onOffline() {
       hadOfflineRef.current = true;
       setOnline(false);
-      clearBackTimer();
-      setBanner("offline");
+      showBannerFor("offline");
     }
 
     const initiallyOffline = isBrowserOffline();
     setOnline(!initiallyOffline);
     if (initiallyOffline) {
       hadOfflineRef.current = true;
-      setBanner("offline");
+      showBannerFor("offline");
     }
     refreshPending();
 
@@ -120,9 +129,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
-      clearBackTimer();
+      clearBannerTimer();
     };
-  }, [refreshPending]);
+  }, [refreshPending, showBannerFor, clearBannerTimer]);
 
   useEffect(() => {
     if (!online) return;
@@ -152,8 +161,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     [online, pendingCount, syncing, refreshPending, syncNow],
   );
 
-  const showOffline = !online || banner === "offline";
-  const showBack = online && banner === "back";
+  const showOffline = banner === "offline";
+  const showBack = banner === "back";
 
   return (
     <OfflineSyncContext.Provider value={value}>
