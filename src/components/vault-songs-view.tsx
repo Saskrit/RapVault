@@ -44,6 +44,7 @@ import {
   navigateToSongEditor,
   queueSongPatch,
   removeCachedSong,
+  warmOfflineLibraryCache,
 } from "@/lib/offline-songs";
 import { hasFunctionalConsent } from "@/lib/cookie-consent";
 import type { Folder, Song } from "@/types";
@@ -126,12 +127,16 @@ export function VaultSongsView() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    void warmOfflineLibraryCache();
+  }, []);
+
   const fetchFolders = useCallback(async () => {
     try {
       const res = await fetch("/api/folders");
       if (res.ok) {
         const data = (await res.json()) as { folders: Folder[] };
-        cacheFolders(data.folders);
+        await cacheFolders(data.folders);
         setFolders(data.folders);
         return;
       }
@@ -139,7 +144,7 @@ export function VaultSongsView() {
       // Fall through to cache when offline.
     }
 
-    const cached = getCachedFolders();
+    const cached = await getCachedFolders();
     if (cached.length > 0 || isBrowserOffline()) {
       setFolders(cached);
     }
@@ -161,44 +166,45 @@ export function VaultSongsView() {
       const res = await fetch(`/api/songs?${params}`);
       if (res.ok) {
         const data = (await res.json()) as { songs: Song[] };
-        cacheSongs(data.songs);
-        setSongs(data.songs.map(applyPendingToSong));
+        await cacheSongs(data.songs);
+        const merged = await Promise.all(
+          data.songs.map((song) => applyPendingToSong(song)),
+        );
+        setSongs(merged);
         return;
       }
     } catch {
       // Fall through to cache when offline.
     }
 
-    if (isBrowserOffline() || getCachedSongs().length > 0) {
-      let cached = getCachedSongs();
-      if (showTrash) {
-        cached = cached.filter((song) => Boolean(song.deletedAt));
-      } else {
-        cached = cached.filter((song) => !song.deletedAt);
-        if (showFavorites) {
-          cached = cached.filter((song) => song.isFavorite);
-        } else if (showCollaborations) {
-          cached = cached.filter(
-            (song) =>
-              song.isCollaborator ||
-              (song.isOwner && (song.collaborators?.length ?? 0) > 0),
-          );
-        } else if (selectedFolderId) {
-          cached = cached.filter((song) => song.folderId === selectedFolderId);
-        }
-      }
-      const q = searchQuery.trim().toLowerCase();
-      if (q) {
+    let cached = await getCachedSongs();
+    if (showTrash) {
+      cached = cached.filter((song) => Boolean(song.deletedAt));
+    } else {
+      cached = cached.filter((song) => !song.deletedAt);
+      if (showFavorites) {
+        cached = cached.filter((song) => song.isFavorite);
+      } else if (showCollaborations) {
         cached = cached.filter(
           (song) =>
-            song.title.toLowerCase().includes(q) ||
-            song.content.toLowerCase().includes(q) ||
-            song.genre.toLowerCase().includes(q) ||
-            song.moodTags.toLowerCase().includes(q),
+            song.isCollaborator ||
+            (song.isOwner && (song.collaborators?.length ?? 0) > 0),
         );
+      } else if (selectedFolderId) {
+        cached = cached.filter((song) => song.folderId === selectedFolderId);
       }
-      setSongs(cached);
     }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      cached = cached.filter(
+        (song) =>
+          song.title.toLowerCase().includes(q) ||
+          song.content.toLowerCase().includes(q) ||
+          song.genre.toLowerCase().includes(q) ||
+          song.moodTags.toLowerCase().includes(q),
+      );
+    }
+    setSongs(cached);
   }, [
     selectedFolderId,
     showFavorites,
@@ -309,7 +315,7 @@ export function VaultSongsView() {
     setSongs((prev) =>
       prev.map((item) => (item.id === song.id ? optimistic : item)),
     );
-    queueSongPatch(song.id, patch);
+    await queueSongPatch(song.id, patch);
 
     if (isBrowserOffline()) return;
 
@@ -321,11 +327,10 @@ export function VaultSongsView() {
       });
       if (res.ok) {
         const data = (await res.json()) as { song: Song };
-        cacheSongs([data.song]);
+        await cacheSongs([data.song]);
+        const merged = await applyPendingToSong(data.song);
         setSongs((prev) =>
-          prev.map((item) =>
-            item.id === song.id ? applyPendingToSong(data.song) : item,
-          ),
+          prev.map((item) => (item.id === song.id ? merged : item)),
         );
       }
     } catch {
@@ -361,7 +366,7 @@ export function VaultSongsView() {
   async function moveSongToBin(song: Song) {
     const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
     if (res.ok) {
-      removeCachedSong(song.id);
+      await removeCachedSong(song.id);
       setSongs((prev) => prev.filter((item) => item.id !== song.id));
       await fetchFolders();
     }
@@ -375,7 +380,7 @@ export function VaultSongsView() {
         method: "DELETE",
       });
       if (res.ok) {
-        removeCachedSong(songToPurge.id);
+        await removeCachedSong(songToPurge.id);
         setSongs((prev) => prev.filter((item) => item.id !== songToPurge.id));
         setSongToPurge(null);
       }

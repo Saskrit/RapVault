@@ -130,7 +130,7 @@ Most rappers still dump bars in Notes, WhatsApp drafts, Google Docs, or random v
 |---------|---------|
 | Marketing landing | Hero write preview, feature sections, auth |
 | PWA | Installable app shell; “Add to home screen” CTA above the landing footer |
-| Offline | Optional offline cache + sync (cookie consent) |
+| Offline | IndexedDB (Dexie) local vault + sync queue to API (cookie consent) |
 | Cookies | Essential / Preferences / Offline categories |
 | Legal | Privacy, Terms, Cookie Policy (first person — solo operator) |
 
@@ -176,6 +176,7 @@ Vault **Stats** overview: writing activity, public engagement, network/collab co
 | Framework | Next.js 16 (App Router), React 19 |
 | Language | TypeScript |
 | Database | PostgreSQL + Prisma 7 |
+| Offline vault | Dexie (IndexedDB) + sync queue to API |
 | Auth | JWT session cookies (`jose`), bcrypt, Google OAuth |
 | Media | Cloudinary (avatars & covers) |
 | Email | Nodemailer (password reset + signup verification codes) |
@@ -328,11 +329,12 @@ RapVault/
 
 - **Auth:** HTTP-only JWT session cookie; passwords hashed with bcrypt; email signup stores a pending record until the verification code succeeds  
 - **Access control:** Song access for owner **or** collaborator (`song-access`)  
-- **Offline:** Consent-gated local caches + pending patch queue; flush when online  
+- **Offline (local-first):** Device vault in **IndexedDB via Dexie** (songs, folders, drafts, public lyrics cache, sync queue). After login + functional cookie consent, hydrate from the API once; edits write locally immediately and flush to PostgreSQL when online. Service worker caches the app shell.  
+- **Cloud:** PostgreSQL via Next.js/Prisma remains the source of truth for accounts, network, messages, collabs, and synced songs. Dexie Cloud URL/env vars are reserved for a future multi-device phase — not a second song database.  
 - **Collab colors:** Stored in HTML (`data-writer="collab"` + inline color); collaborators pick one palette color, owners use default  
 - **Collab sync:** Polling while the editor is idle (not full OT/CRDT yet)  
-- **Notifications:** Derived mainly from pending connection requests + `notificationsSeenAt`  
-- **Cookies:** Essential always on; preferences & offline require consent  
+- **Notifications:** Connection requests + pending collab requests + `notificationsSeenAt`  
+- **Cookies:** Essential always on; preferences & offline IndexedDB / service worker require consent  
 
 ---
 

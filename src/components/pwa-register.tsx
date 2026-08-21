@@ -7,11 +7,18 @@ import {
   setDeferredInstallPrompt,
   type BeforeInstallPromptEvent,
 } from "@/lib/pwa-install";
+import { warmOfflineLibraryCache } from "@/lib/offline-songs";
 
 const WARM_PATHS = [
   "/",
   "/vault",
   "/vault/write/local",
+  "/vault/artists",
+  "/vault/network",
+  "/vault/settings",
+  "/vault/stats",
+  "/vault/notifications",
+  "/vault/messages",
   "/~offline",
   "/manifest.json",
 ];
@@ -44,13 +51,6 @@ export function PwaRegister() {
 
     const register = async () => {
       try {
-        if (
-          process.env.NODE_ENV !== "production" &&
-          process.env.NEXT_PUBLIC_PWA_DEV !== "1"
-        ) {
-          return;
-        }
-
         const reg = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
           updateViaCache: "none",
@@ -67,9 +67,12 @@ export function PwaRegister() {
               }).catch(() => null),
             ),
           );
+          await warmOfflineLibraryCache();
         }
 
-        if (reg.active && navigator.onLine) {
+        if (reg.waiting) {
+          reg.waiting.postMessage("rapvault-skip-waiting");
+        } else if (reg.active && navigator.onLine) {
           reg.active.postMessage("rapvault-skip-waiting");
         }
       } catch {

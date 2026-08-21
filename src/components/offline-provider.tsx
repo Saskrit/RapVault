@@ -16,6 +16,7 @@ import {
   getPendingSongIds,
   isBrowserOffline,
 } from "@/lib/offline-songs";
+import { useCookieConsentOptional } from "@/components/cookie-consent-provider";
 
 type OfflineSyncContextValue = {
   online: boolean;
@@ -38,6 +39,8 @@ export function useOfflineSync() {
 }
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
+  const consent = useCookieConsentOptional();
+  const functional = Boolean(consent?.consent?.functional);
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -47,7 +50,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const backTimerRef = useRef<number | null>(null);
 
   const refreshPending = useCallback(() => {
-    setPendingCount(getPendingSongIds().length);
+    void getPendingSongIds().then((ids) => setPendingCount(ids.length));
   }, []);
 
   const syncNow = useCallback(async () => {
@@ -57,7 +60,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (syncingRef.current) return;
-    if (getPendingSongIds().length === 0) {
+    const pending = await getPendingSongIds();
+    if (pending.length === 0) {
       refreshPending();
       return;
     }
@@ -175,8 +179,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               <>
                 <WifiOff className="h-4 w-4 shrink-0" />
                 <span>
-                  You&apos;re offline — new songs and edits save on this device
-                  and sync when you&apos;re back online
+                  {!functional
+                    ? "You're offline — turn on Offline & app cache in cookie settings so songs save on this device"
+                    : "You're offline — new songs and edits save on this device and sync when you're back online"}
                 </span>
               </>
             )}

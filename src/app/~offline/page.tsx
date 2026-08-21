@@ -13,9 +13,11 @@ function OfflineVaultGate() {
   const [hasVault, setHasVault] = useState(false);
 
   useEffect(() => {
-    const cached = getCachedSongs().filter((song) => !song.deletedAt);
-    setHasVault(cached.length > 0);
-    setReady(true);
+    void getCachedSongs().then((songs) => {
+      const cached = songs.filter((song) => !song.deletedAt);
+      setHasVault(cached.length > 0);
+      setReady(true);
+    });
   }, []);
 
   if (!ready) {

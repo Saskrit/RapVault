@@ -1,13 +1,20 @@
-/* RapVault service worker — cache app shell so /vault works offline. */
-const CACHE_VERSION = "rapvault-shell-v4";
+/* RapVault service worker — cache app shell + vault read APIs for offline. */
+const CACHE_VERSION = "rapvault-shell-v5";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
+const API_CACHE = `${CACHE_VERSION}-api`;
 
 const PRECACHE_URLS = [
   "/",
   "/vault",
   "/vault/write/local",
+  "/vault/artists",
+  "/vault/network",
+  "/vault/settings",
+  "/vault/stats",
+  "/vault/notifications",
+  "/vault/messages",
   "/~offline",
   "/manifest.json",
   "/rapvault-mark.png",
@@ -63,6 +70,18 @@ function isApiRequest(url) {
   return sameOrigin(url) && url.pathname.startsWith("/api/");
 }
 
+/** Read APIs that power the logged-in vault offline. */
+function isCacheableApiGet(url) {
+  if (!isApiRequest(url)) return false;
+  const p = url.pathname;
+  if (p === "/api/auth/me") return true;
+  if (p === "/api/folders") return true;
+  if (p === "/api/songs") return true;
+  if (/^\/api\/songs\/[^/]+$/.test(p)) return true;
+  if (/^\/api\/songs\/[^/]+\/public$/.test(p)) return true;
+  return false;
+}
+
 function isAssetRequest(url) {
   if (!sameOrigin(url)) return false;
   return (
@@ -116,9 +135,15 @@ async function offlineFallback(url) {
       ? (await matchByPathname(PAGE_CACHE, "/vault/write/local")) ||
         (await matchByPathname(SHELL_CACHE, "/vault/write/local"))
       : null;
+    const publicShell = url.pathname.startsWith("/vault/s/")
+      ? (await matchByPathname(PAGE_CACHE, url.pathname)) ||
+        (await matchByPathname(PAGE_CACHE, "/vault")) ||
+        (await matchByPathname(SHELL_CACHE, "/vault"))
+      : null;
     const vault =
       (await matchByPathname(PAGE_CACHE, url.pathname)) ||
       writeShell ||
+      publicShell ||
       (await matchByPathname(PAGE_CACHE, "/vault")) ||
       (await matchByPathname(SHELL_CACHE, "/vault"));
     if (vault) return vault;
@@ -178,6 +203,30 @@ async function cacheFirstAsset(request) {
   }
 }
 
+async function networkFirstApi(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(API_CACHE);
+      try {
+        await cache.put(request, response.clone());
+      } catch {
+        // ignore quota
+      }
+    }
+    return response;
+  } catch {
+    const cached =
+      (await matchIgnoreSearch(API_CACHE, request)) ||
+      (await caches.open(API_CACHE).then((c) => c.match(request)));
+    if (cached) return cached;
+    return new Response(JSON.stringify({ error: "Offline" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -189,7 +238,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (!sameOrigin(url) || isApiRequest(url)) return;
+  if (!sameOrigin(url)) return;
+
+  if (isCacheableApiGet(url)) {
+    event.respondWith(networkFirstApi(request));
+    return;
+  }
+
+  if (isApiRequest(url)) return;
 
   if (isDocumentLike(request, url)) {
     event.respondWith(networkFirstPage(request, url));

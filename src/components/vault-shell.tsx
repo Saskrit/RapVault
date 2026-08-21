@@ -84,7 +84,7 @@ export function VaultShell({
       const res = await fetch("/api/folders");
       if (res.ok) {
         const data = (await res.json()) as { folders: Folder[] };
-        cacheFolders(data.folders);
+        await cacheFolders(data.folders);
         setFolders(data.folders);
         onFoldersChange?.(data.folders);
         return;
@@ -93,7 +93,7 @@ export function VaultShell({
       // Fall through to cache when offline.
     }
 
-    const cached = getCachedFolders();
+    const cached = await getCachedFolders();
     if (cached.length > 0 || isBrowserOffline()) {
       setFolders(cached);
       onFoldersChange?.(cached);

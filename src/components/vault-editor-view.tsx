@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { CollaboratorsModal } from "@/components/collaborators-modal";
@@ -63,6 +63,7 @@ const toolChip =
 
 export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { online, refreshPending } = useOfflineSync();
   const [song, setSong] = useState<Song | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,9 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCollabModal, setShowCollabModal] = useState(false);
+  const [collabInitialTab, setCollabInitialTab] = useState<"active" | "requests">(
+    "active",
+  );
   const [deleting, setDeleting] = useState(false);
   const [spellCheck, setSpellCheck] = useState(false);
   const [beatsOpen, setBeatsOpen] = useState(false);
@@ -82,6 +86,13 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   useEffect(() => {
     songRef.current = song;
   }, [song]);
+
+  useEffect(() => {
+    if (searchParams.get("collab") === "requests") {
+      setCollabInitialTab("requests");
+      setShowCollabModal(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -154,13 +165,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       setLoading(true);
       setNotFound(false);
 
-      const applyLocal = (base: Song) => applyPendingToSong(base);
-
       // Local-only drafts never exist on the server until sync.
       if (isOfflineSongId(songId)) {
-        const cached = getCachedSong(songId);
+        const cached = await getCachedSong(songId);
+        if (cancelled) return;
         if (cached) {
-          setSong(applyLocal(cached));
+          setSong(await applyPendingToSong(cached));
           setNotFound(false);
           setSaveState("offline");
         } else {
@@ -176,18 +186,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
         if (res.ok) {
           const data = (await res.json()) as { song: Song };
-          cacheSong(data.song);
-          const merged = applyLocal(data.song);
+          await cacheSong(data.song);
+          const merged = await applyPendingToSong(data.song);
           setSong(merged);
           setNotFound(false);
 
-          if (getPendingPatch(songId) && !isBrowserOffline()) {
+          const pending = await getPendingPatch(songId);
+          if (pending && !isBrowserOffline()) {
             setSaveState("saving");
             const result = await flushPendingSong(songId);
             refreshPending();
             if (!cancelled) {
-              const cached = getCachedSong(songId);
-              if (cached) setSong(applyLocal(cached));
+              const cached = await getCachedSong(songId);
+              if (cached) setSong(await applyPendingToSong(cached));
               setSaveState(result === "ok" ? "saved" : "offline");
               if (result === "ok") {
                 setTimeout(() => {
@@ -197,22 +208,22 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             }
           }
         } else {
-          const cached = getCachedSong(songId);
+          const cached = await getCachedSong(songId);
           if (cached) {
-            setSong(applyLocal(cached));
+            setSong(await applyPendingToSong(cached));
             setNotFound(false);
-            if (getPendingPatch(songId)) setSaveState("offline");
+            if (await getPendingPatch(songId)) setSaveState("offline");
           } else {
             setNotFound(true);
           }
         }
       } catch {
         if (cancelled) return;
-        const cached = getCachedSong(songId);
+        const cached = await getCachedSong(songId);
         if (cached) {
-          setSong(applyLocal(cached));
+          setSong(await applyPendingToSong(cached));
           setNotFound(false);
-          if (getPendingPatch(songId) || isBrowserOffline()) {
+          if ((await getPendingPatch(songId)) || isBrowserOffline()) {
             setSaveState("offline");
           }
         } else {
@@ -223,7 +234,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       }
     }
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -233,7 +244,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     function onRemap(event: Event) {
       const detail = (event as CustomEvent<{ from: string; to: string }>).detail;
       if (!detail || detail.from !== songId) return;
-      setActiveLocalSongId(detail.to);
+      void setActiveLocalSongId(detail.to);
       router.replace(`/vault/write/${detail.to}`);
     }
     window.addEventListener(SONG_ID_REMAP_EVENT, onRemap);
@@ -253,7 +264,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     async function pullRemote() {
       if (cancelled || document.visibilityState === "hidden") return;
       if (isBrowserOffline()) return;
-      if (pendingPatch.current || getPendingPatch(songId) || saveTimer.current) {
+      if (
+        pendingPatch.current ||
+        (await getPendingPatch(songId)) ||
+        saveTimer.current
+      ) {
         return;
       }
 
@@ -265,10 +280,10 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         const local = songRef.current;
         if (!local) return;
         if (remote.updatedAt <= local.updatedAt) return;
-        if (pendingPatch.current || getPendingPatch(songId)) return;
+        if (pendingPatch.current || (await getPendingPatch(songId))) return;
 
-        cacheSong(remote);
-        setSong(applyPendingToSong(remote));
+        await cacheSong(remote);
+        setSong(await applyPendingToSong(remote));
         setSaveState("saved");
         window.setTimeout(() => {
           if (!cancelled) setSaveState("idle");
@@ -308,12 +323,13 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         return;
       }
 
-      const cached = getCachedSong(id);
+      const cached = await getCachedSong(id);
       if (cached) {
+        const merged = await applyPendingToSong(cached);
         setSong((prev) => {
-          if (!prev) return applyPendingToSong(cached);
+          if (!prev) return merged;
           return {
-            ...applyPendingToSong(cached),
+            ...merged,
             content: prev.content,
             title: prev.title,
             beatUrl: prev.beatUrl,
@@ -321,7 +337,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         });
       }
 
-      if (getPendingPatch(id)) {
+      if (await getPendingPatch(id)) {
         setSaveState("offline");
         return;
       }
@@ -340,7 +356,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
       pendingPatch.current = { ...pendingPatch.current, ...patch };
       setSong((prev) => (prev ? { ...prev, ...patch } : prev));
-      queueSongPatch(id, patch);
+      void queueSongPatch(id, patch);
       refreshPending();
 
       if (isBrowserOffline()) {
@@ -359,8 +375,10 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   // When connectivity returns, push any queued edits.
   useEffect(() => {
     if (!online || !songId) return;
-    if (!getPendingPatch(songId)) return;
-    void persistSong(songId);
+    void (async () => {
+      if (!(await getPendingPatch(songId))) return;
+      await persistSong(songId);
+    })();
   }, [online, songId, persistSong]);
 
   // Flush debounce early if the user leaves the page.
@@ -370,10 +388,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         clearTimeout(saveTimer.current);
         saveTimer.current = null;
       }
-      if (pendingPatch.current || getPendingPatch(songId)) {
-        pendingPatch.current = null;
-        void flushPendingSong(songId);
-      }
+      void (async () => {
+        if (pendingPatch.current || (await getPendingPatch(songId))) {
+          pendingPatch.current = null;
+          await flushPendingSong(songId);
+        }
+      })();
     }
     window.addEventListener("pagehide", flushNow);
     return () => window.removeEventListener("pagehide", flushNow);
@@ -393,7 +413,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     try {
       const res = await fetch(`/api/songs/${song.id}`, { method: "DELETE" });
       if (res.ok) {
-        removeCachedSong(song.id);
+        await removeCachedSong(song.id);
         setShowDeleteModal(false);
         // Hard navigate: soft router.push + refresh can fail after unmounting the
         // YouTube beat player and leave an empty "page couldn't load" state.
@@ -443,16 +463,17 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       const res = await fetch(`/api/songs/${songId}`);
       if (res.ok) {
         const data = (await res.json()) as { song: Song };
-        cacheSong(data.song);
+        await cacheSong(data.song);
+        const merged = await applyPendingToSong(data.song);
         setSong((prev) =>
           prev
             ? {
-                ...applyPendingToSong(data.song),
+                ...merged,
                 content: prev.content,
                 title: prev.title,
                 beatUrl: prev.beatUrl,
               }
-            : applyPendingToSong(data.song),
+            : merged,
         );
       }
     } catch {
@@ -521,7 +542,10 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
               <button
                 type="button"
-                onClick={() => setShowCollabModal(true)}
+                onClick={() => {
+                  setCollabInitialTab("active");
+                  setShowCollabModal(true);
+                }}
                 className={`${toolChip} max-w-[10rem] xl:max-w-[14rem]`}
                 aria-label="Collaborators"
                 title={
@@ -784,10 +808,17 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
       <CollaboratorsModal
         open={showCollabModal}
-        onClose={() => setShowCollabModal(false)}
+        onClose={() => {
+          setShowCollabModal(false);
+          setCollabInitialTab("active");
+          if (searchParams.get("collab") === "requests") {
+            router.replace(`/vault/write/${song.id}`, { scroll: false });
+          }
+        }}
         songId={song.id}
         isOwner={isOwner}
         onChanged={refreshSongMeta}
+        initialTab={collabInitialTab}
       />
     </div>
   );

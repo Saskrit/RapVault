@@ -12,6 +12,7 @@ export const songAccessInclude = {
     },
   },
   collaborators: {
+    where: { status: "accepted" },
     include: {
       user: { select: artistSelect },
     },
@@ -48,6 +49,7 @@ export function serializeSong(
       id: string;
       userId: string;
       createdAt: Date;
+      status?: string;
       user: {
         id: string;
         username: string | null;
@@ -92,6 +94,7 @@ export function serializeSong(
     collaborators: (song.collaborators || []).map((c) => ({
       id: c.id,
       userId: c.userId,
+      status: c.status || "accepted",
       createdAt: c.createdAt.toISOString(),
       artist: toNetworkArtist(c.user),
     })),
@@ -109,7 +112,7 @@ export async function getAccessibleSong(
       ...(options?.includeDeleted ? {} : { deletedAt: null }),
       OR: [
         { userId },
-        { collaborators: { some: { userId } } },
+        { collaborators: { some: { userId, status: "accepted" } } },
       ],
     },
     include: songAccessInclude,

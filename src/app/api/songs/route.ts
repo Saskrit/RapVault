@@ -32,10 +32,10 @@ export async function GET(request: Request) {
       where: {
         deletedAt: null,
         OR: [
-          { collaborators: { some: { userId: user.id } } },
+          { collaborators: { some: { userId: user.id, status: "accepted" } } },
           {
             userId: user.id,
-            collaborators: { some: {} },
+            collaborators: { some: { status: "accepted" } },
           },
         ],
         ...(textFilter ? textFilter : {}),
@@ -75,7 +75,13 @@ export async function GET(request: Request) {
               ...(favorites === "true" ? { isFavorite: true } : {}),
             },
             ...(!folderId && favorites !== "true"
-              ? [{ collaborators: { some: { userId: user.id } } }]
+              ? [
+                  {
+                    collaborators: {
+                      some: { userId: user.id, status: "accepted" },
+                    },
+                  },
+                ]
               : []),
           ],
         },

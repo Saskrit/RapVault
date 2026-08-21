@@ -42,7 +42,7 @@ export async function GET() {
           select: {
             reactions: true,
             views: true,
-            collaborators: true,
+            collaborators: { where: { status: "accepted" } },
           },
         },
       },
@@ -61,10 +61,17 @@ export async function GET() {
       where: { status: "pending", addresseeId: session.id },
     }),
     prisma.songCollaborator.count({
-      where: { song: { userId: session.id, deletedAt: null } },
+      where: {
+        status: "accepted",
+        song: { userId: session.id, deletedAt: null },
+      },
     }),
     prisma.songCollaborator.count({
-      where: { userId: session.id, song: { deletedAt: null } },
+      where: {
+        status: "accepted",
+        userId: session.id,
+        song: { deletedAt: null },
+      },
     }),
     prisma.songReaction.count({
       where: { song: { userId: session.id, deletedAt: null } },

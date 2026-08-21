@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { areConnected } from "@/lib/song-access";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,11 +35,41 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const reacted = await prisma.songReaction.findUnique({
-    where: {
-      songId_userId: { songId: song.id, userId: session.id },
-    },
-  });
+  const isOwner = song.userId === session.id;
+
+  const [reacted, collabRow, connected] = await Promise.all([
+    prisma.songReaction.findUnique({
+      where: {
+        songId_userId: { songId: song.id, userId: session.id },
+      },
+    }),
+    isOwner
+      ? Promise.resolve(null)
+      : prisma.songCollaborator.findUnique({
+          where: {
+            songId_userId: { songId: song.id, userId: session.id },
+          },
+          select: { status: true },
+        }),
+    isOwner
+      ? Promise.resolve(false)
+      : areConnected(session.id, song.userId),
+  ]);
+
+  let collabStatus: "none" | "pending" | "accepted" | "owner" = "none";
+  if (isOwner) {
+    collabStatus = "owner";
+  } else if (collabRow?.status === "accepted") {
+    collabStatus = "accepted";
+  } else if (collabRow?.status === "pending") {
+    collabStatus = "pending";
+  }
+
+  const canRequestCollab =
+    Boolean(song.isPublic) &&
+    !isOwner &&
+    connected &&
+    collabStatus === "none";
 
   return NextResponse.json({
     song: {
@@ -52,7 +83,7 @@ export async function GET(_request: Request, context: RouteContext) {
       viewCount: song.viewCount,
       updatedAt: song.updatedAt.toISOString(),
       createdAt: song.createdAt.toISOString(),
-      isOwner: song.userId === session.id,
+      isOwner,
       author: {
         id: song.user.id,
         username: song.user.username,
@@ -61,6 +92,9 @@ export async function GET(_request: Request, context: RouteContext) {
       },
       fireCount: song._count.reactions,
       fired: Boolean(reacted),
+      connected: Boolean(connected),
+      collabStatus,
+      canRequestCollab,
     },
   });
 }

@@ -121,10 +121,15 @@ model SongCollaborator {
   song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /** pending = collab request; accepted = active collaborator */
+  status    String   @default("accepted")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([songId, userId])
   @@index([userId])
+  @@index([songId, status])
+  @@index([userId, status])
 }
 
 model SongView {

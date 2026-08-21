@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, UserMinus, UserPlus, Users } from "lucide-react";
+import { Check, Loader2, UserMinus, UserPlus, Users, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/modal";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { UserAvatar } from "@/components/user-avatar";
+import { notifyNotificationsUpdated } from "@/hooks/use-notifications";
 
 type Artist = {
   id: string;
@@ -17,6 +18,7 @@ type Artist = {
 type Collaborator = {
   id: string;
   userId: string;
+  status?: string;
   createdAt: string;
   artist: Artist;
 };
@@ -27,6 +29,8 @@ type CollaboratorsModalProps = {
   songId: string;
   isOwner: boolean;
   onChanged?: () => void;
+  /** Open focused on pending requests (from notifications). */
+  initialTab?: "active" | "requests";
 };
 
 export function CollaboratorsModal({
@@ -35,8 +39,10 @@ export function CollaboratorsModal({
   songId,
   isOwner,
   onChanged,
+  initialTab = "active",
 }: CollaboratorsModalProps) {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [pending, setPending] = useState<Collaborator[]>([]);
   const [candidates, setCandidates] = useState<Artist[]>([]);
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +54,7 @@ export function CollaboratorsModal({
     if (res.ok) {
       const data = await res.json();
       setCollaborators(data.collaborators || []);
+      setPending(data.pending || []);
       setCandidates(data.candidates || []);
       setViewerId(data.viewerId || null);
     }
@@ -69,6 +76,25 @@ export function CollaboratorsModal({
       if (res.ok) {
         await load();
         onChanged?.();
+        notifyNotificationsUpdated();
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function respondRequest(userId: string, action: "accept" | "decline") {
+    setBusyId(userId);
+    try {
+      const res = await fetch(`/api/songs/${songId}/collaborators`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, action }),
+      });
+      if (res.ok) {
+        await load();
+        onChanged?.();
+        notifyNotificationsUpdated();
       }
     } finally {
       setBusyId(null);
@@ -85,11 +111,14 @@ export function CollaboratorsModal({
       if (res.ok) {
         await load();
         onChanged?.();
+        notifyNotificationsUpdated();
       }
     } finally {
       setBusyId(null);
     }
   }
+
+  const showRequestsFirst = isOwner && initialTab === "requests" && pending.length > 0;
 
   return (
     <Modal
@@ -98,7 +127,7 @@ export function CollaboratorsModal({
       title="Collaborators"
       description={
         isOwner
-          ? "Invite artists from your network to write on this song together."
+          ? "Invite artists from your network, or accept collab requests on this song."
           : "Artists working on this song with you."
       }
     >
@@ -106,6 +135,60 @@ export function CollaboratorsModal({
         <RapVaultLoading compact label="Loading..." className="min-h-[8rem]" />
       ) : (
         <div className="space-y-6">
+          {isOwner && pending.length > 0 && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                Pending requests
+              </p>
+              <ul className="space-y-2">
+                {pending.map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
+                  >
+                    <UserAvatar
+                      src={c.artist.avatarUrl}
+                      name={c.artist.displayName}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">
+                        {c.artist.displayName}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        @{c.artist.username} · wants to collab
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => respondRequest(c.userId, "accept")}
+                        disabled={busyId === c.userId}
+                        className="inline-flex h-9 items-center gap-1 rounded-xl bg-accent px-2.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        {busyId === c.userId ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => respondRequest(c.userId, "decline")}
+                        disabled={busyId === c.userId}
+                        className="inline-flex h-9 items-center gap-1 rounded-xl border border-border px-2.5 text-xs font-medium text-muted transition hover:border-red-500/40 hover:text-red-400 disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Decline
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
               On this song
@@ -113,7 +196,9 @@ export function CollaboratorsModal({
             {collaborators.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted">
                 <Users className="mx-auto mb-2 h-5 w-5" />
-                No collaborators yet
+                {showRequestsFirst
+                  ? "Accept a request above to add them"
+                  : "No collaborators yet"}
               </div>
             ) : (
               <ul className="space-y-2">

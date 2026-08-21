@@ -126,7 +126,7 @@ export function NotificationsView() {
               </h1>
               <p className="mt-1.5 text-sm text-muted">
                 {unreadCount > 0
-                  ? `${unreadCount} unread connection request${unreadCount === 1 ? "" : "s"}`
+                  ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
                   : "You're all caught up"}
               </p>
             </div>
@@ -152,7 +152,7 @@ export function NotificationsView() {
               <Bell className="mb-3 h-9 w-9 text-muted opacity-50" />
               <p className="text-sm font-medium">No notifications yet</p>
               <p className="mt-1 max-w-xs text-sm text-muted">
-                When someone sends a connection request, it will show up here.
+                When someone sends a connection or collab request, it will show up here.
               </p>
               <Link
                 href="/vault/network"

@@ -4,6 +4,8 @@
  * Preferences + functional/offline cache require explicit opt-in.
  */
 
+import { deleteRapVaultDb } from "@/lib/db";
+
 export const CONSENT_COOKIE = "rapvault_consent";
 export const CONSENT_STORAGE_KEY = "rapvault_consent_v1";
 export const CONSENT_VERSION = 1 as const;
@@ -49,9 +51,12 @@ export const FUNCTIONAL_STORAGE_KEYS = [
   "rapvault-song-index-v1",
   "rapvault-folders-v1",
   "rapvault-active-local-song",
+  "rapvault-me-v1",
+  "rapvault-dexie-migrated-v1",
 ] as const;
 
 const FUNCTIONAL_PREFIX = "rapvault-song-v1:";
+const PUBLIC_SONG_PREFIX = "rapvault-public-song-v1:";
 
 function canUseDom() {
   return typeof window !== "undefined" && typeof document !== "undefined";
@@ -199,9 +204,20 @@ export async function purgeNonEssentialStorage(state: ConsentState) {
       const toRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key?.startsWith(FUNCTIONAL_PREFIX)) toRemove.push(key);
+        if (
+          key?.startsWith(FUNCTIONAL_PREFIX) ||
+          key?.startsWith(PUBLIC_SONG_PREFIX)
+        ) {
+          toRemove.push(key);
+        }
       }
       toRemove.forEach(removeLocalKey);
+    } catch {
+      // ignore
+    }
+
+    try {
+      await deleteRapVaultDb();
     } catch {
       // ignore
     }

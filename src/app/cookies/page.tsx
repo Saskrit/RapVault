@@ -76,7 +76,10 @@ export default function CookiesPage() {
           If you allow Offline &amp; app cache, RapVault may:
         </p>
         <ul>
-          <li>Cache song and folder data locally for offline reading/editing;</li>
+          <li>
+            Store songs, folders, and drafts in IndexedDB (via Dexie) for offline
+            reading and editing;
+          </li>
           <li>Queue pending edits while you are offline and sync when online;</li>
           <li>
             Register a service worker and use the Cache API so the app shell can
@@ -85,8 +88,9 @@ export default function CookiesPage() {
         </ul>
         <p>
           If you decline this category, I unregister the RapVault service
-          worker (when present), delete related caches, and stop writing offline
-          storage keys—reducing the risk of stale cache or storage errors.
+          worker (when present), delete related caches and the IndexedDB vault,
+          and stop writing offline storage—reducing the risk of stale cache or
+          storage errors.
         </p>
       </LegalSection>
 

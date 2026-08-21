@@ -1,14 +1,22 @@
 "use client";
 
-import { ArrowLeft, Eye, Flame, Globe, Music2, Pencil } from "lucide-react";
+import { ArrowLeft, Eye, Globe, Music2, Pencil, Users } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
-import { VaultHeader, iconBtn } from "@/components/vault-header";
+import { VaultHeader, iconBtn, labelBtn } from "@/components/vault-header";
+import { notifyNotificationsUpdated } from "@/hooks/use-notifications";
+import {
+  cachePublicSong,
+  getCachedPublicSong,
+  isBrowserOffline,
+} from "@/lib/offline-songs";
 import { contentToHtml } from "@/lib/rich-text";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
+
+type CollabStatus = "none" | "pending" | "accepted" | "owner";
 
 type PublicSong = {
   id: string;
@@ -27,6 +35,9 @@ type PublicSong = {
   };
   fireCount: number;
   fired: boolean;
+  connected: boolean;
+  collabStatus: CollabStatus;
+  canRequestCollab: boolean;
 };
 
 export function PublicSongView({ songId }: { songId: string }) {
@@ -34,29 +45,51 @@ export function PublicSongView({ songId }: { songId: string }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [firing, setFiring] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [collabMessage, setCollabMessage] = useState<string | null>(null);
   const [beatsOpen, setBeatsOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/songs/${songId}/public`);
-    if (!res.ok) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
-    const data = await res.json();
-    setSong(data.song);
-    setLoading(false);
-
-    await fetch(`/api/songs/${songId}/view`, { method: "POST" })
-      .then((r) => r.json())
-      .then((v) => {
-        if (typeof v.viewCount === "number") {
-          setSong((prev) =>
-            prev ? { ...prev, viewCount: v.viewCount } : prev,
-          );
+    try {
+      const res = await fetch(`/api/songs/${songId}/public`);
+      if (!res.ok) {
+        const cached = await getCachedPublicSong(songId);
+        if (cached) {
+          setSong(cached as PublicSong);
+          setLoading(false);
+          return;
         }
-      })
-      .catch(() => {});
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      const next = data.song as PublicSong;
+      await cachePublicSong(next);
+      setSong(next);
+      setLoading(false);
+
+      if (!isBrowserOffline()) {
+        await fetch(`/api/songs/${songId}/view`, { method: "POST" })
+          .then((r) => r.json())
+          .then((v) => {
+            if (typeof v.viewCount === "number") {
+              setSong((prev) =>
+                prev ? { ...prev, viewCount: v.viewCount } : prev,
+              );
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {
+      const cached = await getCachedPublicSong(songId);
+      if (cached) {
+        setSong(cached as PublicSong);
+      } else {
+        setNotFound(true);
+      }
+      setLoading(false);
+    }
   }, [songId]);
 
   useEffect(() => {
@@ -78,19 +111,67 @@ export function PublicSongView({ songId }: { songId: string }) {
   }, [song?.beatUrl]);
 
   async function toggleFire() {
-    if (!song || firing) return;
+    if (!song || firing || song.isOwner) return;
+    if (isBrowserOffline()) return;
     setFiring(true);
     try {
       const res = await fetch(`/api/songs/${songId}/react`, { method: "POST" });
       if (!res.ok) return;
       const data = await res.json();
-      setSong((prev) =>
-        prev
-          ? { ...prev, fired: data.fired, fireCount: data.fireCount }
-          : prev,
-      );
+      const next = song
+        ? {
+            ...song,
+            fired: data.fired as boolean,
+            fireCount: data.fireCount as number,
+          }
+        : null;
+      if (next) {
+        setSong(next);
+        await cachePublicSong(next);
+      }
     } finally {
       setFiring(false);
+    }
+  }
+
+  async function requestCollab() {
+    if (!song || requesting || !song.canRequestCollab) return;
+    if (isBrowserOffline()) {
+      setCollabMessage("Connect to the internet to request a collab.");
+      return;
+    }
+    setRequesting(true);
+    setCollabMessage(null);
+    try {
+      const res = await fetch(`/api/songs/${songId}/collaborators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCollabMessage(
+          typeof data.error === "string"
+            ? data.error
+            : "Could not send collab request",
+        );
+        return;
+      }
+      const next = song
+        ? {
+            ...song,
+            collabStatus: "pending" as const,
+            canRequestCollab: false,
+          }
+        : null;
+      if (next) {
+        setSong(next);
+        await cachePublicSong(next);
+      }
+      setCollabMessage("Collab request sent — waiting for the owner.");
+      notifyNotificationsUpdated();
+    } finally {
+      setRequesting(false);
     }
   }
 
@@ -122,7 +203,7 @@ export function PublicSongView({ songId }: { songId: string }) {
       <VaultHeader>
         <Link
           href={song.isOwner ? "/vault" : backHref}
-          className={`${iconBtn} flex w-auto items-center gap-1.5 px-3 text-sm font-medium`}
+          className={labelBtn}
           aria-label="Back"
         >
           <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -153,7 +234,7 @@ export function PublicSongView({ songId }: { songId: string }) {
             </p>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5">
             <button
               type="button"
               onClick={() => setBeatsOpen((open) => !open)}
@@ -179,37 +260,91 @@ export function PublicSongView({ songId }: { songId: string }) {
             {song.isOwner && (
               <Link
                 href={`/vault/write/${song.id}`}
-                className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3`}
+                className={labelBtn}
                 title="Edit view"
                 aria-label="Open edit view"
               >
                 <Pencil className="h-4 w-4 shrink-0" />
-                <span className="hidden text-sm sm:inline">Edit</span>
+                <span className="hidden sm:inline">Edit</span>
               </Link>
             )}
 
-            <button
-              type="button"
-              onClick={toggleFire}
-              disabled={firing}
-              className={`${iconBtn} w-auto gap-1.5 px-2.5 sm:px-3 ${
-                song.fired
-                  ? "border-orange-500/40 bg-orange-500/15 text-orange-500"
-                  : "hover:border-orange-500/40 hover:text-orange-500"
-              }`}
-              aria-label={song.fired ? "Remove fire" : "React with fire"}
-              title="Fire"
-            >
-              <Flame
-                className={`h-4 w-4 ${song.fired ? "fill-orange-500" : ""}`}
-                aria-hidden
-              />
-              <span className="text-sm font-semibold tabular-nums">
-                {song.fireCount}
+            {song.canRequestCollab && (
+              <button
+                type="button"
+                onClick={() => void requestCollab()}
+                disabled={requesting}
+                className={`${labelBtn} border-accent/40 text-accent hover:border-accent hover:bg-accent/10 hover:text-accent`}
+                aria-label="Request to collaborate"
+                title="Request collab"
+              >
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">
+                  {requesting ? "Sending..." : "Request collab"}
+                </span>
+              </button>
+            )}
+
+            {song.collabStatus === "pending" && !song.isOwner && (
+              <span
+                className={`${labelBtn} pointer-events-none border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300`}
+              >
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Request pending</span>
               </span>
-            </button>
+            )}
+
+            {song.collabStatus === "accepted" && !song.isOwner && (
+              <Link
+                href={`/vault/write/${song.id}`}
+                className={`${labelBtn} border-accent/40 text-accent`}
+              >
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Open collab</span>
+              </Link>
+            )}
+
+            {!song.isOwner && (
+              <button
+                type="button"
+                onClick={toggleFire}
+                disabled={firing || isBrowserOffline()}
+                className={`${labelBtn} min-w-[2.75rem] ${
+                  song.fired
+                    ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:text-orange-400"
+                    : "hover:border-orange-500/40 hover:text-orange-500"
+                }`}
+                aria-label={song.fired ? "Remove fire" : "React with fire"}
+                title="Fire"
+              >
+                <span className="text-base leading-none" aria-hidden>
+                  🔥
+                </span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {song.fireCount}
+                </span>
+              </button>
+            )}
+
+            {song.isOwner && (
+              <span
+                className={`${labelBtn} pointer-events-none min-w-[2.75rem]`}
+                title="Fires"
+                aria-label={`${song.fireCount} fires`}
+              >
+                <span className="text-base leading-none" aria-hidden>
+                  🔥
+                </span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {song.fireCount}
+                </span>
+              </span>
+            )}
           </div>
         </div>
+        {collabMessage && (
+          <p className="mt-2 text-xs text-muted sm:text-sm">{collabMessage}</p>
+        )}
       </div>
 
       {/* Same split layout as edit view */}

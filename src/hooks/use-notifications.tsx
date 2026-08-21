@@ -6,7 +6,7 @@ export const NOTIFICATIONS_UPDATED_EVENT = "rapvault:notifications-updated";
 
 export type AppNotification = {
   id: string;
-  type: "network_request";
+  type: "network_request" | "collab_request";
   title: string;
   body: string;
   href: string;

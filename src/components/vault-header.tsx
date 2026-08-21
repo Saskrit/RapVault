@@ -26,6 +26,7 @@ import {
   preferenceStorageGet,
   preferenceStorageSet,
 } from "@/lib/safe-storage";
+import { cacheMe, getCachedMe } from "@/lib/offline-songs";
 
 type VaultHeaderProps = {
   searchQuery?: string;
@@ -40,10 +41,14 @@ const SKIP_LOGOUT_CONFIRM_KEY = "rapvault-skip-logout-confirm";
 
 /** Touch-friendly on phones; same visual size on desktop (lg+). */
 const iconBtn =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:w-10";
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:w-10";
+
+/** Labeled header/tool control — auto width so icon + text never clip. */
+const labelBtn =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-background px-2.5 text-sm font-medium text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:px-3";
 
 const logoutBtn =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400 sm:h-10 sm:w-10";
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400/90 transition active:scale-95 hover:border-red-500/45 hover:bg-red-500/15 hover:text-red-400 sm:h-10 sm:w-10";
 
 const headerIcon = "h-4 w-4";
 
@@ -87,17 +92,34 @@ export function VaultHeader({
   } = useNotifications(20000, 5);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
+    void (async () => {
+      const cached = await getCachedMe<{
+        username?: string | null;
+        displayName?: string | null;
+        email?: string;
+      }>();
+      if (cached) {
+        setLabel(
+          cached.username
+            ? `@${cached.username}`
+            : cached.displayName || cached.email || null,
+        );
+      }
+
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = res.ok ? await res.json() : null;
         if (!data?.user) return;
+        await cacheMe(data.user);
         setLabel(
           data.user.username
             ? `@${data.user.username}`
             : data.user.displayName || data.user.email,
         );
-      })
-      .catch(() => {});
+      } catch {
+        // ignore offline
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -294,7 +316,7 @@ export function VaultHeader({
                       <Bell className="mx-auto mb-2 h-7 w-7 text-muted opacity-50" />
                       <p className="text-sm font-medium">All caught up</p>
                       <p className="mt-1 text-xs text-muted">
-                        Connection requests will show up here.
+                        Connection and collab requests will show up here.
                       </p>
                     </div>
                   ) : (
@@ -452,4 +474,4 @@ export function VaultHeader({
   );
 }
 
-export { iconBtn };
+export { iconBtn, labelBtn };

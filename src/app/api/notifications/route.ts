@@ -22,19 +22,36 @@ export async function GET(request: Request) {
   });
   const seenAt = me?.notificationsSeenAt ?? null;
 
-  const incoming = await prisma.connection.findMany({
-    where: {
-      status: "pending",
-      addresseeId: session.id,
-    },
-    include: {
-      requester: { select: artistSelect },
-    },
-    orderBy: { createdAt: "desc" },
-    ...(limit ? { take: limit } : { take: 100 }),
-  });
+  const [incoming, collabRequests] = await Promise.all([
+    prisma.connection.findMany({
+      where: {
+        status: "pending",
+        addresseeId: session.id,
+      },
+      include: {
+        requester: { select: artistSelect },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.songCollaborator.findMany({
+      where: {
+        status: "pending",
+        song: {
+          userId: session.id,
+          deletedAt: null,
+        },
+      },
+      include: {
+        user: { select: artistSelect },
+        song: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+  ]);
 
-  const notifications = incoming.map((row) => {
+  const networkNotifications = incoming.map((row) => {
     const artist = toNetworkArtist(row.requester);
     const createdAt = row.createdAt;
     const unread = !seenAt || createdAt > seenAt;
@@ -50,26 +67,56 @@ export async function GET(request: Request) {
     };
   });
 
+  const collabNotifications = collabRequests.map((row) => {
+    const artist = toNetworkArtist(row.user);
+    const createdAt = row.createdAt;
+    const unread = !seenAt || createdAt > seenAt;
+    const title = row.song.title?.trim() || "Untitled";
+    return {
+      id: `collab:${row.id}`,
+      type: "collab_request" as const,
+      title: "Collab request",
+      body: `${artist.displayName} wants to collab on “${title}”`,
+      href: `/vault/write/${row.song.id}?collab=requests`,
+      createdAt: createdAt.toISOString(),
+      unread,
+      artist,
+    };
+  });
+
+  const notifications = [...networkNotifications, ...collabNotifications].sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  const sliced = limit ? notifications.slice(0, limit) : notifications;
   const unreadCount = notifications.filter((n) => n.unread).length;
 
-  // If limit is applied, still compute accurate unread from a count query
-  const totalUnread =
-    limit != null
-      ? await prisma.connection.count({
-          where: {
-            status: "pending",
-            addresseeId: session.id,
-            ...(seenAt ? { createdAt: { gt: seenAt } } : {}),
-          },
-        })
-      : unreadCount;
+  const [networkUnread, collabUnread] = await Promise.all([
+    prisma.connection.count({
+      where: {
+        status: "pending",
+        addresseeId: session.id,
+        ...(seenAt ? { createdAt: { gt: seenAt } } : {}),
+      },
+    }),
+    prisma.songCollaborator.count({
+      where: {
+        status: "pending",
+        song: { userId: session.id, deletedAt: null },
+        ...(seenAt ? { createdAt: { gt: seenAt } } : {}),
+      },
+    }),
+  ]);
 
   return NextResponse.json({
-    notifications,
+    notifications: sliced,
     counts: {
       total: notifications.length,
-      unread: totalUnread,
-      networkRequests: totalUnread,
+      unread: networkUnread + collabUnread,
+      networkRequests: networkUnread,
+      collabRequests: collabUnread,
+      listedUnread: unreadCount,
     },
   });
 }

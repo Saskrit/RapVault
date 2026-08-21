@@ -12,8 +12,10 @@ export default function LocalWritePage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setSongId(getActiveLocalSongId());
-    setReady(true);
+    void getActiveLocalSongId().then((id) => {
+      setSongId(id);
+      setReady(true);
+    });
   }, []);
 
   if (!ready) {
