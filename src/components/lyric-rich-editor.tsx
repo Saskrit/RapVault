@@ -41,7 +41,8 @@ type LyricRichEditorProps = {
   onChange: (value: string) => void;
   spellCheck?: boolean;
   onSpellCheckChange?: (enabled: boolean) => void;
-  toolbarStats?: ReactNode;
+  /** Sticky horizontal status bar at the bottom of the editor (words, lines, save). */
+  footerStats?: ReactNode;
   /**
    * Hex color for this writer's new text.
    * Collaborators pick one; owners leave unset (default theme color).
@@ -344,7 +345,7 @@ export function LyricRichEditor({
   onChange,
   spellCheck = true,
   onSpellCheckChange,
-  toolbarStats,
+  footerStats,
   writerColor = null,
   canChooseWriterColor = false,
   writerLabel = null,
@@ -817,12 +818,6 @@ export function LyricRichEditor({
             </button>
           </div>
 
-          {toolbarStats && (
-            <div className="mx-auto flex min-w-0 flex-1 justify-center px-2">
-              {toolbarStats}
-            </div>
-          )}
-
           {canChooseWriterColor && (
             <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
               <span className="hidden text-[11px] text-muted sm:inline">
@@ -923,7 +918,7 @@ export function LyricRichEditor({
           <button
             type="button"
             onClick={toggleRapTools}
-            className={`${toolBtn} ${toolbarStats ? "" : "ml-auto "}hidden w-9 lg:inline-flex ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : ""}`}
+            className={`${toolBtn} ml-auto hidden w-9 lg:inline-flex ${rapToolsOpen ? "border-accent bg-accent/10 text-accent" : ""}`}
             title={rapToolsOpen ? "Hide tools" : "Show tools"}
             aria-label={rapToolsOpen ? "Hide tools" : "Show tools"}
             aria-expanded={rapToolsOpen}
@@ -970,6 +965,14 @@ export function LyricRichEditor({
         style={{ fontSize: `${fontSize}px` }}
         className="lyric-markdown lyric-editor h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 leading-relaxed outline-none lg:px-8 lg:py-5"
       />
+
+      {footerStats && (
+        <div className="sticky bottom-0 z-10 shrink-0 border-t border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:px-6">
+          <div className="flex min-h-7 w-full flex-nowrap items-center justify-center gap-x-2 overflow-x-auto whitespace-nowrap text-xs text-muted sm:justify-between sm:text-[13px]">
+            {footerStats}
+          </div>
+        </div>
+      )}
 
       <Modal
         open={linkModalOpen}

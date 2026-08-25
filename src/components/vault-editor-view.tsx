@@ -749,16 +749,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                     ? "Colored text = collaborator · Yours = default"
                     : null
               }
-              toolbarStats={
-                <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted sm:text-xs">
-                  <span>{stats.words} words</span>
-                  <span className="text-border">·</span>
-                  <span>{stats.lines} lines</span>
-                  <span className="text-border">·</span>
-                  <span>~{formatDuration(stats.estimatedSeconds)}</span>
-                  <span className="text-border">·</span>
+              footerStats={
+                <>
+                  <div className="flex flex-nowrap items-center gap-x-2">
+                    <span className="tabular-nums">{stats.words} words</span>
+                    <span className="text-border">·</span>
+                    <span className="tabular-nums">{stats.lines} lines</span>
+                    <span className="text-border">·</span>
+                    <span className="tabular-nums">
+                      ~{formatDuration(stats.estimatedSeconds)}
+                    </span>
+                  </div>
                   <span
-                    className={
+                    className={`shrink-0 font-medium tabular-nums ${
                       saveState === "error"
                         ? "text-red-400"
                         : saveState === "saving"
@@ -767,8 +770,8 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                             ? "text-green-400"
                             : saveState === "offline"
                               ? "text-amber-500"
-                              : ""
-                    }
+                              : "text-muted"
+                    }`}
                   >
                     {saveState === "saving"
                       ? "Saving..."
@@ -780,7 +783,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                             ? "Save failed"
                             : "Ready"}
                   </span>
-                </div>
+                </>
               }
             />
           }
