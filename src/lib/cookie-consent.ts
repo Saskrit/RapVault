@@ -43,6 +43,8 @@ export const PREFERENCE_STORAGE_KEYS = [
   "rapvault-page-size",
   "rapvault-editor-split",
   "rapvault-editor-split-locked",
+  "rapvault-collab-write-color",
+  "rapvault-collab-color-locked",
 ] as const;
 
 export const FUNCTIONAL_STORAGE_KEYS = [

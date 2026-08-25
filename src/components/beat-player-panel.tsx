@@ -1,6 +1,14 @@
 "use client";
 
-import { ExternalLink, Music2, Trash2, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Music2,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { loadYouTubeIframeApi } from "@/lib/youtube-iframe-api";
 import {
@@ -9,6 +17,13 @@ import {
   youTubeWatchUrl,
 } from "@/lib/youtube";
 
+const MAX_BEATS = 5;
+
+type BeatPlaylist = {
+  urls: string[];
+  active: number;
+};
+
 type BeatPlayerPanelProps = {
   beatUrl: string;
   onBeatUrlChange: (beatUrl: string) => void;
@@ -16,15 +31,76 @@ type BeatPlayerPanelProps = {
   readOnly?: boolean;
 };
 
+function clampActive(active: number, length: number) {
+  if (length <= 0) return 0;
+  return Math.max(0, Math.min(active, length - 1));
+}
+
+/** Parse legacy single URL or multi-beat JSON playlist. */
+export function parseBeatPlaylist(raw: string): BeatPlaylist {
+  const value = raw.trim();
+  if (!value) return { urls: [], active: 0 };
+
+  if (value.startsWith("{") || value.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(value) as
+        | { urls?: unknown; active?: unknown }
+        | string[];
+      if (Array.isArray(parsed)) {
+        const urls = parsed
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, MAX_BEATS);
+        return { urls, active: 0 };
+      }
+      const urls = Array.isArray(parsed.urls)
+        ? parsed.urls
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .slice(0, MAX_BEATS)
+        : [];
+      const active =
+        typeof parsed.active === "number" && Number.isFinite(parsed.active)
+          ? clampActive(Math.floor(parsed.active), urls.length)
+          : 0;
+      return { urls, active };
+    } catch {
+      // Fall through to single-URL parsing.
+    }
+  }
+
+  return { urls: [value], active: 0 };
+}
+
+/** Keep single-URL strings for one beat (backward compatible). */
+export function serializeBeatPlaylist(playlist: BeatPlaylist): string {
+  const urls = playlist.urls
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .slice(0, MAX_BEATS);
+  if (urls.length === 0) return "";
+  if (urls.length === 1) return urls[0]!;
+  return JSON.stringify({
+    urls,
+    active: clampActive(playlist.active, urls.length),
+  });
+}
+
 export function BeatPlayerPanel({
   beatUrl,
   onBeatUrlChange,
   onClose,
   readOnly = false,
 }: BeatPlayerPanelProps) {
-  const [urlInput, setUrlInput] = useState(beatUrl);
+  const [playlist, setPlaylist] = useState<BeatPlaylist>(() =>
+    parseBeatPlaylist(beatUrl),
+  );
+  const activeUrl = playlist.urls[playlist.active] ?? "";
+  const [urlInput, setUrlInput] = useState(activeUrl);
   const [videoId, setVideoId] = useState<string | null>(() =>
-    parseYouTubeVideoId(beatUrl),
+    parseYouTubeVideoId(activeUrl),
   );
   const [error, setError] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
@@ -35,10 +111,35 @@ export function BeatPlayerPanel({
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clearingRef = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipExternalSync = useRef(false);
+
+  function commitPlaylist(next: BeatPlaylist) {
+    const urls = next.urls
+      .map((url) => url.trim())
+      .filter(Boolean)
+      .slice(0, MAX_BEATS);
+    const normalized: BeatPlaylist = {
+      urls,
+      active: clampActive(next.active, urls.length),
+    };
+    skipExternalSync.current = true;
+    setPlaylist(normalized);
+    const active = normalized.urls[normalized.active] ?? "";
+    setUrlInput(active);
+    setVideoId(parseYouTubeVideoId(active));
+    onBeatUrlChange(serializeBeatPlaylist(normalized));
+  }
 
   useEffect(() => {
-    setUrlInput(beatUrl);
-    setVideoId(parseYouTubeVideoId(beatUrl));
+    if (skipExternalSync.current) {
+      skipExternalSync.current = false;
+      return;
+    }
+    const next = parseBeatPlaylist(beatUrl);
+    setPlaylist(next);
+    const active = next.urls[next.active] ?? "";
+    setUrlInput(active);
+    setVideoId(parseYouTubeVideoId(active));
   }, [beatUrl]);
 
   useEffect(() => {
@@ -136,7 +237,7 @@ export function BeatPlayerPanel({
       });
     }
 
-    initPlayer();
+    void initPlayer();
 
     return () => {
       cancelled = true;
@@ -144,12 +245,87 @@ export function BeatPlayerPanel({
     };
   }, [videoId]);
 
-  function loadBeat(input?: string) {
-    if (clearingRef.current) return;
+  function clearBeat() {
+    if (readOnly) return;
+    clearingRef.current = true;
+    setError("");
+    setDuration(null);
+    setCurrentTime(0);
 
+    if (playlist.active >= playlist.urls.length) {
+      const index = Math.max(0, playlist.urls.length - 1);
+      const active = playlist.urls[index] ?? "";
+      setPlaylist({
+        urls: playlist.urls,
+        active: playlist.urls.length === 0 ? 0 : index,
+      });
+      setUrlInput(active);
+      setVideoId(parseYouTubeVideoId(active));
+    } else {
+      const urls = playlist.urls.filter((_, i) => i !== playlist.active);
+      commitPlaylist({
+        urls,
+        active: clampActive(playlist.active, urls.length),
+      });
+    }
+
+    setClearedToast(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setClearedToast(false);
+      toastTimerRef.current = null;
+    }, 2000);
+    window.setTimeout(() => {
+      clearingRef.current = false;
+    }, 0);
+  }
+
+  function goPrev() {
+    setError("");
+    // Leaving an unsaved empty slot → return to last saved beat
+    if (playlist.active >= playlist.urls.length) {
+      if (playlist.urls.length === 0) {
+        setPlaylist({ urls: [], active: 0 });
+        setUrlInput("");
+        setVideoId(null);
+        return;
+      }
+      const index = playlist.urls.length - 1;
+      commitPlaylist({ urls: playlist.urls, active: index });
+      return;
+    }
+    if (playlist.urls.length <= 1 || playlist.active <= 0) return;
+    commitPlaylist({
+      urls: playlist.urls,
+      active: playlist.active - 1,
+    });
+  }
+
+  function goNext() {
+    setError("");
+    if (playlist.active >= playlist.urls.length) return;
+    if (playlist.urls.length <= 1) return;
+    if (playlist.active >= playlist.urls.length - 1) return;
+    commitPlaylist({
+      urls: playlist.urls,
+      active: playlist.active + 1,
+    });
+  }
+
+  function addBeatSlot() {
+    if (readOnly || playlist.urls.length >= MAX_BEATS) return;
+    setPlaylist({ urls: playlist.urls, active: playlist.urls.length });
+    setUrlInput("");
+    setVideoId(null);
+    setDuration(null);
+    setCurrentTime(0);
+    setError("");
+  }
+
+  function loadBeatIntoNewOrCurrent(input?: string) {
+    if (clearingRef.current || readOnly) return;
     const value = (input ?? urlInput).trim();
     const id = parseYouTubeVideoId(value);
-
     if (!id) {
       if (value)
         setError(
@@ -157,33 +333,44 @@ export function BeatPlayerPanel({
         );
       return;
     }
-
     const watchUrl = youTubeWatchUrl(id);
     setError("");
-    setVideoId(id);
-    setUrlInput(watchUrl);
-    onBeatUrlChange(watchUrl);
+
+    // Adding into a new slot (active past end)
+    if (
+      playlist.active >= playlist.urls.length &&
+      playlist.urls.length < MAX_BEATS
+    ) {
+      commitPlaylist({
+        urls: [...playlist.urls, watchUrl],
+        active: playlist.urls.length,
+      });
+      return;
+    }
+
+    const urls = [...playlist.urls];
+    if (urls.length === 0) {
+      commitPlaylist({ urls: [watchUrl], active: 0 });
+      return;
+    }
+    const index = clampActive(playlist.active, urls.length);
+    urls[index] = watchUrl;
+    commitPlaylist({ urls, active: index });
   }
 
-  function clearBeat() {
-    clearingRef.current = true;
-    setVideoId(null);
-    setUrlInput("");
-    setError("");
-    setDuration(null);
-    setCurrentTime(0);
-    onBeatUrlChange("");
-    setClearedToast(true);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
-      setClearedToast(false);
-      toastTimerRef.current = null;
-    }, 2000);
-    // Blur from the trash click can fire loadBeat with the old URL — ignore briefly.
-    window.setTimeout(() => {
-      clearingRef.current = false;
-    }, 0);
-  }
+  const beatCount = playlist.urls.length;
+  const showingNewSlot =
+    !readOnly && playlist.active >= beatCount && beatCount < MAX_BEATS;
+  const displayIndex = showingNewSlot
+    ? beatCount + 1
+    : beatCount === 0
+      ? 0
+      : playlist.active + 1;
+  const canGoPrev =
+    showingNewSlot || (beatCount > 1 && playlist.active > 0);
+  const canGoNext =
+    !showingNewSlot && beatCount > 1 && playlist.active < beatCount - 1;
+  const canAdd = !readOnly && beatCount < MAX_BEATS && !showingNewSlot;
 
   const progress =
     duration && duration > 0
@@ -200,32 +387,110 @@ export function BeatPlayerPanel({
           Beat cleared
         </div>
       )}
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-2.5 py-1.5">
-        <Music2 className="h-3.5 w-3.5 shrink-0 text-accent" />
-        <h2 className="min-w-0 flex-1 truncate text-xs font-semibold">
-          Beat player
+
+      <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1">
+        <Music2 className="h-3 w-3 shrink-0 text-accent" />
+        <h2 className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-tight">
+          Beats
         </h2>
+
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={goPrev}
+            disabled={!canGoPrev}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Previous beat"
+            title="Previous beat"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="min-w-[2.25rem] text-center text-[10px] font-medium tabular-nums text-muted">
+            {displayIndex}/{MAX_BEATS}
+          </span>
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={!canGoNext}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Next beat"
+            title="Next beat"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+          {canAdd && (
+            <button
+              type="button"
+              onClick={addBeatSlot}
+              className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted transition hover:border-accent hover:text-accent"
+              aria-label="Add another beat"
+              title={`Add beat (${beatCount}/${MAX_BEATS})`}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-foreground lg:hidden"
+            className="ml-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground lg:hidden"
             aria-label="Hide beat player"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
           </button>
         )}
       </div>
 
+      {beatCount > 0 && (
+        <div className="flex shrink-0 items-center justify-center gap-1 border-b border-border px-2 py-1">
+          {Array.from({ length: MAX_BEATS }).map((_, index) => {
+            const filled = index < beatCount;
+            const active = showingNewSlot
+              ? false
+              : filled && index === playlist.active;
+            return (
+              <button
+                key={index}
+                type="button"
+                disabled={!filled}
+                onClick={() => {
+                  if (!filled) return;
+                  commitPlaylist({ urls: playlist.urls, active: index });
+                  setError("");
+                }}
+                className={`h-1.5 rounded-full transition ${
+                  filled
+                    ? active
+                      ? "w-4 bg-accent"
+                      : "w-1.5 bg-muted/70 hover:bg-muted"
+                    : "w-1.5 bg-border"
+                } disabled:cursor-default`}
+                aria-label={
+                  filled ? `Play beat ${index + 1}` : `Empty slot ${index + 1}`
+                }
+                title={filled ? `Beat ${index + 1}` : `Empty (${index + 1}/5)`}
+              />
+            );
+          })}
+        </div>
+      )}
+
       {!readOnly && (
-        <div className="shrink-0 space-y-1 border-b border-border px-2.5 py-2">
+        <div className="shrink-0 space-y-0.5 border-b border-border px-2 py-1.5">
           <label
             htmlFor="beat-url"
-            className="text-[10px] font-medium uppercase tracking-wide text-muted"
+            className="text-[9px] font-medium uppercase tracking-wide text-muted"
           >
-            Paste beat link
+            Paste link
+            {showingNewSlot
+              ? ` · new beat ${beatCount + 1}/${MAX_BEATS}`
+              : beatCount > 0
+                ? ` · beat ${playlist.active + 1}`
+                : ""}
           </label>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1">
             <input
               id="beat-url"
               type="url"
@@ -234,68 +499,69 @@ export function BeatPlayerPanel({
                 setUrlInput(e.target.value);
                 if (error) setError("");
               }}
-              onKeyDown={(e) => e.key === "Enter" && loadBeat()}
-              onBlur={() => loadBeat()}
+              onKeyDown={(e) => e.key === "Enter" && loadBeatIntoNewOrCurrent()}
+              onBlur={() => loadBeatIntoNewOrCurrent()}
               onPaste={(e) => {
                 const pasted = e.clipboardData.getData("text");
                 if (parseYouTubeVideoId(pasted)) {
                   e.preventDefault();
                   setUrlInput(pasted.trim());
-                  loadBeat(pasted.trim());
+                  loadBeatIntoNewOrCurrent(pasted.trim());
                 }
               }}
-              placeholder="https://youtube.com/watch?v=..."
-              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs outline-none placeholder:text-muted focus:border-accent"
+              placeholder="youtube.com/watch?v=…"
+              className="min-h-7 min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] outline-none placeholder:text-muted focus:border-accent"
             />
             <button
               type="button"
               onClick={clearBeat}
               onMouseDown={(e) => e.preventDefault()}
-              disabled={!urlInput && !videoId}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label="Clear beat"
-              title="Clear beat"
+              disabled={!urlInput && !videoId && beatCount === 0}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted transition hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label="Clear this beat"
+              title="Clear this beat"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3" />
             </button>
           </div>
-          {error && <p className="text-[11px] text-red-400">{error}</p>}
+          {error && <p className="text-[10px] text-red-400">{error}</p>}
         </div>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col">
         {videoId ? (
           <>
-            {/* Fill available panel space instead of forcing 16:9 height (that broke resize). */}
             <div className="relative min-h-[8rem] flex-1 bg-black">
               <div
                 ref={playerShellRef}
                 className="absolute inset-0 h-full w-full overflow-hidden"
               />
             </div>
-            <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-2.5 py-1.5">
-              <p className="truncate text-[11px] text-muted">
-                {readOnly ? "Public beat" : "Synced to this song"}
+            <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-2 py-1">
+              <p className="truncate text-[10px] text-muted">
+                {readOnly
+                  ? `Public · ${playlist.active + 1}/${beatCount}`
+                  : `${playlist.active + 1} of ${beatCount} · synced`}
               </p>
               <a
                 href={youTubeWatchUrl(videoId)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex shrink-0 items-center gap-1 text-[11px] text-muted transition hover:text-accent"
+                className="flex shrink-0 items-center gap-1 text-[10px] text-muted transition hover:text-accent"
               >
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-2.5 w-2.5" />
                 YouTube
               </a>
             </div>
-            <div className="flex shrink-0 flex-col gap-1.5 border-t border-border px-2.5 py-2">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
-                Beat length
+            <div className="flex shrink-0 flex-col gap-1 border-t border-border px-2 py-1.5">
+              <p className="text-[9px] font-medium uppercase tracking-wide text-muted">
+                Length
               </p>
               {duration !== null ? (
                 <>
-                  <p className="text-sm font-semibold tabular-nums tracking-tight">
+                  <p className="text-xs font-semibold tabular-nums tracking-tight">
                     <span>0:00 → {formatVideoTime(duration)}</span>
-                    <span className="ml-1.5 text-xs font-medium text-muted">
+                    <span className="ml-1.5 text-[10px] font-medium text-muted">
                       [{formatVideoTime(currentTime)} –{" "}
                       {formatVideoTime(duration)}]
                     </span>
@@ -314,23 +580,26 @@ export function BeatPlayerPanel({
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-[11px] tabular-nums text-muted">
+                    <div className="flex justify-between text-[10px] tabular-nums text-muted">
                       <span>{formatVideoTime(currentTime)}</span>
                       <span>{formatVideoTime(duration)}</span>
                     </div>
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-muted">Loading duration…</p>
+                <p className="text-[11px] text-muted">Loading…</p>
               )}
             </div>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center">
-            <Music2 className="h-7 w-7 text-border" />
-            <p className="max-w-[14rem] text-xs text-muted">
-              Paste a YouTube beat link above. It saves to this song on all your
-              devices.
+          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
+            <Music2 className="h-6 w-6 text-border" />
+            <p className="max-w-[13rem] text-[11px] leading-relaxed text-muted">
+              {showingNewSlot
+                ? `Paste beat ${beatCount + 1} of ${MAX_BEATS}.`
+                : beatCount > 0
+                  ? "This slot is empty — paste a YouTube link."
+                  : `Paste a YouTube beat. Add up to ${MAX_BEATS} and switch with the arrows.`}
             </p>
           </div>
         )}

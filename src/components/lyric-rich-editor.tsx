@@ -6,11 +6,13 @@ import {
   Link,
   List,
   ListOrdered,
+  Lock,
   Quote,
   Redo2,
   SpellCheck,
   Strikethrough,
   Undo2,
+  Unlock,
   Wrench,
 } from "lucide-react";
 import {
@@ -77,6 +79,7 @@ export const COLLAB_COLOR_OPTIONS = [
 ] as const;
 
 const COLLAB_COLOR_KEY = "rapvault-collab-write-color";
+const COLLAB_COLOR_LOCK_KEY = "rapvault-collab-color-locked";
 
 function escapeHtml(text: string) {
   return text
@@ -156,6 +159,13 @@ function loadSavedCollabColor(): string {
     return matchCollabPaletteColor(saved)!;
   }
   return COLLAB_WRITER_COLOR;
+}
+
+function loadSavedCollabColorLocked(): boolean {
+  const saved = preferenceStorageGet(COLLAB_COLOR_LOCK_KEY);
+  // Default locked so collaborators write in one color until they unlock to switch.
+  if (saved === "false") return false;
+  return true;
 }
 
 /** Keep collaborator-colored text visible for every viewer (owner + invitee). */
@@ -343,6 +353,7 @@ export function LyricRichEditor({
   const lastHtml = useRef("");
   const emittedValue = useRef<string | null>(null);
   const [pickedColor, setPickedColor] = useState(COLLAB_WRITER_COLOR);
+  const [colorLocked, setColorLocked] = useState(true);
   const activeWriterColor = canChooseWriterColor
     ? pickedColor
     : writerColor;
@@ -420,6 +431,7 @@ export function LyricRichEditor({
 
     if (canChooseWriterColor) {
       setPickedColor(loadSavedCollabColor());
+      setColorLocked(loadSavedCollabColorLocked());
     }
 
     return () => media.removeEventListener("change", syncRapTools);
@@ -432,11 +444,20 @@ export function LyricRichEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- apply when color changes while focused
   }, [activeWriterColor]);
 
+  function setColorLock(locked: boolean) {
+    setColorLocked(locked);
+    preferenceStorageSet(COLLAB_COLOR_LOCK_KEY, String(locked));
+  }
+
   function chooseWriterColor(color: string) {
     if (!canChooseWriterColor) return;
     const next = matchCollabPaletteColor(color) || COLLAB_WRITER_COLOR;
+    // One active color: when locked, ignore other swatches until unlocked.
+    if (colorLocked && !colorsClose(pickedColor, next)) return;
     setPickedColor(next);
     preferenceStorageSet(COLLAB_COLOR_KEY, next);
+    // Picking a color locks it as the only write color.
+    setColorLock(true);
   }
 
   function changeFontSize(direction: -1 | 1) {
@@ -803,7 +824,7 @@ export function LyricRichEditor({
           )}
 
           {canChooseWriterColor && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
               <span className="hidden text-[11px] text-muted sm:inline">
                 Your color
               </span>
@@ -811,22 +832,37 @@ export function LyricRichEditor({
                 className="flex items-center gap-1"
                 role="radiogroup"
                 aria-label="Collaborator writing color"
+                aria-disabled={colorLocked}
               >
                 {COLLAB_COLOR_OPTIONS.map((color) => {
                   const selected = colorsClose(pickedColor, color);
+                  const disabled = colorLocked && !selected;
                   return (
                     <button
                       key={color}
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      title={`Write in ${color}`}
-                      aria-label={`Write in ${color}`}
+                      disabled={disabled}
+                      title={
+                        disabled
+                          ? "Unlock to switch color"
+                          : selected
+                            ? `Writing in ${color} (locked)`
+                            : `Write in ${color}`
+                      }
+                      aria-label={
+                        disabled
+                          ? `Color locked — unlock to use ${color}`
+                          : `Write in ${color}`
+                      }
                       onClick={() => chooseWriterColor(color)}
-                      className={`h-10 w-10 rounded-full border p-1.5 transition active:scale-95 lg:h-5 lg:w-5 lg:p-0 ${
+                      className={`relative h-10 w-10 rounded-full border p-1.5 transition active:scale-95 lg:h-5 lg:w-5 lg:p-0 ${
                         selected
                           ? "border-foreground ring-2 ring-foreground/25 ring-offset-1 ring-offset-background"
-                          : "border-border/80 hover:scale-110"
+                          : disabled
+                            ? "cursor-not-allowed border-border/50 opacity-35"
+                            : "border-border/80 hover:scale-110"
                       }`}
                     >
                       <span
@@ -838,6 +874,35 @@ export function LyricRichEditor({
                   );
                 })}
               </div>
+              <button
+                type="button"
+                onClick={() => setColorLock(!colorLocked)}
+                className={`inline-flex h-9 items-center gap-1 rounded-lg border px-2 text-[11px] font-medium transition active:scale-95 lg:h-7 ${
+                  colorLocked
+                    ? "border-accent/40 bg-accent/10 text-accent"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                }`}
+                title={
+                  colorLocked
+                    ? "Color locked — click to unlock and switch"
+                    : "Unlocked — pick a color (locks after you choose)"
+                }
+                aria-pressed={colorLocked}
+                aria-label={
+                  colorLocked
+                    ? "Unlock writing color"
+                    : "Lock writing color"
+                }
+              >
+                {colorLocked ? (
+                  <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                ) : (
+                  <Unlock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                )}
+                <span className="hidden sm:inline">
+                  {colorLocked ? "Locked" : "Pick one"}
+                </span>
+              </button>
             </div>
           )}
 
