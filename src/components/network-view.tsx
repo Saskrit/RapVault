@@ -50,15 +50,20 @@ export function NetworkView() {
   const [messagingId, setMessagingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/network");
-    if (res.ok) {
-      const data = await res.json();
-      setConnections(data.connections || []);
-      setIncoming(data.incoming || []);
-      setOutgoing(data.outgoing || []);
-      notifyNotificationsUpdated();
+    try {
+      const res = await fetch("/api/network");
+      if (res.ok) {
+        const data = await res.json();
+        setConnections(data.connections || []);
+        setIncoming(data.incoming || []);
+        setOutgoing(data.outgoing || []);
+        notifyNotificationsUpdated();
+      }
+    } catch {
+      // ignore offline
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -75,25 +80,30 @@ export function NetworkView() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/network");
-      if (!cancelled && res.ok) {
-        const data = await res.json();
-        setConnections(data.connections || []);
-        setIncoming(data.incoming || []);
-        setOutgoing(data.outgoing || []);
-        const requested = searchParams.get("tab");
-        if (
-          requested === "incoming" ||
-          requested === "outgoing" ||
-          requested === "connections"
-        ) {
-          setTab(requested);
-        } else if ((data.incoming?.length || 0) > 0) {
-          setTab("incoming");
+      try {
+        const res = await fetch("/api/network");
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          setConnections(data.connections || []);
+          setIncoming(data.incoming || []);
+          setOutgoing(data.outgoing || []);
+          const requested = searchParams.get("tab");
+          if (
+            requested === "incoming" ||
+            requested === "outgoing" ||
+            requested === "connections"
+          ) {
+            setTab(requested);
+          } else if ((data.incoming?.length || 0) > 0) {
+            setTab("incoming");
+          }
+          notifyNotificationsUpdated();
         }
-        notifyNotificationsUpdated();
+      } catch {
+        // ignore offline
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;

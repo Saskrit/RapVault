@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 
 export default function GlobalError({
   reset,
@@ -10,12 +9,6 @@ export default function GlobalError({
 }) {
   const offline =
     typeof navigator !== "undefined" && navigator.onLine === false;
-
-  useEffect(() => {
-    if (offline) {
-      window.location.replace("/~offline");
-    }
-  }, [offline]);
 
   return (
     <html lang="en">
@@ -49,8 +42,8 @@ export default function GlobalError({
           </h1>
           <p style={{ color: "#a3a3a3", fontSize: 14, lineHeight: 1.5 }}>
             {offline
-              ? "Taking you to your offline vault…"
-              : "If you're offline, open your locally saved vault. Otherwise reload to try again."}
+              ? "You are currently offline. Your cached content and state remain intact. Reload when you're back online."
+              : "Something went wrong. Please reload to try again."}
           </p>
           <div
             style={{
@@ -63,9 +56,7 @@ export default function GlobalError({
           >
             <button
               type="button"
-              onClick={() => {
-                window.location.href = "/~offline";
-              }}
+              onClick={() => reset()}
               style={{
                 minHeight: 44,
                 borderRadius: 12,
@@ -77,11 +68,13 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              Open offline vault
+              Reload
             </button>
             <button
               type="button"
-              onClick={() => reset()}
+              onClick={() => {
+                window.location.href = "/~offline";
+              }}
               style={{
                 minHeight: 44,
                 borderRadius: 12,
@@ -93,7 +86,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              Reload
+              Open offline vault
             </button>
           </div>
         </div>

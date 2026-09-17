@@ -279,16 +279,16 @@ export function navigateToSongEditor(
     void setActiveLocalSongId(songId);
   }
 
-  if (isBrowserOffline() || !router) {
-    window.location.assign(href);
+  if (router) {
+    if (options?.replace && router.replace) {
+      router.replace(href);
+    } else {
+      router.push(href);
+    }
     return;
   }
 
-  if (options?.replace && router.replace) {
-    router.replace(href);
-  } else {
-    router.push(href);
-  }
+  window.location.assign(href);
 }
 
 function notifySongIdRemapped(from: string, to: string) {

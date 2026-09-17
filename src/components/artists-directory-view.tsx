@@ -28,13 +28,18 @@ export function ArtistsDirectoryView() {
 
   const load = useCallback(async (query: string) => {
     setLoading(true);
-    const params = query ? `?q=${encodeURIComponent(query)}` : "";
-    const res = await fetch(`/api/artists${params}`);
-    if (res.ok) {
-      const data = await res.json();
-      setArtists(data.artists);
+    try {
+      const params = query ? `?q=${encodeURIComponent(query)}` : "";
+      const res = await fetch(`/api/artists${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setArtists(data.artists);
+      }
+    } catch {
+      // ignore offline
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {

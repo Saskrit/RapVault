@@ -1,5 +1,5 @@
 /* RapVault service worker — cache app shell + vault read APIs for offline. */
-const CACHE_VERSION = "rapvault-shell-v5";
+const CACHE_VERSION = "rapvault-shell-v6";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
@@ -147,17 +147,18 @@ async function offlineFallback(url) {
       (await matchByPathname(PAGE_CACHE, "/vault")) ||
       (await matchByPathname(SHELL_CACHE, "/vault"));
     if (vault) return vault;
-    return Response.redirect(new URL("/~offline", self.location.origin), 303);
   }
 
   const shell = await caches.open(SHELL_CACHE);
-  return (
+  const fallback =
     (await shell.match("/~offline")) ||
-    (await caches.match("/~offline")) ||
-    new Response(
-      "<!doctype html><title>Offline</title><h1>You are offline</h1><p><a href='/~offline'>Continue</a></p>",
-      { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
-    )
+    (await caches.match("/~offline"));
+
+  if (fallback) return fallback;
+
+  return new Response(
+    "<!doctype html><title>Offline</title><h1>You are offline</h1><p>Reconnect to view this page.</p>",
+    { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
   );
 }
 
@@ -174,11 +175,25 @@ async function networkFirstPage(request, url) {
     }
     return response;
   } catch {
-    return (
+    const isRSC =
+      request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
+
+    const cached =
       (await matchIgnoreSearch(PAGE_CACHE, request)) ||
-      (await matchByPathname(PAGE_CACHE, url.pathname)) ||
-      (await offlineFallback(url))
-    );
+      (await matchByPathname(PAGE_CACHE, url.pathname));
+
+    if (cached) return cached;
+
+    // Never return an HTML document or 303 redirect for an internal RSC flight request.
+    // Next.js client router treats HTML/redirect responses to RSC requests as hard browser reloads.
+    if (isRSC) {
+      return new Response(null, {
+        status: 503,
+        statusText: "Offline",
+      });
+    }
+
+    return offlineFallback(url);
   }
 }
 

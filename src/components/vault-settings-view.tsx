@@ -40,6 +40,7 @@ import {
   SOCIAL_LINK_META,
   type SocialLinks,
 } from "@/lib/social-links";
+import { isBrowserOffline } from "@/lib/offline-songs";
 
 type ProfileUser = {
   id: string;
@@ -254,20 +255,27 @@ export function VaultSettingsView() {
   }, [coverMenuOpen]);
 
   const loadProfile = useCallback(async () => {
-    const res = await fetch("/api/auth/me");
-    if (!res.ok) {
-      router.push("/login");
-      return;
+    try {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) {
+        if (!isBrowserOffline()) {
+          router.push("/login");
+        }
+        return;
+      }
+      const data = await res.json();
+      setUser(data.user);
+      setRecoveryInput(data.user.recoveryEmail || "");
+      setDisplayName(data.user.displayName || data.user.name || "");
+      setUsername(data.user.username || "");
+      setBio(data.user.bio || "");
+      setProfilePublic(data.user.profilePublic !== false);
+      setSocialLinks(pickSocialLinks(data.user));
+    } catch {
+      // ignore offline / network failure
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    setUser(data.user);
-    setRecoveryInput(data.user.recoveryEmail || "");
-    setDisplayName(data.user.displayName || data.user.name || "");
-    setUsername(data.user.username || "");
-    setBio(data.user.bio || "");
-    setProfilePublic(data.user.profilePublic !== false);
-    setSocialLinks(pickSocialLinks(data.user));
-    setLoading(false);
   }, [router]);
 
   useEffect(() => {

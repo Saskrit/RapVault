@@ -61,13 +61,18 @@ export function MessagesInboxView() {
   const { unreadCount, refreshUnread } = useUnreadMessages();
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/messages/conversations");
-    if (res.ok) {
-      const data = await res.json();
-      setConversations(data.conversations);
+    try {
+      const res = await fetch("/api/messages/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data.conversations);
+      }
+    } catch {
+      // ignore offline
+    } finally {
+      setLoading(false);
+      void refreshUnread();
     }
-    setLoading(false);
-    void refreshUnread();
   }, [refreshUnread]);
 
   useEffect(() => {

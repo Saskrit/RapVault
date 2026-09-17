@@ -15,6 +15,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { VaultShell } from "@/components/vault-shell";
 import { notifyMessagesRead } from "@/hooks/use-unread-messages";
+import { isBrowserOffline } from "@/lib/offline-songs";
 
 type ChatMessage = {
   id: string;
@@ -114,16 +115,22 @@ export function MessageThreadView({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/messages/conversations/${conversationId}`);
-    if (!res.ok) {
-      setNotFound(true);
+    try {
+      const res = await fetch(`/api/messages/conversations/${conversationId}`);
+      if (!res.ok) {
+        if (!isBrowserOffline() && res.status === 404) {
+          setNotFound(true);
+        }
+        return;
+      }
+      const data = await res.json();
+      setThread(data.conversation);
+      notifyMessagesRead();
+    } catch {
+      // ignore offline - keep existing messages
+    } finally {
       setLoading(false);
-      return;
     }
-    const data = await res.json();
-    setThread(data.conversation);
-    setLoading(false);
-    notifyMessagesRead();
   }, [conversationId]);
 
   useEffect(() => {

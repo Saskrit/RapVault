@@ -43,7 +43,7 @@ export function useOfflineSync() {
 export function OfflineProvider({ children }: { children: ReactNode }) {
   const consent = useCookieConsentOptional();
   const functional = Boolean(consent?.consent?.functional);
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(() => !isBrowserOffline());
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [banner, setBanner] = useState<"offline" | "back" | null>(null);
@@ -118,9 +118,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const showBannerForRef = useRef(showBannerFor);
   const dismissBannerRef = useRef(dismissBanner);
   const refreshPendingRef = useRef(refreshPending);
-  showBannerForRef.current = showBannerFor;
-  dismissBannerRef.current = dismissBanner;
-  refreshPendingRef.current = refreshPending;
+  useEffect(() => {
+    showBannerForRef.current = showBannerFor;
+    dismissBannerRef.current = dismissBanner;
+    refreshPendingRef.current = refreshPending;
+  });
 
   useEffect(() => {
     function onOnline() {
@@ -140,9 +142,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       showBannerForRef.current("offline");
     }
 
-    const initiallyOffline = isBrowserOffline();
-    setOnline(!initiallyOffline);
-    if (initiallyOffline) {
+    if (isBrowserOffline()) {
       hadOfflineRef.current = true;
       showBannerForRef.current("offline");
     }
@@ -165,6 +165,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!online) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void syncNow();
   }, [online, syncNow]);
 
@@ -191,48 +192,43 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     [online, pendingCount, syncing, refreshPending, syncNow],
   );
 
-  if (!banner) {
-    return (
-      <OfflineSyncContext.Provider value={value}>
-        {children}
-      </OfflineSyncContext.Provider>
-    );
-  }
-
   const isBack = banner === "back";
 
   return (
     <OfflineSyncContext.Provider value={value}>
-      <div
-        className="pointer-events-none fixed inset-x-0 top-0 z-[90] flex justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
-        role="status"
-        aria-live="polite"
-      >
-        <div
-          className={`flex max-w-lg items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm shadow-lg backdrop-blur ${
-            isBack
-              ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-              : "border-amber-500/35 bg-amber-500/15 text-amber-900 dark:text-amber-200"
-          }`}
-        >
-          {isBack ? (
-            <>
-              <Wifi className="h-4 w-4 shrink-0" />
-              <span>You are back Online.</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-4 w-4 shrink-0" />
-              <span>
-                {!functional
-                  ? "You're offline — turn on Offline & app cache in cookie settings so songs save on this device"
-                  : "You're offline — new songs and edits save on this device and sync when you're back online"}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
       {children}
+      {banner && (
+        <div
+          key="offline-sync-banner"
+          className="pointer-events-none fixed inset-x-0 top-0 z-[90] flex justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            className={`flex max-w-lg items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm shadow-lg backdrop-blur ${
+              isBack
+                ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                : "border-amber-500/35 bg-amber-500/15 text-amber-900 dark:text-amber-200"
+            }`}
+          >
+            {isBack ? (
+              <>
+                <Wifi className="h-4 w-4 shrink-0" />
+                <span>You are back Online.</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-4 w-4 shrink-0" />
+                <span>
+                  {!functional
+                    ? "You're offline — turn on Offline & app cache in cookie settings so songs save on this device"
+                    : "You're offline — new songs and edits save on this device and sync when you're back online"}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </OfflineSyncContext.Provider>
   );
 }

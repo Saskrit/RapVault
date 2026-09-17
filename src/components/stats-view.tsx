@@ -64,11 +64,16 @@ export function StatsView() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/stats");
-    if (res.ok) {
-      setData(await res.json());
+    try {
+      const res = await fetch("/api/stats");
+      if (res.ok) {
+        setData(await res.json());
+      }
+    } catch {
+      // ignore offline
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
