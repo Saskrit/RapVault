@@ -128,12 +128,14 @@ export function BeatPlayerPanel({
   const [clearedToast, setClearedToast] = useState(false);
   const playerShellRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YT.Player | null>(null);
+  const playerReadyRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clearingRef = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipExternalSync = useRef(false);
+  const autoPlayNextRef = useRef(false);
 
-  function commitPlaylist(next: BeatPlaylist) {
+  function commitPlaylist(next: BeatPlaylist, shouldAutoplay = false) {
     const urls = next.urls
       .map((url) => url.trim())
       .filter(Boolean)
@@ -142,6 +144,9 @@ export function BeatPlayerPanel({
       urls,
       active: clampActive(next.active, urls.length),
     };
+    if (shouldAutoplay) {
+      autoPlayNextRef.current = true;
+    }
     skipExternalSync.current = true;
     setPlaylist(normalized);
     const active = normalized.urls[normalized.active] ?? "";
@@ -165,19 +170,36 @@ export function BeatPlayerPanel({
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (tickRef.current) clearInterval(tickRef.current);
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+        } catch {
+          // ignore
+        }
+        playerRef.current = null;
+        playerReadyRef.current = false;
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (!videoId || !playerShellRef.current) return;
+    if (!videoId) {
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+        } catch {
+          // ignore
+        }
+        playerRef.current = null;
+        playerReadyRef.current = false;
+      }
+      return;
+    }
+
+    if (!playerShellRef.current) return;
 
     let cancelled = false;
-    const shell = playerShellRef.current;
-    // YouTube replaces this node with an iframe — keep it outside React's DOM ownership.
-    const host = document.createElement("div");
-    host.style.width = "100%";
-    host.style.height = "100%";
-    shell.replaceChildren(host);
 
     function stopTick() {
       if (tickRef.current) {
@@ -207,6 +229,7 @@ export function BeatPlayerPanel({
 
     function destroyPlayer() {
       stopTick();
+      playerReadyRef.current = false;
       const player = playerRef.current;
       playerRef.current = null;
       if (player) {
@@ -216,10 +239,47 @@ export function BeatPlayerPanel({
           // YouTube may already have removed the iframe.
         }
       }
-      shell.replaceChildren();
+      if (playerShellRef.current) {
+        playerShellRef.current.replaceChildren();
+      }
     }
 
     const id = videoId;
+    const shouldAutoplay = autoPlayNextRef.current;
+
+    // Fast-path: if player is already loaded and ready in the DOM, switch video seamlessly and autoplay
+    if (
+      playerRef.current &&
+      playerReadyRef.current &&
+      typeof (playerRef.current as any).loadVideoById === "function"
+    ) {
+      try {
+        setCurrentTime(0);
+        setDuration(null);
+        if (shouldAutoplay) {
+          autoPlayNextRef.current = false;
+          (playerRef.current as any).loadVideoById(id);
+          try {
+            (playerRef.current as any).playVideo?.();
+          } catch {
+            // ignore
+          }
+        } else {
+          (playerRef.current as any).cueVideoById(id);
+        }
+        return;
+      } catch {
+        // Fall back to recreating player if switching within current player errors
+        destroyPlayer();
+      }
+    }
+
+    const shell = playerShellRef.current;
+    // YouTube replaces this node with an iframe — keep it outside React's DOM ownership.
+    const host = document.createElement("div");
+    host.style.width = "100%";
+    host.style.height = "100%";
+    shell.replaceChildren(host);
 
     async function initPlayer() {
       setDuration(null);
@@ -228,54 +288,68 @@ export function BeatPlayerPanel({
       await loadYouTubeIframeApi();
       if (cancelled || !window.YT?.Player || !host.isConnected) return;
 
-      playerRef.current = new window.YT.Player(host, {
-        videoId: id,
-        width: "100%",
-        height: "100%",
-        playerVars: {
-          rel: 0,
-          modestbranding: 1,
-          enablejsapi: 1,
-          origin: window.location.origin,
-        },
-        events: {
-          onReady: (event) => {
-            if (cancelled) return;
-            try {
-              const total = event.target.getDuration();
-              if (total > 0) setDuration(total);
-            } catch {
-              // ignore
-            }
+      try {
+        playerRef.current = new window.YT.Player(host, {
+          videoId: id,
+          width: "100%",
+          height: "100%",
+          playerVars: {
+            rel: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+            origin: window.location.origin,
+            autoplay: shouldAutoplay ? 1 : 0,
           },
-          onStateChange: (event) => {
-            if (cancelled) return;
-            const state = event.data;
-            // 1 = PLAYING, 3 = BUFFERING
-            if (state === 1 || state === 3) {
+          events: {
+            onReady: (event) => {
+              if (cancelled) return;
+              playerReadyRef.current = true;
               try {
                 const total = event.target.getDuration();
                 if (total > 0) setDuration(total);
               } catch {
                 // ignore
               }
-              startTick(event.target);
-            } else if (state === 2 || state === 0) {
-              // 2 = PAUSED, 0 = ENDED
-              stopTick();
-              try {
-                const t = event.target.getCurrentTime();
-                if (typeof t === "number" && !Number.isNaN(t)) {
-                  setCurrentTime(t);
-                  onTimeUpdate?.(t);
+              if (shouldAutoplay) {
+                autoPlayNextRef.current = false;
+                try {
+                  (event.target as any).playVideo?.();
+                } catch {
+                  // ignore
                 }
-              } catch {
-                // Player may already be torn down.
               }
-            }
+            },
+            onStateChange: (event) => {
+              if (cancelled) return;
+              const state = event.data;
+              // 1 = PLAYING, 3 = BUFFERING
+              if (state === 1 || state === 3) {
+                try {
+                  const total = event.target.getDuration();
+                  if (total > 0) setDuration(total);
+                } catch {
+                  // ignore
+                }
+                startTick(event.target);
+              } else if (state === 2 || state === 0) {
+                // 2 = PAUSED, 0 = ENDED
+                stopTick();
+                try {
+                  const t = event.target.getCurrentTime();
+                  if (typeof t === "number" && !Number.isNaN(t)) {
+                    setCurrentTime(t);
+                    onTimeUpdate?.(t);
+                  }
+                } catch {
+                  // Player may already be torn down.
+                }
+              }
+            },
           },
-        },
-      });
+        });
+      } catch (err) {
+        console.error("YouTube Player init error:", err);
+      }
     }
 
     void initPlayer();
@@ -310,13 +384,13 @@ export function BeatPlayerPanel({
     return () => {
       cancelled = true;
       clearInterval(monitorInterval);
-      destroyPlayer();
     };
   }, [videoId, onTimeUpdate]);
 
   function clearBeat() {
     if (readOnly) return;
     clearingRef.current = true;
+    autoPlayNextRef.current = false;
     setError("");
     setDuration(null);
     setCurrentTime(0);
@@ -359,14 +433,17 @@ export function BeatPlayerPanel({
         return;
       }
       const index = playlist.urls.length - 1;
-      commitPlaylist({ urls: playlist.urls, active: index });
+      commitPlaylist({ urls: playlist.urls, active: index }, true);
       return;
     }
     if (playlist.urls.length <= 1 || playlist.active <= 0) return;
-    commitPlaylist({
-      urls: playlist.urls,
-      active: playlist.active - 1,
-    });
+    commitPlaylist(
+      {
+        urls: playlist.urls,
+        active: playlist.active - 1,
+      },
+      true,
+    );
   }
 
   function goNext() {
@@ -374,14 +451,18 @@ export function BeatPlayerPanel({
     if (playlist.active >= playlist.urls.length) return;
     if (playlist.urls.length <= 1) return;
     if (playlist.active >= playlist.urls.length - 1) return;
-    commitPlaylist({
-      urls: playlist.urls,
-      active: playlist.active + 1,
-    });
+    commitPlaylist(
+      {
+        urls: playlist.urls,
+        active: playlist.active + 1,
+      },
+      true,
+    );
   }
 
   function addBeatSlot() {
     if (readOnly || playlist.urls.length >= MAX_BEATS) return;
+    autoPlayNextRef.current = false;
     setPlaylist({ urls: playlist.urls, active: playlist.urls.length });
     setUrlInput("");
     setVideoId(null);
@@ -408,21 +489,24 @@ export function BeatPlayerPanel({
       playlist.active >= playlist.urls.length &&
       playlist.urls.length < MAX_BEATS
     ) {
-      commitPlaylist({
-        urls: [...playlist.urls, watchUrl],
-        active: playlist.urls.length,
-      });
+      commitPlaylist(
+        {
+          urls: [...playlist.urls, watchUrl],
+          active: playlist.urls.length,
+        },
+        true,
+      );
       return;
     }
 
     const urls = [...playlist.urls];
     if (urls.length === 0) {
-      commitPlaylist({ urls: [watchUrl], active: 0 });
+      commitPlaylist({ urls: [watchUrl], active: 0 }, true);
       return;
     }
     const index = clampActive(playlist.active, urls.length);
     urls[index] = watchUrl;
-    commitPlaylist({ urls, active: index });
+    commitPlaylist({ urls, active: index }, true);
   }
 
   const beatCount = playlist.urls.length;
