@@ -90,7 +90,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [selectedLyricText, setSelectedLyricText] = useState("");
   const [editingAnnotation, setEditingAnnotation] =
     useState<Annotation | null>(null);
-  const [currentBeatTime, setCurrentBeatTime] = useState<number | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<SongPatch | null>(null);
@@ -828,7 +827,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                   setAnnotationModalOpen(true);
                 }}
                 onDeleteAnnotation={handleDeleteAnnotation}
-                onTimeUpdate={(t) => setCurrentBeatTime(t)}
               />
             </div>
           }

@@ -39,7 +39,6 @@ type BeatPlayerPanelProps = {
   onAddAnnotation?: () => void;
   onEditAnnotation?: (annotation: Annotation) => void;
   onDeleteAnnotation?: (id: string) => void;
-  onSetCurrentLineTime?: (timeStr: string) => void;
   onTimeUpdate?: (currentTime: number) => void;
 };
 
@@ -111,7 +110,6 @@ export function BeatPlayerPanel({
   onAddAnnotation,
   onEditAnnotation,
   onDeleteAnnotation,
-  onSetCurrentLineTime,
   onTimeUpdate,
 }: BeatPlayerPanelProps) {
   const [activeTab, setActiveTab] = useState<"beats" | "annotations">("beats");
@@ -493,50 +491,16 @@ export function BeatPlayerPanel({
           </button>
         </div>
 
-        {/* Right side beat pagination */}
-        <div className="flex items-center gap-1">
+        {onClose && (
           <button
             type="button"
-            onClick={goPrev}
-            disabled={!canGoPrev}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground disabled:opacity-30"
-            aria-label="Previous beat"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground lg:hidden"
+            aria-label="Close panel"
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
-          <span className="text-[11px] font-medium tabular-nums text-muted">
-            {displayIndex} / {MAX_BEATS}
-          </span>
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={!canGoNext}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground disabled:opacity-30"
-            aria-label="Next beat"
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-          {canAdd && (
-            <button
-              type="button"
-              onClick={addBeatSlot}
-              className="ml-1 flex h-6 w-6 items-center justify-center rounded border border-border text-muted transition hover:border-amber-600 hover:text-amber-600"
-              title="Add another beat"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="ml-1 flex h-6 w-6 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground lg:hidden"
-              aria-label="Close panel"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Main Tab Content */}
@@ -577,24 +541,43 @@ export function BeatPlayerPanel({
                     placeholder="Paste YouTube link here..."
                     className="w-full min-h-9 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none transition focus:border-amber-600"
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (canGoNext) {
-                        goNext();
-                      } else if (canAdd) {
-                        addBeatSlot();
-                      } else if (playlist.urls.length > 0) {
-                        commitPlaylist({ urls: playlist.urls, active: 0 });
-                      }
-                    }}
-                    title="Next beat"
-                    aria-label="Next beat"
-                    className="rap-btn-bronze flex min-h-9 items-center gap-1.5 shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-xs active:scale-95"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Next Beat</span>
-                  </button>
+                  {/* Beat Pagination < 2/5 > + (replacing Next Beat button) */}
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border bg-background p-0.5 sm:gap-1 sm:p-1">
+                    <button
+                      type="button"
+                      onClick={goPrev}
+                      disabled={!canGoPrev}
+                      className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                      aria-label="Previous beat"
+                      title="Previous beat"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="px-1 text-xs font-semibold tabular-nums text-foreground">
+                      {displayIndex} / {MAX_BEATS}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      disabled={!canGoNext}
+                      className="flex h-7 w-7 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                      aria-label="Next beat"
+                      title="Next beat"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    {canAdd && (
+                      <button
+                        type="button"
+                        onClick={addBeatSlot}
+                        className="ml-0.5 flex h-7 w-7 items-center justify-center rounded border border-border text-muted transition hover:border-amber-600 hover:text-amber-600"
+                        title="Add another beat"
+                        aria-label="Add another beat"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={clearBeat}
