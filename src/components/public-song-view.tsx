@@ -232,6 +232,18 @@ export function PublicSongView({ songId }: { songId: string }) {
                 song.author.displayName
               )}
             </p>
+            {song.collabStatus === "accepted" && !song.isOwner && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400">
+                <Users className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  You are working with{" "}
+                  <strong className="font-semibold text-foreground">
+                    {song.author.displayName}
+                  </strong>{" "}
+                  on this song
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5">

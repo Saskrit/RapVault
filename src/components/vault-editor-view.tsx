@@ -605,6 +605,29 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                       <Pencil className="h-4 w-4" />
                     </button>
                   </div>
+                  {song.isCollaborator ? (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400">
+                      <Users className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        You are working with{" "}
+                        <strong className="font-semibold text-foreground">
+                          {song.owner?.displayName || "this artist"}
+                        </strong>{" "}
+                        on this song
+                      </span>
+                    </div>
+                  ) : (song.collaborators?.length ?? 0) > 0 ? (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400">
+                      <Users className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        You are working with{" "}
+                        <strong className="font-semibold text-foreground">
+                          {song.collaborators?.map((c) => c.artist.displayName).join(", ")}
+                        </strong>{" "}
+                        on this song
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Right controls in document header: Status, Publish, More */}

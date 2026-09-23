@@ -829,8 +829,8 @@ export function VaultSongsView() {
                         className="flex items-center gap-1 text-xs text-muted"
                         title={
                           s.isCollaborator
-                            ? `Collab with ${collabTitle}`
-                            : `Collab with ${s.collaborators?.map((c) => c.artist.displayName).join(", ")}`
+                            ? `You are working with ${collabTitle} on this song`
+                            : `You are working with ${s.collaborators?.map((c) => c.artist.displayName).join(", ")} on this song`
                         }
                       >
                         {s.collaborators && s.collaborators.length > 1 ? (
@@ -1104,7 +1104,9 @@ export function VaultSongsView() {
                           <p className="mt-0.5 text-xs text-muted">
                             {showTrash
                               ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
-                              : new Date(song.updatedAt).toLocaleDateString()}
+                              : isCollaborative
+                                ? `Working with ${collabName} · ${new Date(song.updatedAt).toLocaleDateString()}`
+                                : new Date(song.updatedAt).toLocaleDateString()}
                           </p>
                         </button>
 
@@ -1170,7 +1172,9 @@ export function VaultSongsView() {
                       <p className="mt-1.5 text-xs font-medium text-muted">
                         {showTrash
                           ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
-                          : new Date(song.updatedAt).toLocaleDateString()}
+                          : isCollaborative
+                            ? `Working with ${collabName} · ${new Date(song.updatedAt).toLocaleDateString()}`
+                            : new Date(song.updatedAt).toLocaleDateString()}
                       </p>
                     </button>
 
