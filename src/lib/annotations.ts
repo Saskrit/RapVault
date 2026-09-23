@@ -30,61 +30,23 @@ export type ColorStyle = {
   rgbaBg: string;
 };
 
+export const GENIUS_GOLD: ColorStyle = {
+  label: "Gold",
+  dotClass: "bg-amber-400",
+  highlightClass: "bg-[#fff2a8] dark:bg-amber-500/25 text-foreground border-b-2 border-amber-500",
+  badgeClass: "hidden",
+  tagClass: "bg-amber-50/90 text-amber-900 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60",
+  accentHex: "#f59e0b",
+  rgbaBg: "rgba(254, 240, 138, 0.6)",
+};
+
 export const ANNOTATION_COLORS: Record<AnnotationColor, ColorStyle> = {
-  purple: {
-    label: "Purple",
-    dotClass: "bg-purple-500",
-    highlightClass: "bg-purple-500/15 text-purple-950 dark:text-purple-100 border-b border-purple-400 dark:border-purple-500",
-    badgeClass: "bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800",
-    tagClass: "bg-purple-50/90 text-purple-700 border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60",
-    accentHex: "#a855f7",
-    rgbaBg: "rgba(168, 85, 247, 0.16)",
-  },
-  green: {
-    label: "Green",
-    dotClass: "bg-emerald-500",
-    highlightClass: "bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 border-b border-emerald-400 dark:border-emerald-500",
-    badgeClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
-    tagClass: "bg-emerald-50/90 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60",
-    accentHex: "#22c55e",
-    rgbaBg: "rgba(34, 197, 94, 0.16)",
-  },
-  pink: {
-    label: "Pink",
-    dotClass: "bg-rose-500",
-    highlightClass: "bg-rose-500/15 text-rose-950 dark:text-rose-100 border-b border-rose-400 dark:border-rose-500",
-    badgeClass: "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800",
-    tagClass: "bg-rose-50/90 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60",
-    accentHex: "#f43f5e",
-    rgbaBg: "rgba(244, 63, 94, 0.16)",
-  },
-  amber: {
-    label: "Amber",
-    dotClass: "bg-amber-500",
-    highlightClass: "bg-amber-500/15 text-amber-950 dark:text-amber-100 border-b border-amber-400 dark:border-amber-500",
-    badgeClass: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
-    tagClass: "bg-amber-50/90 text-amber-700 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60",
-    accentHex: "#f59e0b",
-    rgbaBg: "rgba(245, 158, 11, 0.16)",
-  },
-  blue: {
-    label: "Blue",
-    dotClass: "bg-blue-500",
-    highlightClass: "bg-blue-500/15 text-blue-950 dark:text-blue-100 border-b border-blue-400 dark:border-blue-500",
-    badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800",
-    tagClass: "bg-blue-50/90 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60",
-    accentHex: "#3b82f6",
-    rgbaBg: "rgba(59, 130, 246, 0.16)",
-  },
-  teal: {
-    label: "Teal",
-    dotClass: "bg-teal-500",
-    highlightClass: "bg-teal-500/15 text-teal-950 dark:text-teal-100 border-b border-teal-400 dark:border-teal-500",
-    badgeClass: "bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800",
-    tagClass: "bg-teal-50/90 text-teal-700 border-teal-200/80 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/60",
-    accentHex: "#14b8a6",
-    rgbaBg: "rgba(20, 184, 166, 0.16)",
-  },
+  purple: GENIUS_GOLD,
+  green: GENIUS_GOLD,
+  pink: GENIUS_GOLD,
+  amber: GENIUS_GOLD,
+  blue: GENIUS_GOLD,
+  teal: GENIUS_GOLD,
 };
 
 export function parseAnnotations(raw?: string | null): Annotation[] {
@@ -173,7 +135,6 @@ export function wrapLyricWithAnnotation(
   content: string,
   annotation: Annotation,
 ): string {
-  const badgeHtml = `<span class="rap-annotation-badge" contenteditable="false" data-annotation-id="${annotation.id}">💬 ${annotation.commentsCount || 1}</span>`;
   const escapedId = annotation.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const existingRegex = new RegExp(
     `<mark\\b[^>]*\\bdata-annotation-id=["']?${escapedId}["']?[^>]*>([\\s\\S]*?)<\\/mark>`,
@@ -186,7 +147,7 @@ export function wrapLyricWithAnnotation(
         /<span\b[^>]*\bclass=["'][^"']*rap-annotation-badge[^"']*["'][^>]*>[\s\S]*?<\/span>/gi,
         "",
       );
-      return `<mark class="rap-annotation-mark" data-annotation-id="${annotation.id}" data-color="${annotation.color}">${cleanInner}${badgeHtml}</mark>`;
+      return `<mark class="rap-annotation-mark" data-annotation-id="${annotation.id}">${cleanInner}</mark>`;
     });
   }
 
@@ -199,7 +160,7 @@ export function wrapLyricWithAnnotation(
   if (regex.test(content)) {
     return content.replace(
       regex,
-      `<mark class="rap-annotation-mark" data-annotation-id="${annotation.id}" data-color="${annotation.color}">$1${badgeHtml}</mark>`,
+      `<mark class="rap-annotation-mark" data-annotation-id="${annotation.id}">$1</mark>`,
     );
   }
 

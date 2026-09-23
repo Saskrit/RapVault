@@ -19,6 +19,7 @@ import {
   Wrench,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -371,6 +372,73 @@ export function LyricRichEditor({
     ? pickedColor
     : writerColor;
   const writerColorRef = useRef(activeWriterColor);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [selectionPopup, setSelectionPopup] = useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
+
+  const checkSelectionForPopup = useCallback(() => {
+    const sel = window.getSelection();
+    const editor = editorRef.current;
+    const wrapper = wrapperRef.current;
+    if (!sel || !editor || !wrapper || sel.rangeCount === 0 || sel.isCollapsed) {
+      setSelectionPopup(null);
+      return;
+    }
+
+    const text = sel.toString().trim();
+    if (!text) {
+      setSelectionPopup(null);
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) {
+      setSelectionPopup(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setSelectionPopup(null);
+      return;
+    }
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    // Position popup centered horizontally above the highlighted words
+    const x = Math.max(
+      45,
+      Math.min(
+        wrapperRect.width - 45,
+        rect.left + rect.width / 2 - wrapperRect.left,
+      ),
+    );
+    const y = rect.top - wrapperRect.top - 8;
+
+    // Hide if out of visible bounds of editor
+    if (y < -20 || rect.bottom < wrapperRect.top || rect.top > wrapperRect.bottom) {
+      setSelectionPopup(null);
+      return;
+    }
+
+    setSelectionPopup({ x, y, text });
+  }, []);
+
+  useEffect(() => {
+    function onDocSelectionChange() {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) {
+        setSelectionPopup(null);
+      }
+    }
+    document.addEventListener("selectionchange", onDocSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", onDocSelectionChange);
+  }, []);
 
   function handleAnnotateClick() {
     let selected = "";
@@ -816,17 +884,6 @@ export function LyricRichEditor({
 
             <button
               type="button"
-              onClick={handleAnnotateClick}
-              className="ml-1 inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-600/40 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-800 transition active:scale-95 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-200"
-              title="Annotate lyrics"
-              aria-label="Annotate"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-              <span>Annotate</span>
-            </button>
-
-            <button
-              type="button"
               onClick={toggleRapTools}
               className={`${toolBtn} w-9 ${
                 rapToolsOpen
@@ -1014,26 +1071,69 @@ export function LyricRichEditor({
         )}
       </div>
 
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        role="textbox"
-        aria-multiline="true"
-        aria-label="Song lyrics"
-        onInput={syncContent}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onDrop={handleDrop}
-        onClick={handleEditorClick}
-        onFocus={applyWriterColor}
-        onMouseUp={applyWriterColor}
-        onDragOver={(event) => event.preventDefault()}
-        spellCheck={spellCheck}
-        data-placeholder="Drop your bars here..."
-        style={{ fontSize: `${fontSize}px` }}
-        className="lyric-markdown lyric-editor h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 leading-relaxed outline-none lg:px-8 lg:py-5"
-      />
+      <div ref={wrapperRef} className="relative flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Song lyrics"
+          onInput={syncContent}
+          onKeyDown={(e) => {
+            handleKeyDown(e);
+            setTimeout(checkSelectionForPopup, 20);
+          }}
+          onKeyUp={checkSelectionForPopup}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
+          onClick={handleEditorClick}
+          onFocus={applyWriterColor}
+          onMouseUp={() => {
+            applyWriterColor();
+            setTimeout(checkSelectionForPopup, 10);
+          }}
+          onScroll={checkSelectionForPopup}
+          onDragOver={(event) => event.preventDefault()}
+          spellCheck={spellCheck}
+          data-placeholder="Drop your bars here..."
+          style={{ fontSize: `${fontSize}px` }}
+          className="lyric-markdown lyric-editor h-full min-h-0 flex-1 overflow-y-auto overscroll-contain bg-editor px-4 py-4 leading-relaxed outline-none lg:px-8 lg:py-5"
+        />
+
+        {selectionPopup && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${selectionPopup.x}px`,
+              top: `${selectionPopup.y}px`,
+              transform: "translate(-50%, -100%)",
+              zIndex: 40,
+            }}
+            className="pointer-events-auto select-none"
+          >
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                // Prevent editor blur so selection is preserved
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const text = selectionPopup.text;
+                setSelectionPopup(null);
+                onTriggerAnnotate?.(text);
+              }}
+              className="flex items-center gap-1.5 rounded-full bg-zinc-950 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xl ring-1 ring-white/20 transition hover:bg-black hover:scale-105 active:scale-95 dark:bg-zinc-100 dark:text-zinc-950 dark:ring-zinc-800"
+            >
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              <span>Annotate</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {footerStats && (
         <div className="sticky bottom-0 z-10 shrink-0 border-t border-border bg-card/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:px-6">

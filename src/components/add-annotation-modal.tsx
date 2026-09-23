@@ -3,7 +3,6 @@
 import { Clock, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-  ANNOTATION_COLORS,
   type Annotation,
   type AnnotationColor,
   formatVideoTimestamp,
@@ -124,70 +123,33 @@ export function AddAnnotationModal({
           />
         </div>
 
-        {/* Color and Timestamp row */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {/* Tag Color */}
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
-              Tag Color
+        {/* Timestamp */}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Beat Timestamp (Optional)
             </label>
-            <div className="flex items-center gap-1.5 rounded-xl border border-border bg-background p-1.5">
-              {(Object.keys(ANNOTATION_COLORS) as AnnotationColor[]).map(
-                (cKey) => {
-                  const style = ANNOTATION_COLORS[cKey];
-                  const selected = color === cKey;
-                  return (
-                    <button
-                      key={cKey}
-                      type="button"
-                      onClick={() => setColor(cKey)}
-                      className={`relative flex h-7 w-7 flex-1 items-center justify-center rounded-lg transition active:scale-95 ${
-                        selected
-                          ? "ring-2 ring-foreground ring-offset-1 ring-offset-background"
-                          : "hover:scale-105"
-                      }`}
-                      title={style.label}
-                      aria-label={style.label}
-                    >
-                      <span
-                        className="h-4 w-4 rounded-full"
-                        style={{ backgroundColor: style.accentHex }}
-                      />
-                    </button>
-                  );
-                },
-              )}
-            </div>
+            {currentVideoTime && currentVideoTime > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setTimestamp(formatVideoTimestamp(currentVideoTime))
+                }
+                className="text-[11px] font-medium text-amber-700 hover:underline dark:text-amber-400"
+              >
+                Use current beat ({formatVideoTimestamp(currentVideoTime)})
+              </button>
+            )}
           </div>
-
-          {/* Timestamp */}
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Beat Timestamp
-              </label>
-              {currentVideoTime && currentVideoTime > 0 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTimestamp(formatVideoTimestamp(currentVideoTime))
-                  }
-                  className="text-[11px] font-medium text-amber-700 hover:underline dark:text-amber-400"
-                >
-                  Use {formatVideoTimestamp(currentVideoTime)}
-                </button>
-              )}
-            </div>
-            <div className="relative">
-              <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-              <input
-                type="text"
-                value={timestamp}
-                onChange={(e) => setTimestamp(e.target.value)}
-                placeholder="e.g. 0:12"
-                className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none transition focus:border-amber-600"
-              />
-            </div>
+          <div className="relative">
+            <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+            <input
+              type="text"
+              value={timestamp}
+              onChange={(e) => setTimestamp(e.target.value)}
+              placeholder="e.g. 0:12"
+              className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none transition focus:border-amber-600"
+            />
           </div>
         </div>
 

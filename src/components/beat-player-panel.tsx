@@ -514,21 +514,42 @@ export function BeatPlayerPanel({
                     type="url"
                     value={urlInput}
                     onChange={(e) => {
-                      setUrlInput(e.target.value);
+                      const val = e.target.value;
+                      setUrlInput(val);
                       if (error) setError("");
+                      if (parseYouTubeVideoId(val)) {
+                        loadBeatIntoNewOrCurrent(val);
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pasted = e.clipboardData.getData("text");
+                      if (parseYouTubeVideoId(pasted)) {
+                        setTimeout(() => loadBeatIntoNewOrCurrent(pasted), 20);
+                      }
                     }}
                     onKeyDown={(e) =>
                       e.key === "Enter" && loadBeatIntoNewOrCurrent()
                     }
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="Paste YouTube link here..."
                     className="w-full min-h-9 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none transition focus:border-amber-600"
                   />
                   <button
                     type="button"
-                    onClick={() => loadBeatIntoNewOrCurrent()}
-                    className="rap-btn-bronze min-h-9 shrink-0 rounded-lg px-4 py-1.5 text-xs font-semibold shadow-xs active:scale-95"
+                    onClick={() => {
+                      if (canGoNext) {
+                        goNext();
+                      } else if (canAdd) {
+                        addBeatSlot();
+                      } else if (playlist.urls.length > 0) {
+                        commitPlaylist({ urls: playlist.urls, active: 0 });
+                      }
+                    }}
+                    title="Next beat"
+                    aria-label="Next beat"
+                    className="rap-btn-bronze flex min-h-9 items-center gap-1.5 shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-xs active:scale-95"
                   >
-                    Load
+                    <Plus className="h-4 w-4" />
+                    <span>Next Beat</span>
                   </button>
                   <button
                     type="button"

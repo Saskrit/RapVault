@@ -604,9 +604,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                       <Pencil className="h-4 w-4" />
                     </button>
                   </div>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Saved just now • {stats.words} words • {stats.lines} lines
-                  </p>
                 </div>
 
                 {/* Right controls in document header: Status, Publish, More */}
