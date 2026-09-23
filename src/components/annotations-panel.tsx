@@ -4,9 +4,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import {
   ANNOTATION_COLORS,
   type Annotation,
-  formatRelativeTime,
 } from "@/lib/annotations";
-import { UserAvatar } from "@/components/user-avatar";
 
 type AnnotationsPanelProps = {
   annotations: Annotation[];
@@ -79,26 +77,19 @@ export function AnnotationsPanel({
                     : ""
                 }`}
               >
-                {/* Top Row: Dot, Timestamp, Lyric Snippet Tag, Actions */}
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorMeta.dotClass}`}
-                    aria-hidden
-                  />
-                  {item.timestamp && (
-                    <span className="shrink-0 font-mono text-[11px] font-semibold text-blue-600 dark:text-blue-400">
-                      {item.timestamp}
+                {/* Line / Word / Sentence and Actions */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium leading-relaxed ${colorMeta.tagClass}`}
+                      title={item.text}
+                    >
+                      {item.text}
                     </span>
-                  )}
-                  <span
-                    className={`min-w-0 max-w-[16rem] truncate rounded-md border px-2 py-0.5 text-xs font-medium ${colorMeta.tagClass}`}
-                    title={item.text}
-                  >
-                    {item.text}
-                  </span>
+                  </div>
 
                   {!readOnly && (
-                    <div className="ml-auto flex shrink-0 items-center gap-1 opacity-70 transition group-hover:opacity-100">
+                    <div className="flex shrink-0 items-center gap-1 opacity-70 transition group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -127,23 +118,8 @@ export function AnnotationsPanel({
                   )}
                 </div>
 
-                {/* Author Row */}
-                <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
-                  <UserAvatar
-                    src={item.authorAvatar}
-                    name={item.authorName}
-                    size="sm"
-                    className="h-4 w-4 shrink-0 text-[9px]"
-                  />
-                  <span className="font-semibold text-foreground/80">
-                    {item.authorName}
-                  </span>
-                  <span>•</span>
-                  <span>{formatRelativeTime(item.createdAt)}</span>
-                </div>
-
-                {/* Explanation */}
-                <p className="mt-1.5 text-xs leading-relaxed text-foreground/90">
+                {/* Description */}
+                <p className="mt-2 text-xs leading-relaxed text-foreground/90 whitespace-pre-wrap">
                   {item.explanation}
                 </p>
               </div>
