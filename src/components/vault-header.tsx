@@ -4,8 +4,10 @@ import Link from "next/link";
 import {
   Bell,
   CheckCheck,
+  ChevronDown,
   LogOut,
   MessageSquare,
+  Plus,
   Search,
   Settings,
   UserPlus,
@@ -34,6 +36,7 @@ type VaultHeaderProps = {
   mobileSearchOpen?: boolean;
   onMobileSearchOpen?: (open: boolean) => void;
   centerLabel?: string;
+  variant?: "default" | "writing";
   children?: React.ReactNode;
 };
 
@@ -72,10 +75,14 @@ export function VaultHeader({
   mobileSearchOpen = false,
   onMobileSearchOpen,
   centerLabel,
+  variant = "default",
   children,
 }: VaultHeaderProps) {
   const showSearch = onSearchChange !== undefined;
   const [label, setLabel] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [skipConfirm, setSkipConfirm] = useState(false);
@@ -97,6 +104,7 @@ export function VaultHeader({
         username?: string | null;
         displayName?: string | null;
         email?: string;
+        avatarUrl?: string | null;
       }>();
       if (cached) {
         setLabel(
@@ -104,6 +112,7 @@ export function VaultHeader({
             ? `@${cached.username}`
             : cached.displayName || cached.email || null,
         );
+        if (cached.avatarUrl) setAvatarUrl(cached.avatarUrl);
       }
 
       try {
@@ -116,11 +125,30 @@ export function VaultHeader({
             ? `@${data.user.username}`
             : data.user.displayName || data.user.email,
         );
+        if (data.user.avatarUrl) setAvatarUrl(data.user.avatarUrl);
       } catch {
         // ignore offline
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setUserMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userMenuOpen]);
 
   useEffect(() => {
     setSkipConfirm(preferenceStorageGet(SKIP_LOGOUT_CONFIRM_KEY) === "1");
@@ -229,6 +257,40 @@ export function VaultHeader({
             className="hidden lg:inline-flex"
           />
         </div>
+
+        {variant === "writing" && (
+          <nav className="ml-2 hidden items-center gap-4 text-xs font-semibold text-muted lg:flex lg:gap-5">
+            <Link href="/vault" className="transition hover:text-foreground">
+              Home
+            </Link>
+            <Link href="/vault" className="transition hover:text-foreground">
+              Explore
+            </Link>
+            <Link href="/vault" className="transition hover:text-foreground">
+              Beats
+            </Link>
+            <Link href="/vault/artists" className="transition hover:text-foreground">
+              Artists
+            </Link>
+            <Link href="/about" className="transition hover:text-foreground">
+              About
+            </Link>
+          </nav>
+        )}
+
+        {variant === "writing" && (
+          <div className="relative mx-auto hidden min-w-0 max-w-sm flex-1 md:block lg:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+            <input
+              type="search"
+              placeholder="Search songs, artists, beats..."
+              className="w-full min-h-9 rounded-xl border border-border bg-sidebar/50 py-1.5 pl-9 pr-14 text-xs text-foreground outline-none transition focus:border-amber-600 focus:bg-background"
+            />
+            <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+              Ctrl K
+            </kbd>
+          </div>
+        )}
 
         {showSearch && (
           <div className="relative mx-auto hidden min-w-0 max-w-lg flex-1 lg:block">
@@ -386,51 +448,117 @@ export function VaultHeader({
             )}
           </div>
 
-          <Link
-            href="/vault/messages"
-            className={`relative ${iconBtn}`}
-            aria-label={
-              unreadCount > 0
-                ? `Messages, ${unreadCount} unread`
-                : "Messages"
-            }
-            title="Messages"
-          >
-            <MessageSquare className={headerIcon} />
-            <UnreadBadge count={unreadCount} />
-          </Link>
-          {label && (
-            <Link
-              href="/vault/settings"
-              className="hidden max-w-[14rem] items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs text-muted transition hover:border-foreground/20 hover:text-foreground xl:flex"
-              title="Profile & settings"
-            >
-              <span className="flex items-center gap-1 text-foreground/80">
-                <UserRound className="h-3.5 w-3.5 shrink-0" />
-                <Settings className="h-3.5 w-3.5 shrink-0" />
-              </span>
-              <span className="truncate">{label}</span>
-            </Link>
+          {variant === "writing" ? (
+            <>
+              {/* User Avatar + Name + Dropdown */}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  className="flex items-center gap-1.5 rounded-xl border border-border bg-background p-1 pr-2 text-xs font-semibold text-foreground transition hover:border-foreground/30 active:scale-95 sm:gap-2 sm:px-2.5 sm:py-1.5"
+                >
+                  <UserAvatar
+                    src={avatarUrl}
+                    name={label || "User"}
+                    size="sm"
+                    className="h-6 w-6 text-[10px]"
+                  />
+                  <span className="hidden truncate font-semibold sm:inline">
+                    {label || "@saskreet"}
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-muted transition ${userMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full z-40 mt-1.5 min-w-[12rem] overflow-hidden rounded-2xl border border-border bg-card py-1.5 shadow-xl">
+                    <Link
+                      href="/vault/settings"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-3.5 py-2 text-xs text-foreground transition hover:bg-sidebar"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-muted" />
+                      <span>Profile & Settings</span>
+                    </Link>
+                    <div className="flex items-center justify-between px-3.5 py-2 text-xs text-foreground transition hover:bg-sidebar">
+                      <span>Theme</span>
+                      <ThemeToggle />
+                    </div>
+                    <div className="my-1 border-t border-border" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        handleLogoutClick();
+                      }}
+                      className="flex w-full items-center gap-2 px-3.5 py-2 text-xs text-red-500 transition hover:bg-sidebar"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Log out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* + New Button */}
+              <Link
+                href="/vault/write/local"
+                className="rap-btn-bronze inline-flex min-h-9 items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold shadow-xs transition active:scale-95 sm:px-3.5"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/vault/messages"
+                className={`relative ${iconBtn}`}
+                aria-label={
+                  unreadCount > 0
+                    ? `Messages, ${unreadCount} unread`
+                    : "Messages"
+                }
+                title="Messages"
+              >
+                <MessageSquare className={headerIcon} />
+                <UnreadBadge count={unreadCount} />
+              </Link>
+              {label && (
+                <Link
+                  href="/vault/settings"
+                  className="hidden max-w-[14rem] items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs text-muted transition hover:border-foreground/20 hover:text-foreground xl:flex"
+                  title="Profile & settings"
+                >
+                  <span className="flex items-center gap-1 text-foreground/80">
+                    <UserRound className="h-3.5 w-3.5 shrink-0" />
+                    <Settings className="h-3.5 w-3.5 shrink-0" />
+                  </span>
+                  <span className="truncate">{label}</span>
+                </Link>
+              )}
+              <Link
+                href="/vault/settings"
+                className={`${iconBtn} xl:hidden`}
+                aria-label="Profile & settings"
+                title="Profile & settings"
+              >
+                <Settings className={headerIcon} />
+              </Link>
+              <ThemeToggle className="hidden md:flex" />
+              <button
+                type="button"
+                onClick={handleLogoutClick}
+                disabled={loggingOut}
+                className={logoutBtn}
+                aria-label="Log out"
+                title="Log out"
+              >
+                <LogOut className={headerIcon} />
+              </button>
+            </>
           )}
-          <Link
-            href="/vault/settings"
-            className={`${iconBtn} xl:hidden`}
-            aria-label="Profile & settings"
-            title="Profile & settings"
-          >
-            <Settings className={headerIcon} />
-          </Link>
-          <ThemeToggle className="hidden md:flex" />
-          <button
-            type="button"
-            onClick={handleLogoutClick}
-            disabled={loggingOut}
-            className={logoutBtn}
-            aria-label="Log out"
-            title="Log out"
-          >
-            <LogOut className={headerIcon} />
-          </button>
         </div>
       </div>
 

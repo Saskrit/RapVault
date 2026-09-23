@@ -3,13 +3,18 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Clock,
   ExternalLink,
+  MapPin,
+  MessageSquare,
   Music2,
   Plus,
   Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AnnotationsPanel } from "@/components/annotations-panel";
+import type { Annotation } from "@/lib/annotations";
 import { loadYouTubeIframeApi } from "@/lib/youtube-iframe-api";
 import {
   formatVideoTime,
@@ -29,6 +34,14 @@ type BeatPlayerPanelProps = {
   onBeatUrlChange: (beatUrl: string) => void;
   onClose?: () => void;
   readOnly?: boolean;
+  annotations?: Annotation[];
+  activeAnnotationId?: string | null;
+  onSelectAnnotation?: (id: string) => void;
+  onAddAnnotation?: () => void;
+  onEditAnnotation?: (annotation: Annotation) => void;
+  onDeleteAnnotation?: (id: string) => void;
+  onSetCurrentLineTime?: (timeStr: string) => void;
+  onTimeUpdate?: (currentTime: number) => void;
 };
 
 function clampActive(active: number, length: number) {
@@ -93,7 +106,20 @@ export function BeatPlayerPanel({
   onBeatUrlChange,
   onClose,
   readOnly = false,
+  annotations = [],
+  activeAnnotationId,
+  onSelectAnnotation,
+  onAddAnnotation,
+  onEditAnnotation,
+  onDeleteAnnotation,
+  onSetCurrentLineTime,
+  onTimeUpdate,
 }: BeatPlayerPanelProps) {
+  const [activeTab, setActiveTab] = useState<
+    "beats" | "annotations" | "timestamps" | "comments"
+  >("beats");
+  const [autoScroll, setAutoScroll] = useState(true);
+
   const [playlist, setPlaylist] = useState<BeatPlaylist>(() =>
     parseBeatPlaylist(beatUrl),
   );
@@ -170,7 +196,9 @@ export function BeatPlayerPanel({
       stopTick();
       tickRef.current = setInterval(() => {
         try {
-          setCurrentTime(player.getCurrentTime());
+          const t = player.getCurrentTime();
+          setCurrentTime(t);
+          onTimeUpdate?.(t);
         } catch {
           stopTick();
         }
@@ -227,7 +255,9 @@ export function BeatPlayerPanel({
             ) {
               stopTick();
               try {
-                setCurrentTime(event.target.getCurrentTime());
+                const t = event.target.getCurrentTime();
+                setCurrentTime(t);
+                onTimeUpdate?.(t);
               } catch {
                 // Player may already be torn down.
               }
@@ -243,7 +273,7 @@ export function BeatPlayerPanel({
       cancelled = true;
       destroyPlayer();
     };
-  }, [videoId]);
+  }, [videoId, onTimeUpdate]);
 
   function clearBeat() {
     if (readOnly) return;
@@ -282,7 +312,6 @@ export function BeatPlayerPanel({
 
   function goPrev() {
     setError("");
-    // Leaving an unsaved empty slot → return to last saved beat
     if (playlist.active >= playlist.urls.length) {
       if (playlist.urls.length === 0) {
         setPlaylist({ urls: [], active: 0 });
@@ -336,7 +365,6 @@ export function BeatPlayerPanel({
     const watchUrl = youTubeWatchUrl(id);
     setError("");
 
-    // Adding into a new slot (active past end)
     if (
       playlist.active >= playlist.urls.length &&
       playlist.urls.length < MAX_BEATS
@@ -372,13 +400,8 @@ export function BeatPlayerPanel({
     !showingNewSlot && beatCount > 1 && playlist.active < beatCount - 1;
   const canAdd = !readOnly && beatCount < MAX_BEATS && !showingNewSlot;
 
-  const progress =
-    duration && duration > 0
-      ? Math.min(100, (currentTime / duration) * 100)
-      : 0;
-
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-sidebar">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-card text-foreground">
       {clearedToast && (
         <div
           role="status"
@@ -388,33 +411,101 @@ export function BeatPlayerPanel({
         </div>
       )}
 
-      <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1">
-        <Music2 className="h-3 w-3 shrink-0 text-accent" />
-        <h2 className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-tight">
-          Beats
-        </h2>
+      {/* Top Tab Bar matching screenshot */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-2 pt-1.5 sm:px-3">
+        <div className="flex items-center gap-1 overflow-x-auto text-xs font-medium sm:gap-2">
+          {/* Tab: Beats */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("beats")}
+            className={`relative flex items-center gap-1.5 px-2.5 py-2 transition-colors ${
+              activeTab === "beats"
+                ? "font-semibold text-amber-700 dark:text-amber-400"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <Music2 className="h-3.5 w-3.5" />
+            <span>Beats</span>
+            {activeTab === "beats" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
+            )}
+          </button>
 
-        <div className="flex items-center gap-0.5">
+          {/* Tab: Annotations */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("annotations")}
+            className={`relative flex items-center gap-1.5 px-2.5 py-2 transition-colors ${
+              activeTab === "annotations"
+                ? "font-semibold text-amber-700 dark:text-amber-400"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            <span>Annotations</span>
+            <span className="ml-0.5 rounded-full bg-border px-1.5 py-0.2 text-[10px] font-bold">
+              {annotations.length}
+            </span>
+            {activeTab === "annotations" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
+            )}
+          </button>
+
+          {/* Tab: Line Timestamps */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("timestamps")}
+            className={`relative hidden items-center gap-1.5 px-2.5 py-2 transition-colors sm:flex ${
+              activeTab === "timestamps"
+                ? "font-semibold text-amber-700 dark:text-amber-400"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>Line Timestamps</span>
+            {activeTab === "timestamps" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
+            )}
+          </button>
+
+          {/* Tab: Comments */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("comments")}
+            className={`relative hidden items-center gap-1.5 px-2.5 py-2 transition-colors sm:flex ${
+              activeTab === "comments"
+                ? "font-semibold text-amber-700 dark:text-amber-400"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span>Comments</span>
+            {activeTab === "comments" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Right side beat pagination */}
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={goPrev}
             disabled={!canGoPrev}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-6 w-6 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground disabled:opacity-30"
             aria-label="Previous beat"
-            title="Previous beat"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-          <span className="min-w-[2.25rem] text-center text-[10px] font-medium tabular-nums text-muted">
-            {displayIndex}/{MAX_BEATS}
+          <span className="text-[11px] font-medium tabular-nums text-muted">
+            {displayIndex} / {MAX_BEATS}
           </span>
           <button
             type="button"
             onClick={goNext}
             disabled={!canGoNext}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-6 w-6 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground disabled:opacity-30"
             aria-label="Next beat"
-            title="Next beat"
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
@@ -422,184 +513,167 @@ export function BeatPlayerPanel({
             <button
               type="button"
               onClick={addBeatSlot}
-              className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted transition hover:border-accent hover:text-accent"
-              aria-label="Add another beat"
-              title={`Add beat (${beatCount}/${MAX_BEATS})`}
+              className="ml-1 flex h-6 w-6 items-center justify-center rounded border border-border text-muted transition hover:border-amber-600 hover:text-amber-600"
+              title="Add another beat"
             >
               <Plus className="h-3 w-3" />
             </button>
           )}
-        </div>
-
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="ml-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground lg:hidden"
-            aria-label="Hide beat player"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-
-      {beatCount > 0 && (
-        <div className="flex shrink-0 items-center justify-center gap-1 border-b border-border px-2 py-1">
-          {Array.from({ length: MAX_BEATS }).map((_, index) => {
-            const filled = index < beatCount;
-            const active = showingNewSlot
-              ? false
-              : filled && index === playlist.active;
-            return (
-              <button
-                key={index}
-                type="button"
-                disabled={!filled}
-                onClick={() => {
-                  if (!filled) return;
-                  commitPlaylist({ urls: playlist.urls, active: index });
-                  setError("");
-                }}
-                className={`h-1.5 rounded-full transition ${
-                  filled
-                    ? active
-                      ? "w-4 bg-accent"
-                      : "w-1.5 bg-muted/70 hover:bg-muted"
-                    : "w-1.5 bg-border"
-                } disabled:cursor-default`}
-                aria-label={
-                  filled ? `Play beat ${index + 1}` : `Empty slot ${index + 1}`
-                }
-                title={filled ? `Beat ${index + 1}` : `Empty (${index + 1}/5)`}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {!readOnly && (
-        <div className="shrink-0 space-y-0.5 border-b border-border px-2 py-1.5">
-          <label
-            htmlFor="beat-url"
-            className="text-[9px] font-medium uppercase tracking-wide text-muted"
-          >
-            Paste link
-            {showingNewSlot
-              ? ` · new beat ${beatCount + 1}/${MAX_BEATS}`
-              : beatCount > 0
-                ? ` · beat ${playlist.active + 1}`
-                : ""}
-          </label>
-          <div className="flex gap-1">
-            <input
-              id="beat-url"
-              type="url"
-              value={urlInput}
-              onChange={(e) => {
-                setUrlInput(e.target.value);
-                if (error) setError("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && loadBeatIntoNewOrCurrent()}
-              onBlur={() => loadBeatIntoNewOrCurrent()}
-              onPaste={(e) => {
-                const pasted = e.clipboardData.getData("text");
-                if (parseYouTubeVideoId(pasted)) {
-                  e.preventDefault();
-                  setUrlInput(pasted.trim());
-                  loadBeatIntoNewOrCurrent(pasted.trim());
-                }
-              }}
-              placeholder="youtube.com/watch?v=…"
-              className="min-h-7 min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] outline-none placeholder:text-muted focus:border-accent"
-            />
+          {onClose && (
             <button
               type="button"
-              onClick={clearBeat}
-              onMouseDown={(e) => e.preventDefault()}
-              disabled={!urlInput && !videoId && beatCount === 0}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted transition hover:border-red-500/50 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label="Clear this beat"
-              title="Clear this beat"
+              onClick={onClose}
+              className="ml-1 flex h-6 w-6 items-center justify-center rounded text-muted transition hover:bg-sidebar hover:text-foreground lg:hidden"
+              aria-label="Close panel"
             >
-              <Trash2 className="h-3 w-3" />
+              <X className="h-3 w-3" />
             </button>
-          </div>
-          {error && <p className="text-[10px] text-red-400">{error}</p>}
+          )}
         </div>
-      )}
+      </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        {videoId ? (
-          <>
-            <div className="relative min-h-[8rem] flex-1 bg-black">
-              <div
-                ref={playerShellRef}
-                className="absolute inset-0 h-full w-full overflow-hidden"
-              />
-            </div>
-            <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-2 py-1">
-              <p className="truncate text-[10px] text-muted">
-                {readOnly
-                  ? `Public · ${playlist.active + 1}/${beatCount}`
-                  : `${playlist.active + 1} of ${beatCount} · synced`}
-              </p>
-              <a
-                href={youTubeWatchUrl(videoId)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex shrink-0 items-center gap-1 text-[10px] text-muted transition hover:text-accent"
-              >
-                <ExternalLink className="h-2.5 w-2.5" />
-                YouTube
-              </a>
-            </div>
-            <div className="flex shrink-0 flex-col gap-1 border-t border-border px-2 py-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wide text-muted">
-                Length
-              </p>
-              {duration !== null ? (
-                <>
-                  <p className="text-xs font-semibold tabular-nums tracking-tight">
-                    <span>0:00 → {formatVideoTime(duration)}</span>
-                    <span className="ml-1.5 text-[10px] font-medium text-muted">
-                      [{formatVideoTime(currentTime)} –{" "}
-                      {formatVideoTime(duration)}]
-                    </span>
+      {/* Main Tab Content */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {activeTab === "beats" && (
+          <div className="flex flex-col">
+            {/* Beat URL Input row */}
+            {!readOnly && (
+              <div className="border-b border-border/70 p-3">
+                <label
+                  htmlFor="beat-url-input"
+                  className="mb-1.5 block text-xs font-semibold text-muted"
+                >
+                  Paste YouTube link - Beat {displayIndex || 1}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="beat-url-input"
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => {
+                      setUrlInput(e.target.value);
+                      if (error) setError("");
+                    }}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && loadBeatIntoNewOrCurrent()
+                    }
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full min-h-9 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none transition focus:border-amber-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => loadBeatIntoNewOrCurrent()}
+                    className="rap-btn-bronze min-h-9 shrink-0 rounded-lg px-4 py-1.5 text-xs font-semibold shadow-xs active:scale-95"
+                  >
+                    Load
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearBeat}
+                    title="Clear beat"
+                    className="flex min-h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:bg-sidebar hover:text-red-500"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {error && (
+                  <p className="mt-1 text-[11px] font-medium text-red-500">
+                    {error}
                   </p>
-                  <div className="space-y-1">
-                    <div
-                      className="h-1 overflow-hidden rounded-full bg-border"
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={duration}
-                      aria-valuenow={currentTime}
-                      aria-label="Beat playback position"
-                    >
-                      <div
-                        className="h-full rounded-full bg-accent transition-[width] duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] tabular-nums text-muted">
-                      <span>{formatVideoTime(currentTime)}</span>
-                      <span>{formatVideoTime(duration)}</span>
-                    </div>
-                  </div>
-                </>
+                )}
+              </div>
+            )}
+
+            {/* Video Player */}
+            <div className="relative aspect-video w-full bg-black">
+              {videoId ? (
+                <div
+                  ref={playerShellRef}
+                  className="absolute inset-0 h-full w-full overflow-hidden"
+                />
               ) : (
-                <p className="text-[11px] text-muted">Loading…</p>
+                <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-zinc-500">
+                  <Music2 className="h-8 w-8 opacity-40" />
+                  <p className="text-xs">Paste a YouTube link above to play beat</p>
+                </div>
               )}
             </div>
-          </>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 p-3 text-center">
-            <Music2 className="h-6 w-6 text-border" />
-            <p className="max-w-[13rem] text-[11px] leading-relaxed text-muted">
-              {showingNewSlot
-                ? `Paste beat ${beatCount + 1} of ${MAX_BEATS}.`
-                : beatCount > 0
-                  ? "This slot is empty — paste a YouTube link."
-                  : `Paste a YouTube beat. Add up to ${MAX_BEATS} and switch with the arrows.`}
+
+            {/* Video Control Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-sidebar/30 px-3 py-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  const stamp = formatVideoTime(currentTime);
+                  onSetCurrentLineTime?.(stamp);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-foreground/30 active:scale-95"
+              >
+                <Clock className="h-3.5 w-3.5 text-muted" />
+                <span>Set Current Line Time</span>
+              </button>
+
+              <div className="flex items-center gap-1 font-mono text-xs font-medium text-muted">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  {formatVideoTime(currentTime)} /{" "}
+                  {formatVideoTime(duration || 0)}
+                </span>
+              </div>
+
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted">
+                <span>Auto Scroll</span>
+                <input
+                  type="checkbox"
+                  checked={autoScroll}
+                  onChange={(e) => setAutoScroll(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-amber-700"
+                />
+              </label>
+            </div>
+
+            {/* Annotations Section below beat player as seen in screenshot */}
+            <AnnotationsPanel
+              annotations={annotations}
+              activeAnnotationId={activeAnnotationId}
+              onSelectAnnotation={onSelectAnnotation}
+              onAddAnnotation={onAddAnnotation || (() => {})}
+              onEditAnnotation={onEditAnnotation || (() => {})}
+              onDeleteAnnotation={onDeleteAnnotation || (() => {})}
+              readOnly={readOnly}
+            />
+          </div>
+        )}
+
+        {activeTab === "annotations" && (
+          <AnnotationsPanel
+            annotations={annotations}
+            activeAnnotationId={activeAnnotationId}
+            onSelectAnnotation={onSelectAnnotation}
+            onAddAnnotation={onAddAnnotation || (() => {})}
+            onEditAnnotation={onEditAnnotation || (() => {})}
+            onDeleteAnnotation={onDeleteAnnotation || (() => {})}
+            readOnly={readOnly}
+          />
+        )}
+
+        {activeTab === "timestamps" && (
+          <div className="p-4 text-xs text-muted">
+            <h4 className="font-semibold text-foreground">Line Timestamps</h4>
+            <p className="mt-1 leading-relaxed">
+              Play your beat and click &ldquo;Set Current Line Time&rdquo; to sync each bar with the beat flow.
+            </p>
+            <div className="mt-3 rounded-lg border border-border bg-background p-3 font-mono text-[11px]">
+              Current beat time: {formatVideoTime(currentTime)}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "comments" && (
+          <div className="p-4 text-xs text-muted">
+            <h4 className="font-semibold text-foreground">Song Comments</h4>
+            <p className="mt-1 leading-relaxed">
+              Feedback from collaborators and private notes will appear here.
             </p>
           </div>
         )}

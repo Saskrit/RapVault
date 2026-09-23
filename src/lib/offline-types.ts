@@ -10,6 +10,7 @@ export type SongPatch = Partial<
     | "status"
     | "beatUrl"
     | "voiceMemoPath"
+    | "annotations"
     | "isFavorite"
     | "folderId"
     | "isPublic"

@@ -3,14 +3,17 @@
 import {
   Bold,
   Italic,
+  Lightbulb,
   Link,
   List,
   ListOrdered,
   Lock,
   Quote,
   Redo2,
+  Sparkles,
   SpellCheck,
   Strikethrough,
+  Underline,
   Undo2,
   Unlock,
   Wrench,
@@ -52,6 +55,12 @@ type LyricRichEditorProps = {
   canChooseWriterColor?: boolean;
   /** Show a small “your color” hint when collaborating */
   writerLabel?: string | null;
+  /** Trigger annotation on current selection */
+  onTriggerAnnotate?: (selectedText: string) => void;
+  /** Currently selected/focused annotation id */
+  activeAnnotationId?: string | null;
+  /** Callback when user clicks an annotated lyric in the editor */
+  onAnnotationClick?: (annotationId: string) => void;
 };
 
 const toolBtn =
@@ -349,6 +358,9 @@ export function LyricRichEditor({
   writerColor = null,
   canChooseWriterColor = false,
   writerLabel = null,
+  onTriggerAnnotate,
+  activeAnnotationId,
+  onAnnotationClick,
 }: LyricRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastHtml = useRef("");
@@ -359,6 +371,28 @@ export function LyricRichEditor({
     ? pickedColor
     : writerColor;
   const writerColorRef = useRef(activeWriterColor);
+
+  function handleAnnotateClick() {
+    let selected = "";
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      selected = sel.toString().trim();
+    }
+    onTriggerAnnotate?.(selected);
+  }
+
+  useEffect(() => {
+    if (!activeAnnotationId || !editorRef.current) return;
+    const marks = editorRef.current.querySelectorAll(".rap-annotation-mark");
+    marks.forEach((el) => el.classList.remove("active-highlight"));
+    const match = editorRef.current.querySelector(
+      `.rap-annotation-mark[data-annotation-id="${activeAnnotationId}"]`,
+    );
+    if (match) {
+      match.classList.add("active-highlight");
+      match.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeAnnotationId]);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -623,6 +657,26 @@ export function LyricRichEditor({
 
   function handleEditorClick(event: ReactMouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement | null;
+
+    // Annotation click detection
+    const mark = target?.closest?.(
+      ".rap-annotation-mark, .rap-annotation-badge",
+    ) as HTMLElement | null;
+    if (mark) {
+      const parentMark = mark.classList.contains("rap-annotation-mark")
+        ? mark
+        : (mark.closest(".rap-annotation-mark") as HTMLElement | null);
+      const annId =
+        parentMark?.getAttribute("data-annotation-id") ||
+        mark.getAttribute("data-annotation-id");
+      if (annId && onAnnotationClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        onAnnotationClick(annId);
+        return;
+      }
+    }
+
     const anchor = target?.closest?.("a[href]") as HTMLAnchorElement | null;
     const editor = editorRef.current;
     if (!anchor || !editor || !editor.contains(anchor)) return;
@@ -682,6 +736,9 @@ export function LyricRichEditor({
     } else if (key === "i") {
       event.preventDefault();
       runCommand("italic");
+    } else if (key === "u") {
+      event.preventDefault();
+      runCommand("underline");
     } else if (key === "k") {
       event.preventDefault();
       insertLink();
@@ -734,15 +791,15 @@ export function LyricRichEditor({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border">
         <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 lg:px-6">
-          <div className="hidden items-center gap-0.5 lg:flex">
+          <div className="flex items-center gap-0.5">
             <button type="button" className={`${toolBtn} w-9`} title="Bold" aria-label="Bold" onClick={() => runCommand("bold")}>
               <Bold className="h-4 w-4" />
             </button>
             <button type="button" className={`${toolBtn} w-9`} title="Italic" aria-label="Italic" onClick={() => runCommand("italic")}>
               <Italic className="h-4 w-4" />
             </button>
-            <button type="button" className={`${toolBtn} w-9`} title="Strikethrough" aria-label="Strikethrough" onClick={() => runCommand("strikeThrough")}>
-              <Strikethrough className="h-4 w-4" />
+            <button type="button" className={`${toolBtn} w-9`} title="Underline" aria-label="Underline" onClick={() => runCommand("underline")}>
+              <Underline className="h-4 w-4" />
             </button>
             <button type="button" className={`${toolBtn} w-9`} title="Bullet list" aria-label="Bullet list" onClick={() => runCommand("insertUnorderedList")}>
               <List className="h-4 w-4" />
@@ -756,19 +813,31 @@ export function LyricRichEditor({
             <button type="button" className={`${toolBtn} w-9`} title="Link" aria-label="Link" onClick={insertLink}>
               <Link className="h-4 w-4" />
             </button>
-            {onSpellCheckChange && (
-              <button
-                type="button"
-                className={`${toolBtn} w-9 ${
-                  spellCheck ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent" : ""
-                }`}
-                title={spellCheck ? "Spell check on" : "Spell check off"}
-                aria-label={spellCheck ? "Disable spell check" : "Enable spell check"}
-                onClick={() => onSpellCheckChange(!spellCheck)}
-              >
-                <SpellCheck className="h-4 w-4" />
-              </button>
-            )}
+
+            <button
+              type="button"
+              onClick={handleAnnotateClick}
+              className="ml-1 inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-600/40 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-800 transition active:scale-95 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-200"
+              title="Annotate lyrics"
+              aria-label="Annotate"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
+              <span>Annotate</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleRapTools}
+              className={`${toolBtn} w-9 ${
+                rapToolsOpen
+                  ? "border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                  : ""
+              }`}
+              title="Rhyme suggestions & rap structure"
+              aria-label="Rhyme suggestions"
+            >
+              <Lightbulb className="h-4 w-4" />
+            </button>
           </div>
 
           <div className="ml-0.5 flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">

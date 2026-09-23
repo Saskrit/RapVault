@@ -520,3 +520,75 @@ html {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Lyric Annotations & Highlights (RapVault Writing Studio)
+   ========================================================================== */
+.rap-annotation-mark {
+  border-radius: 4px;
+  padding: 1px 3px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  display: inline;
+}
+
+.rap-annotation-mark[data-color="purple"] {
+  background-color: rgba(168, 85, 247, 0.18);
+  border-bottom: 2px solid #a855f7;
+}
+
+.rap-annotation-mark[data-color="green"] {
+  background-color: rgba(34, 197, 94, 0.18);
+  border-bottom: 2px solid #22c55e;
+}
+
+.rap-annotation-mark[data-color="pink"] {
+  background-color: rgba(244, 63, 94, 0.18);
+  border-bottom: 2px solid #f43f5e;
+}
+
+.rap-annotation-mark[data-color="amber"] {
+  background-color: rgba(245, 158, 11, 0.18);
+  border-bottom: 2px solid #f59e0b;
+}
+
+.rap-annotation-mark[data-color="blue"] {
+  background-color: rgba(59, 130, 246, 0.18);
+  border-bottom: 2px solid #3b82f6;
+}
+
+.rap-annotation-mark[data-color="teal"] {
+  background-color: rgba(20, 184, 166, 0.18);
+  border-bottom: 2px solid #14b8a6;
+}
+
+.rap-annotation-mark:hover,
+.rap-annotation-mark.active-highlight {
+  filter: brightness(0.92);
+  box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.35);
+}
+
+.rap-annotation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 6px;
+  margin-left: 6px;
+  user-select: none;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.rap-btn-bronze {
+  background-color: #a66a38;
+  color: #ffffff;
+  transition: all 0.15s ease-in-out;
+}
+.rap-btn-bronze:hover {
+  background-color: #8c552a;
+}
+

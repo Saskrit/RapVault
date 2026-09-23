@@ -1,30 +1,41 @@
 "use client";
 
 import {
-  ArrowLeft,
   CheckCircle2,
   ChevronDown,
-  CircleDashed,
   Download,
   Eye,
   Globe,
   Lock,
+  MoreVertical,
   Music2,
+  Pencil,
+  Sparkles,
   Star,
   Trash2,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AddAnnotationModal } from "@/components/add-annotation-modal";
 import { BeatPlayerPanel } from "@/components/beat-player-panel";
 import { CollaboratorsModal } from "@/components/collaborators-modal";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LyricRichEditor } from "@/components/lyric-rich-editor";
 import { RapVaultLoading } from "@/components/rapvault-loading";
 import { ResizableSplit } from "@/components/resizable-split";
-import { iconBtn, VaultHeader } from "@/components/vault-header";
+import { VaultHeader } from "@/components/vault-header";
 import { useOfflineSync } from "@/components/offline-provider";
+import {
+  type Annotation,
+  type AnnotationColor,
+  getReferenceDemoAnnotations,
+  parseAnnotations,
+  serializeAnnotations,
+  unwrapLyricAnnotation,
+  wrapLyricWithAnnotation,
+} from "@/lib/annotations";
 import { buildTxtExport, downloadPdf, downloadTxt } from "@/lib/export";
 import {
   preferenceStorageGet,
@@ -53,14 +64,6 @@ type VaultEditorViewProps = {
   songId: string;
 };
 
-/** Square icon control — fixed size, no label. */
-const toolIcon =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:w-10";
-
-/** Chip control — auto width so icon + label never overflow/overlap. */
-const toolChip =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-background px-2.5 text-muted transition active:scale-95 hover:border-foreground/20 hover:text-foreground sm:h-10 sm:px-3";
-
 export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -76,11 +79,25 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   );
   const [deleting, setDeleting] = useState(false);
   const [spellCheck, setSpellCheck] = useState(false);
-  const [beatsOpen, setBeatsOpen] = useState(false);
-  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [beatsOpen, setBeatsOpen] = useState(true);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+
+  // Annotation states
+  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(
+    null,
+  );
+  const [annotationModalOpen, setAnnotationModalOpen] = useState(false);
+  const [selectedLyricText, setSelectedLyricText] = useState("");
+  const [editingAnnotation, setEditingAnnotation] =
+    useState<Annotation | null>(null);
+  const [currentBeatTime, setCurrentBeatTime] = useState<number | null>(null);
+
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<SongPatch | null>(null);
-  const downloadMenuRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const songRef = useRef<Song | null>(null);
 
   useEffect(() => {
@@ -108,37 +125,20 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     return () => media.removeEventListener("change", syncSpellCheck);
   }, []);
 
+  // Close menus on outside click
   useEffect(() => {
-    if (!downloadOpen) return;
     function onPointerDown(event: PointerEvent) {
-      if (!downloadMenuRef.current?.contains(event.target as Node)) {
-        setDownloadOpen(false);
+      const target = event.target as Node;
+      if (statusMenuOpen && !statusMenuRef.current?.contains(target)) {
+        setStatusMenuOpen(false);
+      }
+      if (moreMenuOpen && !moreMenuRef.current?.contains(target)) {
+        setMoreMenuOpen(false);
       }
     }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setDownloadOpen(false);
-    }
     document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [downloadOpen]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    const sync = () => {
-      if (media.matches) setBeatsOpen(true);
-    };
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    if (song?.beatUrl) setBeatsOpen(true);
-  }, [song?.beatUrl]);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [statusMenuOpen, moreMenuOpen]);
 
   useEffect(() => {
     return () => {
@@ -165,7 +165,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       setLoading(true);
       setNotFound(false);
 
-      // Local-only drafts never exist on the server until sync.
       if (isOfflineSongId(songId)) {
         const cached = await getCachedSong(songId);
         if (cancelled) return;
@@ -251,14 +250,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     return () => window.removeEventListener(SONG_ID_REMAP_EVENT, onRemap);
   }, [songId, router]);
 
-  // Shared collab songs: poll for the other writer's saves while idle.
   const isSharedCollab =
     Boolean(song?.isCollaborator) ||
     (song?.collaborators?.length ?? 0) > 0;
 
   useEffect(() => {
     if (!isSharedCollab || !songId) return;
-
     let cancelled = false;
 
     async function pullRemote() {
@@ -333,6 +330,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             content: prev.content,
             title: prev.title,
             beatUrl: prev.beatUrl,
+            annotations: prev.annotations,
           };
         });
       }
@@ -372,7 +370,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     [persistSong, refreshPending],
   );
 
-  // When connectivity returns, push any queued edits.
   useEffect(() => {
     if (!online || !songId) return;
     void (async () => {
@@ -381,7 +378,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     })();
   }, [online, songId, persistSong]);
 
-  // Flush debounce early if the user leaves the page.
   useEffect(() => {
     function flushNow() {
       if (saveTimer.current) {
@@ -399,11 +395,104 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     return () => window.removeEventListener("pagehide", flushNow);
   }, [songId]);
 
+  // Seed sample reference annotations if demo lyrics are present and annotations are empty
+  useEffect(() => {
+    if (!song) return;
+    const currentAnn = parseAnnotations(song.annotations);
+    if (
+      currentAnn.length === 0 &&
+      song.content.includes("satya music taste kati lai")
+    ) {
+      const demo = getReferenceDemoAnnotations();
+      let updatedContent = song.content;
+      for (const d of demo) {
+        updatedContent = wrapLyricWithAnnotation(updatedContent, d);
+      }
+      scheduleSave({
+        annotations: serializeAnnotations(demo),
+        content: updatedContent,
+      });
+    }
+  }, [song?.content, song?.annotations, scheduleSave]);
+
+  const annotations: Annotation[] = useMemo(() => {
+    return parseAnnotations(song?.annotations);
+  }, [song?.annotations]);
+
+  function handleSaveAnnotation(data: {
+    id?: string;
+    text: string;
+    explanation: string;
+    timestamp?: string;
+    color: AnnotationColor;
+    commentsCount?: number;
+  }) {
+    if (!song) return;
+
+    let nextAnnotations: Annotation[];
+    let targetAnnotation: Annotation;
+
+    if (data.id) {
+      targetAnnotation = {
+        id: data.id,
+        text: data.text,
+        explanation: data.explanation,
+        timestamp: data.timestamp,
+        color: data.color,
+        authorName: "@saskreet",
+        createdAt:
+          annotations.find((a) => a.id === data.id)?.createdAt ||
+          new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        commentsCount: data.commentsCount ?? 1,
+      };
+      nextAnnotations = annotations.map((a) =>
+        a.id === data.id ? targetAnnotation : a,
+      );
+    } else {
+      const newId = `ann-${Date.now()}`;
+      targetAnnotation = {
+        id: newId,
+        text: data.text,
+        explanation: data.explanation,
+        timestamp: data.timestamp,
+        color: data.color,
+        authorName: "@saskreet",
+        createdAt: new Date().toISOString(),
+        commentsCount: 1,
+      };
+      nextAnnotations = [...annotations, targetAnnotation];
+    }
+
+    const nextContent = wrapLyricWithAnnotation(song.content, targetAnnotation);
+    const serialized = serializeAnnotations(nextAnnotations);
+
+    scheduleSave({
+      annotations: serialized,
+      content: nextContent,
+    });
+    setActiveAnnotationId(targetAnnotation.id);
+  }
+
+  function handleDeleteAnnotation(id: string) {
+    if (!song) return;
+    const nextAnnotations = annotations.filter((a) => a.id !== id);
+    const nextContent = unwrapLyricAnnotation(song.content, id);
+    const serialized = serializeAnnotations(nextAnnotations);
+
+    scheduleSave({
+      annotations: serialized,
+      content: nextContent,
+    });
+    if (activeAnnotationId === id) {
+      setActiveAnnotationId(null);
+    }
+  }
+
   async function confirmDeleteSong() {
     if (!song) return;
     setDeleting(true);
 
-    // Cancel any pending autosave so we don't PATCH a deleted song mid-navigation.
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
@@ -415,8 +504,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       if (res.ok) {
         await removeCachedSong(song.id);
         setShowDeleteModal(false);
-        // Hard navigate: soft router.push + refresh can fail after unmounting the
-        // YouTube beat player and leave an empty "page couldn't load" state.
         window.location.assign("/vault");
         return;
       }
@@ -442,14 +529,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     const payload = exportPayload();
     if (!payload) return;
     downloadTxt(payload.title, buildTxtExport(payload));
-    setDownloadOpen(false);
   }
 
   async function handleExportPdf() {
     const payload = exportPayload();
     if (!payload) return;
     await downloadPdf(payload.title, payload);
-    setDownloadOpen(false);
   }
 
   const stats = song
@@ -472,6 +557,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 content: prev.content,
                 title: prev.title,
                 beatUrl: prev.beatUrl,
+                annotations: prev.annotations,
               }
             : merged,
         );
@@ -500,302 +586,304 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   }
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
-      <VaultHeader>
-        <Link
-          href="/vault"
-          className={`${iconBtn} shrink-0`}
-          aria-label="Back to library"
-          title="Library"
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-        </Link>
-      </VaultHeader>
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#f7f6f4] text-foreground dark:bg-[#121214]">
+      {/* Top Navbar matching screenshot */}
+      <VaultHeader variant="writing" />
 
-      <div className="shrink-0 border-b border-border bg-card/50 px-2 py-2 sm:px-3 sm:py-3 lg:px-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 lg:gap-3">
-          <input
-            id="song-title"
-            type="text"
-            value={song.title}
-            onChange={(e) => scheduleSave({ title: e.target.value })}
-            spellCheck={spellCheck}
-            className="box-border min-w-0 w-full flex-1 rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold tracking-tight text-foreground outline-none transition placeholder:font-medium placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 sm:px-3.5 sm:py-2.5 sm:text-lg lg:text-xl xl:text-2xl"
-            placeholder="Untitled track"
-          />
-
-          <div className="flex shrink-0 items-center gap-2 self-stretch sm:self-auto">
-            <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-none sm:justify-start sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-              <button
-                type="button"
-                onClick={() => setBeatsOpen((open) => !open)}
-                className={`${toolIcon} lg:hidden ${
-                  beatsOpen
-                    ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                    : ""
-                }`}
-                aria-label={beatsOpen ? "Hide beat player" : "Show beat player"}
-                title={beatsOpen ? "Hide beats" : "Show beats"}
-              >
-                <Music2 className="h-4 w-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setCollabInitialTab("active");
-                  setShowCollabModal(true);
-                }}
-                className={`${toolChip} max-w-[10rem] xl:max-w-[14rem]`}
-                aria-label="Collaborators"
-                title={
-                  (song.collaborators?.length || 0) > 0
-                    ? `With ${song.collaborators!
-                        .map((c) => c.artist.displayName)
-                        .join(", ")}`
-                    : "Collaborators"
-                }
-              >
-                <Users className="h-4 w-4 shrink-0" />
-                <span className="hidden min-w-0 truncate text-sm lg:inline">
-                  {(song.collaborators?.length || 0) > 0
-                    ? song.collaborators!.length === 1
-                      ? song.collaborators![0]!.artist.displayName
-                      : `${song.collaborators!.length} collabs`
-                    : "Collab"}
-                </span>
-              </button>
-
-              {isOwner && (
-                <button
-                  type="button"
-                  onClick={() => scheduleSave({ isFavorite: !song.isFavorite })}
-                  className={toolIcon}
-                  aria-label="Toggle favorite"
-                  title="Favorite"
-                >
-                  <Star
-                    className={`h-4 w-4 ${
-                      song.isFavorite
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-muted"
-                    }`}
-                  />
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() =>
-                  scheduleSave({
-                    status: song.status === "finished" ? "draft" : "finished",
-                  })
-                }
-                className={`${toolChip} ${
-                  song.status === "finished"
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
-                    : ""
-                }`}
-                aria-label={
-                  song.status === "finished"
-                    ? "Finished — click to mark as draft"
-                    : "Draft — click to mark as finished"
-                }
-                title={
-                  song.status === "finished"
-                    ? "Finished — click to mark as draft"
-                    : "Draft — click to mark as finished"
-                }
-              >
-                {song.status === "finished" ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-                ) : (
-                  <CircleDashed className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-                <span className="hidden text-sm lg:inline">
-                  {song.status === "finished" ? "Finished" : "Draft"}
-                </span>
-              </button>
-
-              {isOwner && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    scheduleSave({ isPublic: !Boolean(song.isPublic) })
-                  }
-                  className={`${toolChip} ${
-                    song.isPublic
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 hover:border-emerald-500/60 hover:text-emerald-400"
-                      : "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:border-amber-500/60 hover:text-amber-400"
-                  }`}
-                  aria-label={
-                    song.isPublic
-                      ? "Public — click to make personal"
-                      : "Personal — click to make public"
-                  }
-                  title={
-                    song.isPublic
-                      ? "Public — click to make personal"
-                      : "Personal — click to make public"
-                  }
-                >
-                  {song.isPublic ? (
-                    <Globe className="h-4 w-4 shrink-0" aria-hidden />
-                  ) : (
-                    <Lock className="h-4 w-4 shrink-0" aria-hidden />
-                  )}
-                  <span className="hidden text-sm lg:inline">
-                    {song.isPublic ? "Public" : "Personal"}
-                  </span>
-                </button>
-              )}
-
-              {song.isPublic && (
-                <Link
-                  href={`/vault/s/${song.id}`}
-                  className={toolChip}
-                  title="Public view"
-                  aria-label="Open public view"
-                >
-                  <Eye className="h-4 w-4 shrink-0" />
-                  <span className="hidden text-sm lg:inline">View</span>
-                </Link>
-              )}
-
-              {!isOwner && song.owner && (
-                <p className="hidden max-w-[10rem] truncate text-xs text-muted xl:inline">
-                  with {song.owner.displayName}
-                </p>
-              )}
-
-              <div ref={downloadMenuRef} className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setDownloadOpen((open) => !open)}
-                  className={`${toolChip} ${
-                    downloadOpen
-                      ? "border-accent bg-accent/10 text-accent hover:border-accent hover:text-accent"
-                      : ""
-                  }`}
-                  title="Download"
-                  aria-label="Download"
-                  aria-haspopup="menu"
-                  aria-expanded={downloadOpen}
-                >
-                  <Download className="h-4 w-4 shrink-0" />
-                  <span className="hidden text-sm lg:inline">Download</span>
-                  <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 transition ${downloadOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {downloadOpen && (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-full z-40 mt-1.5 min-w-[9.5rem] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleExportTxt}
-                      className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
-                    >
-                      Download TXT
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleExportPdf}
-                      className="flex w-full items-center px-3.5 py-2.5 text-left text-sm text-foreground transition hover:bg-background"
-                    >
-                      Download PDF
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {isOwner && (
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className={`${toolIcon} shrink-0 hover:border-red-500/50 hover:text-red-400`}
-                aria-label="Delete song"
-                title="Delete"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      {/* Main Split Body: Dual Card Layout */}
+      <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden p-2.5 sm:p-3 lg:p-4">
         <ResizableSplit
           secondaryVisible={beatsOpen}
           storageKey="rapvault-editor-split"
-          defaultSecondarySize={360}
+          defaultSecondarySize={480}
           primary={
-            <LyricRichEditor
-              key={song.id}
-              value={song.content}
-              onChange={(content) => scheduleSave({ content })}
-              spellCheck={spellCheck}
-              onSpellCheckChange={toggleSpellCheck}
-              canChooseWriterColor={Boolean(song.isCollaborator)}
-              writerLabel={
-                song.isCollaborator
-                  ? null
-                  : (song.collaborators?.length ?? 0) > 0
-                    ? "Colored text = collaborator · Yours = default"
-                    : null
-              }
-              footerStats={
-                <>
-                  <div className="flex flex-nowrap items-center gap-x-2">
-                    <span className="tabular-nums">{stats.words} words</span>
-                    <span className="text-border">·</span>
-                    <span className="tabular-nums">{stats.lines} lines</span>
-                    <span className="text-border">·</span>
-                    <span className="tabular-nums">
-                      ~{formatDuration(stats.estimatedSeconds)}
-                    </span>
+            /* Left Card: Document Header + Rich Lyric Editor + Footer */
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+              {/* Document Header matching screenshot */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 px-4 py-3 sm:px-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={titleInputRef}
+                      id="song-title"
+                      type="text"
+                      value={song.title}
+                      onChange={(e) => scheduleSave({ title: e.target.value })}
+                      placeholder="Untitled"
+                      spellCheck={spellCheck}
+                      className="bg-transparent text-xl font-bold tracking-tight text-foreground outline-none transition placeholder:text-muted focus:underline sm:text-2xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => titleInputRef.current?.focus()}
+                      className="rounded-lg p-1 text-muted transition hover:bg-sidebar hover:text-foreground"
+                      title="Rename track"
+                      aria-label="Rename track"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                   </div>
-                  <span
-                    className={`shrink-0 font-medium tabular-nums ${
-                      saveState === "error"
-                        ? "text-red-400"
-                        : saveState === "saving"
-                          ? "text-accent"
-                          : saveState === "saved"
-                            ? "text-green-400"
-                            : saveState === "offline"
-                              ? "text-amber-500"
-                              : "text-muted"
-                    }`}
+                  <p className="mt-0.5 text-xs text-muted">
+                    Saved just now • {stats.words} words • {stats.lines} lines
+                  </p>
+                </div>
+
+                {/* Right controls in document header: Status, Publish, More */}
+                <div className="flex items-center gap-2">
+                  {/* Status Dropdown: Draft v */}
+                  <div className="relative" ref={statusMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setStatusMenuOpen((o) => !o)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-sidebar"
+                    >
+                      <span>
+                        {song.status === "finished" ? "Finished" : "Draft"}
+                      </span>
+                      <ChevronDown className="h-3 w-3 text-muted" />
+                    </button>
+                    {statusMenuOpen && (
+                      <div className="absolute right-0 top-full z-30 mt-1 min-w-[7.5rem] overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            scheduleSave({ status: "draft" });
+                            setStatusMenuOpen(false);
+                          }}
+                          className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-sidebar"
+                        >
+                          Draft
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            scheduleSave({ status: "finished" });
+                            setStatusMenuOpen(false);
+                          }}
+                          className="flex w-full items-center px-3 py-1.5 text-xs hover:bg-sidebar"
+                        >
+                          Finished
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Publish Button in warm bronze */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      scheduleSave({ isPublic: !Boolean(song.isPublic) })
+                    }
+                    className="rap-btn-bronze inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-xs font-semibold shadow-xs transition active:scale-95"
                   >
-                    {saveState === "saving"
-                      ? "Saving..."
-                      : saveState === "saved"
-                        ? "Saved"
-                        : saveState === "offline"
-                          ? "Saved offline"
-                          : saveState === "error"
-                            ? "Save failed"
-                            : "Ready"}
-                  </span>
-                </>
-              }
-            />
+                    {song.isPublic ? "Published" : "Publish"}
+                  </button>
+
+                  {/* More options menu: ⋮ */}
+                  <div className="relative" ref={moreMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setMoreMenuOpen((o) => !o)}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-background text-muted transition hover:bg-sidebar hover:text-foreground"
+                      aria-label="More options"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+
+                    {moreMenuOpen && (
+                      <div className="absolute right-0 top-full z-30 mt-1 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card py-1.5 text-xs shadow-xl">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            scheduleSave({ isFavorite: !song.isFavorite });
+                            setMoreMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3.5 py-2 transition hover:bg-sidebar"
+                        >
+                          <Star
+                            className={`h-3.5 w-3.5 ${
+                              song.isFavorite
+                                ? "fill-amber-400 text-amber-400"
+                                : ""
+                            }`}
+                          />
+                          <span>
+                            {song.isFavorite
+                              ? "Favorited"
+                              : "Add to favorites"}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCollabInitialTab("active");
+                            setShowCollabModal(true);
+                            setMoreMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3.5 py-2 transition hover:bg-sidebar"
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                          <span>Collaborators</span>
+                        </button>
+                        <div className="my-1 border-t border-border" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleExportTxt();
+                            setMoreMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3.5 py-2 transition hover:bg-sidebar"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>Download TXT</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleExportPdf();
+                            setMoreMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3.5 py-2 transition hover:bg-sidebar"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>Download PDF</span>
+                        </button>
+                        {isOwner && (
+                          <>
+                            <div className="my-1 border-t border-border" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowDeleteModal(true);
+                                setMoreMenuOpen(false);
+                              }}
+                              className="flex w-full items-center gap-2 px-3.5 py-2 text-red-500 transition hover:bg-sidebar"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Delete song</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rich Lyric Editor */}
+              <LyricRichEditor
+                key={song.id}
+                value={song.content}
+                onChange={(content) => scheduleSave({ content })}
+                spellCheck={spellCheck}
+                onSpellCheckChange={toggleSpellCheck}
+                canChooseWriterColor={Boolean(song.isCollaborator)}
+                writerLabel={
+                  song.isCollaborator
+                    ? null
+                    : (song.collaborators?.length ?? 0) > 0
+                      ? "Colored text = collaborator · Yours = default"
+                      : null
+                }
+                activeAnnotationId={activeAnnotationId}
+                onAnnotationClick={(id) => setActiveAnnotationId(id)}
+                onTriggerAnnotate={(selected) => {
+                  setSelectedLyricText(selected);
+                  setEditingAnnotation(null);
+                  setAnnotationModalOpen(true);
+                }}
+                footerStats={
+                  <>
+                    <div className="flex flex-nowrap items-center gap-x-2 text-xs text-muted">
+                      <span className="tabular-nums">{stats.words} words</span>
+                      <span className="text-border">·</span>
+                      <span className="tabular-nums">{stats.lines} lines</span>
+                      <span className="text-border">·</span>
+                      <span className="tabular-nums">
+                        ~{formatDuration(stats.estimatedSeconds)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs">
+                      {saveState === "saving" ? (
+                        <span className="font-medium text-amber-700 dark:text-amber-400">
+                          Saving...
+                        </span>
+                      ) : saveState === "offline" ? (
+                        <span className="font-medium text-amber-600">
+                          Saved offline
+                        </span>
+                      ) : saveState === "error" ? (
+                        <span className="font-medium text-red-500">
+                          Save failed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 font-medium text-muted">
+                          <span>Last saved just now</span>
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        </span>
+                      )}
+                    </div>
+                  </>
+                }
+              />
+            </div>
           }
           secondary={
-            <BeatPlayerPanel
-              beatUrl={song.beatUrl}
-              onBeatUrlChange={(beatUrl) => scheduleSave({ beatUrl })}
-              onClose={() => setBeatsOpen(false)}
-            />
+            /* Right Card: Beats & Annotations Panel */
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+              <BeatPlayerPanel
+                beatUrl={song.beatUrl}
+                onBeatUrlChange={(beatUrl) => scheduleSave({ beatUrl })}
+                onClose={() => setBeatsOpen(false)}
+                annotations={annotations}
+                activeAnnotationId={activeAnnotationId}
+                onSelectAnnotation={(id) => setActiveAnnotationId(id)}
+                onAddAnnotation={() => {
+                  setSelectedLyricText("");
+                  setEditingAnnotation(null);
+                  setAnnotationModalOpen(true);
+                }}
+                onEditAnnotation={(item) => {
+                  setEditingAnnotation(item);
+                  setSelectedLyricText(item.text);
+                  setAnnotationModalOpen(true);
+                }}
+                onDeleteAnnotation={handleDeleteAnnotation}
+                onTimeUpdate={(t) => setCurrentBeatTime(t)}
+                onSetCurrentLineTime={(timeStr) => {
+                  // If annotation modal is open, or can append timestamp
+                  if (activeAnnotationId) {
+                    const ann = annotations.find(
+                      (a) => a.id === activeAnnotationId,
+                    );
+                    if (ann) {
+                      handleSaveAnnotation({
+                        ...ann,
+                        timestamp: timeStr,
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
           }
         />
       </main>
+
+      {/* Add / Edit Annotation Modal */}
+      <AddAnnotationModal
+        open={annotationModalOpen}
+        onClose={() => {
+          setAnnotationModalOpen(false);
+          setEditingAnnotation(null);
+          setSelectedLyricText("");
+        }}
+        onSave={handleSaveAnnotation}
+        initialData={editingAnnotation}
+        selectedText={selectedLyricText}
+        currentVideoTime={currentBeatTime}
+      />
 
       <ConfirmModal
         open={showDeleteModal}

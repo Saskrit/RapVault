@@ -67,6 +67,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     ...(body.voiceMemoPath !== undefined
       ? { voiceMemoPath: body.voiceMemoPath }
       : {}),
+    ...(body.annotations !== undefined
+      ? { annotations: String(body.annotations) }
+      : {}),
   };
 
   if (isOwner) {

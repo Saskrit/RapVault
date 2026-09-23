@@ -17,6 +17,7 @@ export type Song = {
   viewCount: number;
   beatUrl: string;
   voiceMemoPath: string;
+  annotations?: string;
   folderId: string | null;
   folder: { id: string; name: string } | null;
   userId?: string;

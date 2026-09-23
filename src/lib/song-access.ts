@@ -33,6 +33,7 @@ export function serializeSong(
     viewCount: number;
     beatUrl: string;
     voiceMemoPath: string;
+    annotations?: string;
     folderId: string | null;
     userId: string;
     createdAt: Date;
@@ -74,6 +75,7 @@ export function serializeSong(
     viewCount: song.viewCount,
     beatUrl: song.beatUrl,
     voiceMemoPath: song.voiceMemoPath,
+    annotations: song.annotations ?? "[]",
     folderId: song.folderId,
     folder: song.folder,
     userId: song.userId,
