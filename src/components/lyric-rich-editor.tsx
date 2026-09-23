@@ -450,15 +450,16 @@ export function LyricRichEditor({
   }
 
   useEffect(() => {
-    if (!activeAnnotationId || !editorRef.current) return;
+    if (!editorRef.current) return;
     const marks = editorRef.current.querySelectorAll(".rap-annotation-mark");
     marks.forEach((el) => el.classList.remove("active-highlight"));
-    const match = editorRef.current.querySelector(
+    if (!activeAnnotationId) return;
+    const matches = editorRef.current.querySelectorAll(
       `.rap-annotation-mark[data-annotation-id="${activeAnnotationId}"]`,
     );
-    if (match) {
-      match.classList.add("active-highlight");
-      match.scrollIntoView({ behavior: "smooth", block: "center" });
+    matches.forEach((el) => el.classList.add("active-highlight"));
+    if (matches[0]) {
+      matches[0].scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeAnnotationId]);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
@@ -740,6 +741,7 @@ export function LyricRichEditor({
       if (annId && onAnnotationClick) {
         event.preventDefault();
         event.stopPropagation();
+        setSelectionPopup(null);
         onAnnotationClick(annId);
         return;
       }
@@ -1089,8 +1091,23 @@ export function LyricRichEditor({
           onDrop={handleDrop}
           onClick={handleEditorClick}
           onFocus={applyWriterColor}
-          onMouseUp={() => {
+          onMouseUp={(e) => {
             applyWriterColor();
+            const target = e.target as HTMLElement | null;
+            const mark = target?.closest?.(".rap-annotation-mark, .rap-annotation-badge") as HTMLElement | null;
+            if (mark) {
+              const parentMark = mark.classList.contains("rap-annotation-mark")
+                ? mark
+                : (mark.closest(".rap-annotation-mark") as HTMLElement | null);
+              const annId =
+                parentMark?.getAttribute("data-annotation-id") ||
+                mark.getAttribute("data-annotation-id");
+              if (annId && onAnnotationClick) {
+                setSelectionPopup(null);
+                onAnnotationClick(annId);
+                return;
+              }
+            }
             setTimeout(checkSelectionForPopup, 10);
           }}
           onScroll={checkSelectionForPopup}

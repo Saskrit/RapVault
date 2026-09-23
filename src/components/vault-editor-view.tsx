@@ -82,7 +82,9 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
-  // Annotation states
+  const [activeSideTab, setActiveSideTab] = useState<"beats" | "annotations">(
+    "beats",
+  );
   const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(
     null,
   );
@@ -763,7 +765,11 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                       : null
                 }
                 activeAnnotationId={activeAnnotationId}
-                onAnnotationClick={(id) => setActiveAnnotationId(id)}
+                onAnnotationClick={(id) => {
+                  setActiveAnnotationId(id);
+                  setActiveSideTab("annotations");
+                  setBeatsOpen(true);
+                }}
                 onTriggerAnnotate={(selected) => {
                   setSelectedLyricText(selected);
                   setEditingAnnotation(null);
@@ -816,6 +822,8 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 annotations={annotations}
                 activeAnnotationId={activeAnnotationId}
                 onSelectAnnotation={(id) => setActiveAnnotationId(id)}
+                activeTab={activeSideTab}
+                onTabChange={setActiveSideTab}
                 onAddAnnotation={() => {
                   setSelectedLyricText("");
                   setEditingAnnotation(null);

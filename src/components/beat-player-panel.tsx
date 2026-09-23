@@ -56,11 +56,13 @@ type BeatPlayerPanelProps = {
   readOnly?: boolean;
   annotations?: Annotation[];
   activeAnnotationId?: string | null;
-  onSelectAnnotation?: (id: string) => void;
+  onSelectAnnotation?: (id: string | null) => void;
   onAddAnnotation?: () => void;
   onEditAnnotation?: (annotation: Annotation) => void;
   onDeleteAnnotation?: (id: string) => void;
   onTimeUpdate?: (currentTime: number) => void;
+  activeTab?: "beats" | "annotations";
+  onTabChange?: (tab: "beats" | "annotations") => void;
 };
 
 function clampActive(active: number, length: number) {
@@ -147,8 +149,16 @@ export function BeatPlayerPanel({
   onEditAnnotation,
   onDeleteAnnotation,
   onTimeUpdate,
+  activeTab: controlledTab,
+  onTabChange,
 }: BeatPlayerPanelProps) {
-  const [activeTab, setActiveTab] = useState<"beats" | "annotations">("beats");
+  const [internalTab, setInternalTab] = useState<"beats" | "annotations">("beats");
+  const activeTab = controlledTab ?? internalTab;
+
+  function setActiveTab(tab: "beats" | "annotations") {
+    setInternalTab(tab);
+    onTabChange?.(tab);
+  }
 
   const [playlist, setPlaylist] = useState<BeatPlaylist>(() =>
     parseBeatPlaylist(beatUrl),
