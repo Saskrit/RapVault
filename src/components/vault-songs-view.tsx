@@ -769,6 +769,385 @@ export function VaultSongsView() {
                   ? song.owner?.displayName || "Collaborator"
                   : song.collaborators?.[0]?.artist.displayName || "Collaborator";
 
+                const renderStatusPill = (s: Song) => {
+                  if (s.status === "finished") {
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatus(s);
+                        }}
+                        title="Finished (click to change)"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#c4eed4] bg-[#eafaf1] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[#1e824c] transition hover:bg-[#ddf7e7] active:scale-95 shadow-2xs dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#1e824c] dark:text-emerald-400" />
+                        <span>Finished</span>
+                      </button>
+                    );
+                  }
+                  if (s.beatUrl || (s.content && s.content.length > 50)) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatus(s);
+                        }}
+                        title="Work in Progress (click to change)"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#f5dfc6] bg-[#fff5ea] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[#a86523] transition hover:bg-[#feecd6] active:scale-95 shadow-2xs dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                      >
+                        <AudioWaveform className="h-3.5 w-3.5 text-[#a86523] dark:text-amber-400" />
+                        <span>Work in Progress</span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleStatus(s);
+                      }}
+                      title="Draft (click to change)"
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#e2e5eb] bg-[#f1f3f7] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-[#556070] transition hover:bg-[#e6e9f0] active:scale-95 shadow-2xs dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-[#556070] dark:text-slate-400" />
+                      <span>Draft</span>
+                    </button>
+                  );
+                };
+
+                const renderVisibilityCollab = (
+                  s: Song,
+                  isCollab: boolean | undefined,
+                  collabTitle: string,
+                ) => {
+                  if (isCollab) {
+                    return (
+                      <div
+                        className="flex items-center gap-1 text-xs text-muted"
+                        title={
+                          s.isCollaborator
+                            ? `Collab with ${collabTitle}`
+                            : `Collab with ${s.collaborators?.map((c) => c.artist.displayName).join(", ")}`
+                        }
+                      >
+                        {s.collaborators && s.collaborators.length > 1 ? (
+                          <div className="flex -space-x-1.5 overflow-hidden">
+                            {s.collaborators.slice(0, 3).map((collab, i) => (
+                              <div
+                                key={collab.artist.id || i}
+                                className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-sidebar text-[9px] font-bold text-foreground"
+                              >
+                                {collab.artist.displayName?.[0]?.toUpperCase() || "C"}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="inline-flex max-w-[6.5rem] items-center gap-1 truncate text-xs font-medium text-foreground/80">
+                            <User className="h-3.5 w-3.5 shrink-0 text-muted" />
+                            <span className="truncate">{collabTitle}</span>
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (s.isPublic) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (s.isOwner !== false) togglePublic(s);
+                        }}
+                        title="Public — visible to everyone"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-emerald-500 transition hover:bg-emerald-500/10"
+                      >
+                        <Globe className="h-4 w-4" />
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (s.isOwner !== false) togglePublic(s);
+                      }}
+                      title="Personal — private to you"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-sidebar"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                    </button>
+                  );
+                };
+
+                const renderPlayButton = (s: Song) => (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlaySong(s);
+                    }}
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-background transition hover:border-foreground/20 hover:bg-sidebar active:scale-95 shadow-2xs ${
+                      playingSongId === s.id
+                        ? "border-amber-400 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        : "text-foreground"
+                    }`}
+                    title={
+                      s.beatUrl
+                        ? playingSongId === s.id
+                          ? "Pause beat preview"
+                          : "Play beat preview"
+                        : "Open track in editor"
+                    }
+                    aria-label="Play song"
+                  >
+                    {playingSongId === s.id ? (
+                      <Pause className="h-4 w-4 fill-current" />
+                    ) : (
+                      <Play className="h-3.5 w-3.5 fill-current translate-x-0.5" />
+                    )}
+                  </button>
+                );
+
+                const renderFavoriteButton = (s: Song) => (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(s);
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-background transition hover:border-foreground/20 hover:bg-sidebar active:scale-95 shadow-2xs"
+                    title={s.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    aria-label={s.isFavorite ? "Favorited" : "Favorite"}
+                  >
+                    <Star
+                      className={`h-4 w-4 transition ${
+                        s.isFavorite
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-muted hover:text-amber-500"
+                      }`}
+                    />
+                  </button>
+                );
+
+                const renderMoreButton = (s: Song) => (
+                  <div className="relative vault-dropdown-anchor">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuSongId(menuSongId === s.id ? null : s.id);
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-background text-muted transition hover:border-foreground/20 hover:bg-sidebar hover:text-foreground active:scale-95 shadow-2xs"
+                      title="More options"
+                      aria-label="More options"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+
+                    {menuSongId === s.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`absolute right-0 z-40 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card py-1.5 text-xs shadow-xl animate-in fade-in zoom-in-95 duration-100 ${
+                          viewMode === "grid" ? "bottom-full mb-1.5" : "top-full mt-1"
+                        }`}
+                      >
+                        {s.isOwner !== false && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuSongId(null);
+                              setSongToMove(s);
+                            }}
+                            className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
+                          >
+                            <FolderInput className="h-3.5 w-3.5 text-muted" />
+                            <span>Add to folder</span>
+                          </button>
+                        )}
+                        {s.isPublic && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuSongId(null);
+                              router.push(`/vault/s/${s.id}`);
+                            }}
+                            className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-muted" />
+                            <span>Public view</span>
+                          </button>
+                        )}
+                        {s.isOwner !== false && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuSongId(null);
+                              togglePublic(s);
+                            }}
+                            className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
+                          >
+                            {s.isPublic ? (
+                              <>
+                                <Lock className="h-3.5 w-3.5 text-muted" />
+                                <span>Make personal</span>
+                              </>
+                            ) : (
+                              <>
+                                <Globe className="h-3.5 w-3.5 text-muted" />
+                                <span>Make public</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {s.isOwner !== false && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuSongId(null);
+                              toggleStatus(s);
+                            }}
+                            className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
+                          >
+                            {s.status === "finished" ? (
+                              <>
+                                <FileText className="h-3.5 w-3.5 text-muted" />
+                                <span>Mark as draft</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-3.5 w-3.5 text-muted" />
+                                <span>Mark as finished</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {s.isOwner !== false && (
+                          <>
+                            <div className="my-1 border-t border-border" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuSongId(null);
+                                moveSongToBin(s);
+                              }}
+                              className="flex w-full items-center gap-2 px-3.5 py-2 text-red-500 transition hover:bg-sidebar"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Move to trash</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+
+                const renderOpenButton = (s: Song) => (
+                  <button
+                    type="button"
+                    onClick={() => openSong(s)}
+                    className="group/open inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-300/70 bg-[#fffaf5] px-3 sm:px-3.5 text-xs sm:text-sm font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100/70 active:scale-95 shadow-2xs dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                    title={`Open "${s.title || "song"}"`}
+                    aria-label={`Open "${s.title || "song"}"`}
+                  >
+                    <span>Open</span>
+                    <ArrowRight className="h-3.5 w-3.5 text-amber-800 transition-transform group-hover/open:translate-x-0.5 dark:text-amber-300" />
+                  </button>
+                );
+
+                const renderTrashActions = (s: Song) => (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => restoreSong(s)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold text-muted transition hover:bg-sidebar hover:text-accent"
+                      title="Restore song"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Restore</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSongToPurge(s)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold text-red-500 transition hover:bg-red-500/10"
+                      title="Delete forever"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                );
+
+                if (viewMode === "grid") {
+                  return (
+                    <div
+                      key={song.id}
+                      className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-4 transition-all hover:border-foreground/20 hover:shadow-sm"
+                    >
+                      {/* Top: Title & Status Pill */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => openSong(song)}
+                          disabled={showTrash}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <h3 className="truncate text-base font-semibold tracking-tight text-foreground transition group-hover:text-accent">
+                            {song.title || "Untitled"}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-muted">
+                            {showTrash
+                              ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
+                              : new Date(song.updatedAt).toLocaleDateString()}
+                          </p>
+                        </button>
+
+                        {!showTrash && (
+                          <div className="shrink-0">
+                            {renderStatusPill(song)}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Middle: Lyric Snippet */}
+                      <button
+                        type="button"
+                        onClick={() => openSong(song)}
+                        disabled={showTrash}
+                        className="my-3 min-h-[2.5rem] text-left"
+                      >
+                        <p className="line-clamp-2 text-xs leading-relaxed text-muted sm:text-sm">
+                          {contentSnippet(song.content) || "No lyrics yet"}
+                        </p>
+                      </button>
+
+                      {/* Bottom Footer: Collab/Visibility on Left, Actions on Right */}
+                      <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+                        <div className="flex items-center min-w-0">
+                          {!showTrash && renderVisibilityCollab(song, isCollaborative, collabName)}
+                        </div>
+
+                        {!showTrash ? (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {renderPlayButton(song)}
+                            {renderFavoriteButton(song)}
+                            {renderMoreButton(song)}
+                            {renderOpenButton(song)}
+                          </div>
+                        ) : (
+                          renderTrashActions(song)
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={song.id}
@@ -780,328 +1159,43 @@ export function VaultSongsView() {
                       disabled={showTrash}
                       className="min-w-0 flex-1 text-left transition active:opacity-80 disabled:cursor-default"
                     >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="truncate text-sm font-semibold tracking-tight text-foreground">
-                        {song.title || "Untitled"}
-                      </span>
-                    </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-muted sm:text-sm">
-                      {contentSnippet(song.content) || "No lyrics yet"}
-                    </p>
-                    <p className="mt-1.5 text-xs font-medium text-muted">
-                      {showTrash
-                        ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
-                        : new Date(song.updatedAt).toLocaleDateString()}
-                    </p>
-                  </button>
-
-                  {/* Right: Modern Side Actions matching screenshot */}
-                  <div className="flex shrink-0 flex-wrap items-center gap-2 self-start lg:self-center lg:gap-3">
-                    {/* 1. Status Pill Badge */}
-                    {!showTrash && (
-                      <div>
-                        {song.status === "finished" ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleStatus(song);
-                            }}
-                            title="Finished (click to change)"
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-500/20 active:scale-95 dark:text-emerald-300"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>Finished</span>
-                          </button>
-                        ) : song.beatUrl || (song.content && song.content.length > 50) ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleStatus(song);
-                            }}
-                            title="Work in Progress (click to change)"
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-500/20 active:scale-95 dark:text-amber-300"
-                          >
-                            <AudioWaveform className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-                            <span>Work in Progress</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleStatus(song);
-                            }}
-                            title="Draft (click to change)"
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border/80 bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 active:scale-95 dark:text-foreground/80"
-                          >
-                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>Draft</span>
-                          </button>
-                        )}
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+                          {song.title || "Untitled"}
+                        </span>
                       </div>
-                    )}
+                      <p className="mt-1 line-clamp-1 text-xs text-muted sm:text-sm">
+                        {contentSnippet(song.content) || "No lyrics yet"}
+                      </p>
+                      <p className="mt-1.5 text-xs font-medium text-muted">
+                        {showTrash
+                          ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
+                          : new Date(song.updatedAt).toLocaleDateString()}
+                      </p>
+                    </button>
 
-                    {/* 2. Collaborators / Visibility Column */}
-                    {!showTrash && (
-                      <div className="flex min-w-[3rem] items-center justify-center">
-                        {isCollaborative ? (
-                          <div
-                            className="flex items-center gap-1 text-xs text-muted"
-                            title={
-                              song.isCollaborator
-                                ? `Collab with ${collabName}`
-                                : `Collab with ${song.collaborators?.map((c) => c.artist.displayName).join(", ")}`
-                            }
-                          >
-                            {song.collaborators && song.collaborators.length > 1 ? (
-                              <div className="flex -space-x-1.5 overflow-hidden">
-                                {song.collaborators.slice(0, 3).map((collab, i) => (
-                                  <div
-                                    key={collab.artist.id || i}
-                                    className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-sidebar text-[9px] font-bold text-foreground"
-                                  >
-                                    {collab.artist.displayName?.[0]?.toUpperCase() || "C"}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="inline-flex max-w-[6.5rem] items-center gap-1 truncate text-xs font-medium text-foreground/80">
-                                <User className="h-3.5 w-3.5 shrink-0 text-muted" />
-                                <span className="truncate">{collabName}</span>
-                              </span>
-                            )}
-                          </div>
-                        ) : song.isPublic ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (song.isOwner !== false) togglePublic(song);
-                            }}
-                            title="Public — visible to everyone"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-emerald-500 transition hover:bg-emerald-500/10"
-                          >
-                            <Globe className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (song.isOwner !== false) togglePublic(song);
-                            }}
-                            title="Personal — private to you"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-sidebar"
-                          >
-                            <Lock className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 3. Action Buttons Group */}
-                    {!showTrash ? (
-                      <div className="flex items-center gap-1.5">
-                        {/* Play Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePlaySong(song);
-                          }}
-                          className={`flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-background transition hover:border-foreground/20 hover:bg-sidebar active:scale-95 shadow-2xs ${
-                            playingSongId === song.id
-                              ? "border-amber-400 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                              : "text-foreground"
-                          }`}
-                          title={
-                            song.beatUrl
-                              ? playingSongId === song.id
-                                ? "Pause beat preview"
-                                : "Play beat preview"
-                              : "Open track in editor"
-                          }
-                          aria-label="Play song"
-                        >
-                          {playingSongId === song.id ? (
-                            <Pause className="h-4 w-4 fill-current" />
-                          ) : (
-                            <Play className="h-4 w-4 fill-current translate-x-0.5" />
-                          )}
-                        </button>
-
-                        {/* Favorite Star Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(song);
-                          }}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-background transition hover:border-foreground/20 hover:bg-sidebar active:scale-95 shadow-2xs"
-                          title={song.isFavorite ? "Remove from favorites" : "Add to favorites"}
-                          aria-label={song.isFavorite ? "Favorited" : "Favorite"}
-                        >
-                          <Star
-                            className={`h-4 w-4 transition ${
-                              song.isFavorite
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-muted hover:text-amber-500"
-                            }`}
-                          />
-                        </button>
-
-                        {/* More Options Button */}
-                        <div className="relative vault-dropdown-anchor">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMenuSongId(menuSongId === song.id ? null : song.id);
-                            }}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-background text-muted transition hover:border-foreground/20 hover:bg-sidebar hover:text-foreground active:scale-95 shadow-2xs"
-                            title="More options"
-                            aria-label="More options"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-
-                          {/* Dropdown Menu */}
-                          {menuSongId === song.id && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute right-0 top-full z-40 mt-1 min-w-[11rem] overflow-hidden rounded-2xl border border-border bg-card py-1.5 text-xs shadow-xl animate-in fade-in zoom-in-95 duration-100"
-                            >
-                              {song.isOwner !== false && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuSongId(null);
-                                    setSongToMove(song);
-                                  }}
-                                  className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
-                                >
-                                  <FolderInput className="h-3.5 w-3.5 text-muted" />
-                                  <span>Add to folder</span>
-                                </button>
-                              )}
-                              {song.isPublic && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuSongId(null);
-                                    router.push(`/vault/s/${song.id}`);
-                                  }}
-                                  className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
-                                >
-                                  <Eye className="h-3.5 w-3.5 text-muted" />
-                                  <span>Public view</span>
-                                </button>
-                              )}
-                              {song.isOwner !== false && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuSongId(null);
-                                    togglePublic(song);
-                                  }}
-                                  className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
-                                >
-                                  {song.isPublic ? (
-                                    <>
-                                      <Lock className="h-3.5 w-3.5 text-muted" />
-                                      <span>Make personal</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Globe className="h-3.5 w-3.5 text-muted" />
-                                      <span>Make public</span>
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                              {song.isOwner !== false && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuSongId(null);
-                                    toggleStatus(song);
-                                  }}
-                                  className="flex w-full items-center gap-2 px-3.5 py-2 text-foreground transition hover:bg-sidebar"
-                                >
-                                  {song.status === "finished" ? (
-                                    <>
-                                      <FileText className="h-3.5 w-3.5 text-muted" />
-                                      <span>Mark as draft</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-muted" />
-                                      <span>Mark as finished</span>
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                              {song.isOwner !== false && (
-                                <>
-                                  <div className="my-1 border-t border-border" />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setMenuSongId(null);
-                                      moveSongToBin(song);
-                                    }}
-                                    className="flex w-full items-center gap-2 px-3.5 py-2 text-red-500 transition hover:bg-sidebar"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    <span>Move to trash</span>
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                    {/* Right: Modern Side Actions */}
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 self-start lg:self-center lg:gap-3">
+                      {!showTrash && renderStatusPill(song)}
+                      {!showTrash && (
+                        <div className="flex min-w-[3rem] items-center justify-center">
+                          {renderVisibilityCollab(song, isCollaborative, collabName)}
                         </div>
-
-                        {/* Open -> Button in warm bronze/amber styling */}
-                        <button
-                          type="button"
-                          onClick={() => openSong(song)}
-                          className="group/open inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-300/70 bg-[#fffaf5] px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100/70 active:scale-95 shadow-2xs dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-900/40"
-                          title={`Open "${song.title || "song"}"`}
-                          aria-label={`Open "${song.title || "song"}"`}
-                        >
-                          <span>Open</span>
-                          <ArrowRight className="h-3.5 w-3.5 text-amber-800 transition-transform group-hover/open:translate-x-0.5 dark:text-amber-300" />
-                        </button>
-                      </div>
-                    ) : (
-                      /* Trash Options */
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => restoreSong(song)}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold text-muted transition hover:bg-sidebar hover:text-accent"
-                          title="Restore song"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          <span>Restore</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSongToPurge(song)}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold text-red-500 transition hover:bg-red-500/10"
-                          title="Delete forever"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    )}
+                      )}
+                      {!showTrash ? (
+                        <div className="flex items-center gap-1.5">
+                          {renderPlayButton(song)}
+                          {renderFavoriteButton(song)}
+                          {renderMoreButton(song)}
+                          {renderOpenButton(song)}
+                        </div>
+                      ) : (
+                        renderTrashActions(song)
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           )}
         </div>
