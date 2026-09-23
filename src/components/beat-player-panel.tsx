@@ -200,7 +200,11 @@ export function BeatPlayerPanel({
   const [markError, setMarkError] = useState("");
 
   const currentBeatKey = activeUrl || String(playlist.active);
-  const currentMarkers: BeatMarker[] = playlist.markers?.[currentBeatKey] || [];
+  const currentMarkers: BeatMarker[] = Array.isArray(
+    playlist.markers?.[currentBeatKey],
+  )
+    ? playlist.markers[currentBeatKey]
+    : [];
 
   function seekToTime(seconds: number) {
     if (!playerRef.current) return;
@@ -296,6 +300,13 @@ export function BeatPlayerPanel({
         }
         playerRef.current = null;
       }
+      try {
+        if (playerShellRef.current) {
+          playerShellRef.current.innerHTML = "";
+        }
+      } catch {
+        // ignore
+      }
       return;
     }
 
@@ -304,7 +315,12 @@ export function BeatPlayerPanel({
     const host = document.createElement("div");
     host.style.width = "100%";
     host.style.height = "100%";
-    shell.replaceChildren(host);
+    try {
+      shell.innerHTML = "";
+      shell.appendChild(host);
+    } catch {
+      // ignore
+    }
 
     function stopTick() {
       if (tickRef.current) {
@@ -343,7 +359,13 @@ export function BeatPlayerPanel({
           // YouTube may already have removed the iframe.
         }
       }
-      shell.replaceChildren();
+      try {
+        if (playerShellRef.current) {
+          playerShellRef.current.innerHTML = "";
+        }
+      } catch {
+        // ignore
+      }
     }
 
     const id = videoId;
@@ -469,6 +491,7 @@ export function BeatPlayerPanel({
       setPlaylist({
         urls: playlist.urls,
         active: playlist.urls.length === 0 ? 0 : index,
+        markers: playlist.markers || {},
       });
       setUrlInput(active);
       setVideoId(parseYouTubeVideoId(active));
@@ -477,6 +500,7 @@ export function BeatPlayerPanel({
       commitPlaylist({
         urls,
         active: clampActive(playlist.active, urls.length),
+        markers: playlist.markers || {},
       });
     }
 
@@ -495,13 +519,16 @@ export function BeatPlayerPanel({
     setError("");
     if (playlist.active >= playlist.urls.length) {
       if (playlist.urls.length === 0) {
-        setPlaylist({ urls: [], active: 0 });
+        setPlaylist({ urls: [], active: 0, markers: playlist.markers || {} });
         setUrlInput("");
         setVideoId(null);
         return;
       }
       const index = playlist.urls.length - 1;
-      commitPlaylist({ urls: playlist.urls, active: index }, true);
+      commitPlaylist(
+        { urls: playlist.urls, active: index, markers: playlist.markers || {} },
+        true,
+      );
       return;
     }
     if (playlist.urls.length <= 1) return;
@@ -511,6 +538,7 @@ export function BeatPlayerPanel({
       {
         urls: playlist.urls,
         active: prevIndex,
+        markers: playlist.markers || {},
       },
       true,
     );
@@ -526,6 +554,7 @@ export function BeatPlayerPanel({
       {
         urls: playlist.urls,
         active: nextIndex,
+        markers: playlist.markers || {},
       },
       true,
     );
@@ -534,7 +563,11 @@ export function BeatPlayerPanel({
   function addBeatSlot() {
     if (readOnly || playlist.urls.length >= MAX_BEATS) return;
     autoPlayNextRef.current = false;
-    setPlaylist({ urls: playlist.urls, active: playlist.urls.length });
+    setPlaylist({
+      urls: playlist.urls,
+      active: playlist.urls.length,
+      markers: playlist.markers || {},
+    });
     setUrlInput("");
     setVideoId(null);
     setDuration(null);
@@ -750,12 +783,13 @@ export function BeatPlayerPanel({
 
             {/* Video Player */}
             <div className="relative aspect-video w-full bg-black">
-              {videoId ? (
-                <div
-                  ref={playerShellRef}
-                  className="absolute inset-0 h-full w-full overflow-hidden"
-                />
-              ) : (
+              <div
+                ref={playerShellRef}
+                className={`absolute inset-0 h-full w-full overflow-hidden ${
+                  videoId ? "block" : "hidden"
+                }`}
+              />
+              {!videoId && (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-zinc-500">
                   <Music2 className="h-8 w-8 opacity-40" />
                   <p className="text-xs">Paste a YouTube link above to play beat</p>
