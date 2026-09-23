@@ -17,6 +17,9 @@ import {
   Undo2,
   Unlock,
   Wrench,
+  X,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   useCallback,
@@ -39,6 +42,10 @@ import {
   preferenceStorageGet,
   preferenceStorageSet,
 } from "@/lib/safe-storage";
+import {
+  ANNOTATION_COLORS,
+  type Annotation,
+} from "@/lib/annotations";
 
 type LyricRichEditorProps = {
   value: string;
@@ -62,6 +69,16 @@ type LyricRichEditorProps = {
   activeAnnotationId?: string | null;
   /** Callback when user clicks an annotated lyric in the editor */
   onAnnotationClick?: (annotationId: string) => void;
+  /** Annotations array for track */
+  annotations?: Annotation[];
+  /** Callback to close the annotation meaning card */
+  onCloseAnnotation?: () => void;
+  /** Callback to edit an annotation */
+  onEditAnnotation?: (annotation: Annotation) => void;
+  /** Callback to delete an annotation */
+  onDeleteAnnotation?: (id: string) => void;
+  /** Whether editor is read-only */
+  readOnly?: boolean;
 };
 
 const toolBtn =
@@ -362,6 +379,11 @@ export function LyricRichEditor({
   onTriggerAnnotate,
   activeAnnotationId,
   onAnnotationClick,
+  annotations,
+  onCloseAnnotation,
+  onEditAnnotation,
+  onDeleteAnnotation,
+  readOnly = false,
 }: LyricRichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastHtml = useRef("");
@@ -462,6 +484,22 @@ export function LyricRichEditor({
       matches[0].scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [activeAnnotationId]);
+
+  const activeAnnotation = annotations?.find((a) => a.id === activeAnnotationId);
+  const activeAnnotationColor = activeAnnotation
+    ? ANNOTATION_COLORS[activeAnnotation.color] || ANNOTATION_COLORS.purple
+    : null;
+
+  useEffect(() => {
+    if (!activeAnnotationId) return;
+    function handleGlobalKeyDown(e: globalThis.KeyboardEvent) {
+      if (e.key === "Escape") {
+        onCloseAnnotation?.();
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [activeAnnotationId, onCloseAnnotation]);
   const [rapToolsOpen, setRapToolsOpen] = useState(false);
   const [fontSize, setFontSize] = useState<number>(DEFAULT_FONT_SIZE);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -1148,6 +1186,82 @@ export function LyricRichEditor({
               <span className="h-2 w-2 rounded-full bg-amber-400" />
               <span>Annotate</span>
             </button>
+          </div>
+        )}
+
+        {/* Floating Side Meaning Card on the side of the text area */}
+        {activeAnnotation && activeAnnotationColor && (
+          <div
+            role="region"
+            aria-label="Annotation meaning"
+            className="pointer-events-auto absolute top-3 right-3 sm:top-4 sm:right-4 z-30 w-72 sm:w-80 max-w-[calc(100%-1.5rem)] rounded-2xl border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-right-3 duration-150"
+          >
+            {/* Header: Label + Close button */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-border/60">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                  Annotation Meaning
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onCloseAnnotation?.()}
+                className="rounded-lg p-1 text-muted transition hover:bg-sidebar hover:text-foreground"
+                title="Close meaning (Esc)"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Line / Word / Sentence snippet */}
+            <div className="mt-3">
+              <span
+                className={`inline-block rounded-md border px-2.5 py-1 text-xs font-semibold leading-relaxed ${activeAnnotationColor.tagClass}`}
+                title={activeAnnotation.text}
+              >
+                "{activeAnnotation.text}"
+              </span>
+            </div>
+
+            {/* Meaning Description */}
+            <div className="mt-2.5 rounded-xl border border-border/70 bg-background/80 p-3 shadow-2xs">
+              <p className="text-xs sm:text-sm leading-relaxed text-foreground whitespace-pre-wrap font-normal">
+                {activeAnnotation.explanation}
+              </p>
+            </div>
+
+            {/* Actions: Edit & Delete if not read-only */}
+            {!readOnly && (onEditAnnotation || onDeleteAnnotation) && (
+              <div className="mt-3 flex items-center justify-end gap-1.5 pt-2 border-t border-border/40">
+                {onEditAnnotation && (
+                  <button
+                    type="button"
+                    onClick={() => onEditAnnotation(activeAnnotation)}
+                    className="rap-btn-secondary inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium"
+                    title="Edit annotation"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    <span>Edit</span>
+                  </button>
+                )}
+                {onDeleteAnnotation && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDeleteAnnotation(activeAnnotation.id);
+                      onCloseAnnotation?.();
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
+                    title="Delete annotation"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

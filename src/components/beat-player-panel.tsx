@@ -180,12 +180,6 @@ export function BeatPlayerPanel({
   const skipExternalSync = useRef(false);
   const autoPlayNextRef = useRef(false);
 
-  // Switch to annotations tab if an annotation is selected from lyrics
-  useEffect(() => {
-    if (activeAnnotationId) {
-      setActiveTab("annotations");
-    }
-  }, [activeAnnotationId]);
 
   // When switching back to the beats tab, ensure the beat is actively playing and not paused
   useEffect(() => {

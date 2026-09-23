@@ -25,11 +25,6 @@ export function AnnotationsPanel({
   onDeleteAnnotation,
   readOnly = false,
 }: AnnotationsPanelProps) {
-  const activeItem = annotations.find((a) => a.id === activeAnnotationId);
-  const activeColorMeta = activeItem
-    ? ANNOTATION_COLORS[activeItem.color] || ANNOTATION_COLORS.purple
-    : null;
-
   return (
     <div className="flex flex-col">
       {/* Header Row */}
@@ -56,67 +51,6 @@ export function AnnotationsPanel({
         )}
       </div>
 
-      {/* Meaning of specific clicked annotated line/word */}
-      {activeItem && activeColorMeta && (
-        <div className="border-b border-border/80 bg-sidebar/50 p-3.5 sm:p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                Annotation Meaning
-              </span>
-            </div>
-            {annotations.length > 1 && (
-              <button
-                type="button"
-                onClick={() => onSelectAnnotation?.(null)}
-                className="text-[11px] font-medium text-muted hover:text-foreground transition underline underline-offset-2"
-              >
-                View all ({annotations.length})
-              </button>
-            )}
-          </div>
-
-          {/* Line / Word / Sentence snippet */}
-          <div className="mb-2.5">
-            <span
-              className={`inline-block rounded-md border px-2.5 py-1 text-xs font-semibold leading-relaxed ${activeColorMeta.tagClass}`}
-            >
-              "{activeItem.text}"
-            </span>
-          </div>
-
-          {/* Meaning / Description */}
-          <div className="rounded-xl border border-border/70 bg-card p-3 shadow-xs">
-            <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap font-normal">
-              {activeItem.explanation}
-            </p>
-          </div>
-
-          {/* Action buttons */}
-          {!readOnly && (
-            <div className="mt-2.5 flex items-center justify-end gap-1.5">
-              <button
-                type="button"
-                onClick={() => onEditAnnotation(activeItem)}
-                className="rap-btn-secondary inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium"
-              >
-                <Pencil className="h-3 w-3" />
-                <span>Edit</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteAnnotation(activeItem.id)}
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
-              >
-                <Trash2 className="h-3 w-3" />
-                <span>Delete</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Annotations List */}
       <div className="divide-y divide-border/60 overflow-y-auto">
         {annotations.length === 0 ? (
@@ -128,13 +62,7 @@ export function AnnotationsPanel({
             </p>
           </div>
         ) : (
-          <>
-            {activeItem && annotations.length > 1 && (
-              <div className="bg-muted/20 px-3.5 py-1.5 text-[11px] font-semibold text-muted">
-                All annotations in this track ({annotations.length})
-              </div>
-            )}
-            {annotations.map((item) => {
+          annotations.map((item) => {
               const colorMeta =
                 ANNOTATION_COLORS[item.color] || ANNOTATION_COLORS.purple;
               const isActive = activeAnnotationId === item.id;
@@ -196,8 +124,7 @@ export function AnnotationsPanel({
                   </p>
                 </div>
               );
-            })}
-          </>
+            })
         )}
       </div>
     </div>

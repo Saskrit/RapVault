@@ -764,12 +764,19 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                       ? "Colored text = collaborator · Yours = default"
                       : null
                 }
+                annotations={annotations}
                 activeAnnotationId={activeAnnotationId}
                 onAnnotationClick={(id) => {
                   setActiveAnnotationId(id);
-                  setActiveSideTab("annotations");
-                  setBeatsOpen(true);
                 }}
+                onCloseAnnotation={() => setActiveAnnotationId(null)}
+                onEditAnnotation={(item) => {
+                  setEditingAnnotation(item);
+                  setSelectedLyricText(item.text);
+                  setAnnotationModalOpen(true);
+                }}
+                onDeleteAnnotation={handleDeleteAnnotation}
+                readOnly={false}
                 onTriggerAnnotate={(selected) => {
                   setSelectedLyricText(selected);
                   setEditingAnnotation(null);
