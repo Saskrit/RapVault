@@ -829,20 +829,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 }}
                 onDeleteAnnotation={handleDeleteAnnotation}
                 onTimeUpdate={(t) => setCurrentBeatTime(t)}
-                onSetCurrentLineTime={(timeStr) => {
-                  // If annotation modal is open, or can append timestamp
-                  if (activeAnnotationId) {
-                    const ann = annotations.find(
-                      (a) => a.id === activeAnnotationId,
-                    );
-                    if (ann) {
-                      handleSaveAnnotation({
-                        ...ann,
-                        timestamp: timeStr,
-                      });
-                    }
-                  }
-                }}
               />
             </div>
           }
@@ -860,7 +846,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
         onSave={handleSaveAnnotation}
         initialData={editingAnnotation}
         selectedText={selectedLyricText}
-        currentVideoTime={currentBeatTime}
       />
 
       <ConfirmModal

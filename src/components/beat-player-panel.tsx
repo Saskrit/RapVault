@@ -115,7 +115,6 @@ export function BeatPlayerPanel({
   onTimeUpdate,
 }: BeatPlayerPanelProps) {
   const [activeTab, setActiveTab] = useState<"beats" | "annotations">("beats");
-  const [autoScroll, setAutoScroll] = useState(true);
 
   const [playlist, setPlaylist] = useState<BeatPlaylist>(() =>
     parseBeatPlaylist(beatUrl),
@@ -194,12 +193,18 @@ export function BeatPlayerPanel({
       tickRef.current = setInterval(() => {
         try {
           const t = player.getCurrentTime();
-          setCurrentTime(t);
-          onTimeUpdate?.(t);
+          if (typeof t === "number" && !Number.isNaN(t)) {
+            setCurrentTime(t);
+            onTimeUpdate?.(t);
+          }
+          const dur = player.getDuration();
+          if (typeof dur === "number" && dur > 0) {
+            setDuration(dur);
+          }
         } catch {
-          stopTick();
+          // ignore
         }
-      }, 500);
+      }, 200);
     }
 
     function destroyPlayer() {
@@ -238,23 +243,34 @@ export function BeatPlayerPanel({
         events: {
           onReady: (event) => {
             if (cancelled) return;
-            const total = event.target.getDuration();
-            if (total > 0) setDuration(total);
+            try {
+              const total = event.target.getDuration();
+              if (total > 0) setDuration(total);
+            } catch {
+              // ignore
+            }
           },
           onStateChange: (event) => {
             if (cancelled) return;
-            const { PlayerState } = window.YT!;
-            if (event.data === PlayerState.PLAYING) {
+            const state = event.data;
+            // 1 = PLAYING, 3 = BUFFERING
+            if (state === 1 || state === 3) {
+              try {
+                const total = event.target.getDuration();
+                if (total > 0) setDuration(total);
+              } catch {
+                // ignore
+              }
               startTick(event.target);
-            } else if (
-              event.data === PlayerState.PAUSED ||
-              event.data === PlayerState.ENDED
-            ) {
+            } else if (state === 2 || state === 0) {
+              // 2 = PAUSED, 0 = ENDED
               stopTick();
               try {
                 const t = event.target.getCurrentTime();
-                setCurrentTime(t);
-                onTimeUpdate?.(t);
+                if (typeof t === "number" && !Number.isNaN(t)) {
+                  setCurrentTime(t);
+                  onTimeUpdate?.(t);
+                }
               } catch {
                 // Player may already be torn down.
               }
@@ -266,8 +282,36 @@ export function BeatPlayerPanel({
 
     void initPlayer();
 
+    // Secondary live status polling to ensure time counter is always responsive
+    const monitorInterval = setInterval(() => {
+      if (cancelled) return;
+      const player = playerRef.current;
+      if (!player) return;
+      try {
+        const p = player as any;
+        const state = p.getPlayerState?.();
+        if (state === 1) {
+          const t = player.getCurrentTime();
+          if (typeof t === "number" && !Number.isNaN(t)) {
+            setCurrentTime(t);
+            onTimeUpdate?.(t);
+          }
+          const dur = player.getDuration();
+          if (typeof dur === "number" && dur > 0) {
+            setDuration(dur);
+          }
+          if (!tickRef.current) {
+            startTick(player);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }, 400);
+
     return () => {
       cancelled = true;
+      clearInterval(monitorInterval);
       destroyPlayer();
     };
   }, [videoId, onTimeUpdate]);
@@ -583,37 +627,17 @@ export function BeatPlayerPanel({
               )}
             </div>
 
-            {/* Video Control Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-sidebar/30 px-3 py-2 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  const stamp = formatVideoTime(currentTime);
-                  onSetCurrentLineTime?.(stamp);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-foreground/30 active:scale-95"
-              >
-                <Clock className="h-3.5 w-3.5 text-muted" />
-                <span>Set Current Line Time</span>
-              </button>
-
-              <div className="flex items-center gap-1 font-mono text-xs font-medium text-muted">
-                <Clock className="h-3.5 w-3.5" />
-                <span>
-                  {formatVideoTime(currentTime)} /{" "}
-                  {formatVideoTime(duration || 0)}
+            {/* Live Playback Time */}
+            <div className="flex items-center justify-between border-b border-border/80 bg-sidebar/30 px-3 py-2 text-xs">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                Playback
+              </span>
+              <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-foreground">
+                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                <span className="tabular-nums">
+                  {formatVideoTime(currentTime)} / {formatVideoTime(duration || 0)}
                 </span>
               </div>
-
-              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted">
-                <span>Auto Scroll</span>
-                <input
-                  type="checkbox"
-                  checked={autoScroll}
-                  onChange={(e) => setAutoScroll(e.target.checked)}
-                  className="h-4 w-4 rounded border-border accent-amber-700"
-                />
-              </label>
             </div>
           </div>
         )}

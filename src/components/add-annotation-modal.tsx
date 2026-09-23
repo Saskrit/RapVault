@@ -1,11 +1,10 @@
 "use client";
 
-import { Clock, Sparkles, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   type Annotation,
   type AnnotationColor,
-  formatVideoTimestamp,
 } from "@/lib/annotations";
 import { Modal } from "@/components/modal";
 
@@ -37,24 +36,16 @@ export function AddAnnotationModal({
 }: AddAnnotationModalProps) {
   const [text, setText] = useState("");
   const [explanation, setExplanation] = useState("");
-  const [timestamp, setTimestamp] = useState("");
-  const [color, setColor] = useState<AnnotationColor>("purple");
+  const [color, setColor] = useState<AnnotationColor>("amber");
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setText(initialData?.text || selectedText || "");
     setExplanation(initialData?.explanation || "");
-    if (initialData?.timestamp) {
-      setTimestamp(initialData.timestamp);
-    } else if (currentVideoTime && currentVideoTime > 0) {
-      setTimestamp(formatVideoTimestamp(currentVideoTime));
-    } else {
-      setTimestamp("");
-    }
-    setColor(initialData?.color || "purple");
+    setColor(initialData?.color || "amber");
     setError("");
-  }, [open, initialData, selectedText, currentVideoTime]);
+  }, [open, initialData, selectedText]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,7 +62,7 @@ export function AddAnnotationModal({
       id: initialData?.id,
       text: text.trim(),
       explanation: explanation.trim(),
-      timestamp: timestamp.trim() || undefined,
+      timestamp: initialData?.timestamp || undefined,
       color,
       commentsCount: initialData?.commentsCount ?? 1,
     });
@@ -121,36 +112,6 @@ export function AddAnnotationModal({
             placeholder="Explain the rhyme scheme, punchline, cultural reference, or bar meaning..."
             className="w-full rounded-xl border border-border bg-background p-3 text-sm leading-relaxed text-foreground outline-none transition focus:border-amber-600 focus:ring-1 focus:ring-amber-600/30"
           />
-        </div>
-
-        {/* Timestamp */}
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Beat Timestamp (Optional)
-            </label>
-            {currentVideoTime && currentVideoTime > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setTimestamp(formatVideoTimestamp(currentVideoTime))
-                }
-                className="text-[11px] font-medium text-amber-700 hover:underline dark:text-amber-400"
-              >
-                Use current beat ({formatVideoTimestamp(currentVideoTime)})
-              </button>
-            )}
-          </div>
-          <div className="relative">
-            <Clock className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              value={timestamp}
-              onChange={(e) => setTimestamp(e.target.value)}
-              placeholder="e.g. 0:12"
-              className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none transition focus:border-amber-600"
-            />
-          </div>
         </div>
 
         {error && <p className="text-xs font-medium text-red-500">{error}</p>}
