@@ -778,7 +778,11 @@ export function BeatPlayerPanel({
 
             {/* Structure Marks / Timestamps Section (Hook, Verse, etc.) */}
             <div className="border-b border-border/80 p-3">
-              <div className="mb-2 flex items-center justify-between">
+              <div
+                className={`flex items-center justify-between ${
+                  isAddingMark || currentMarkers.length > 0 ? "mb-2" : ""
+                }`}
+              >
                 <div className="flex items-center gap-1.5">
                   <Bookmark className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                   <span className="text-xs font-semibold text-foreground">
@@ -899,7 +903,7 @@ export function BeatPlayerPanel({
               )}
 
               {/* Marks List */}
-              {currentMarkers.length > 0 ? (
+              {currentMarkers.length > 0 && (
                 <div className="space-y-1.5">
                   {currentMarkers.map((marker, index) => {
                     const nextTime = currentMarkers[index + 1]?.time;
@@ -944,29 +948,6 @@ export function BeatPlayerPanel({
                       </div>
                     );
                   })}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-dashed border-border/70 p-3 text-center">
-                  <p className="text-xs font-medium text-muted">
-                    No structure marks yet
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted/70">
-                    Add timestamps for Hook, Verse, Bridge, etc. to jump directly to key beat sections.
-                  </p>
-                  {!readOnly && videoId && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewMarkLabel("Hook");
-                        setNewMarkTimeStr(formatVideoTime(currentTime));
-                        setIsAddingMark(true);
-                      }}
-                      className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-amber-600 hover:text-amber-600"
-                    >
-                      <Plus className="h-3 w-3" />
-                      <span>Mark Hook at {formatVideoTime(currentTime)}</span>
-                    </button>
-                  )}
                 </div>
               )}
             </div>
