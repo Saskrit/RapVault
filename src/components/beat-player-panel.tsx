@@ -170,6 +170,31 @@ export function BeatPlayerPanel({
   const skipExternalSync = useRef(false);
   const autoPlayNextRef = useRef(false);
 
+  // Switch to annotations tab if an annotation is selected from lyrics
+  useEffect(() => {
+    if (activeAnnotationId) {
+      setActiveTab("annotations");
+    }
+  }, [activeAnnotationId]);
+
+  // When switching back to the beats tab, ensure the beat is actively playing and not paused
+  useEffect(() => {
+    if (activeTab !== "beats" || !videoId) return;
+
+    const player = playerRef.current as any;
+    if (player && typeof player.playVideo === "function") {
+      try {
+        const state = player.getPlayerState?.();
+        // 1 = PLAYING, 3 = BUFFERING
+        if (state !== 1 && state !== 3) {
+          player.playVideo();
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [activeTab, videoId]);
+
   function commitPlaylist(next: BeatPlaylist, shouldAutoplay = false) {
     const urls = next.urls
       .map((url) => url.trim())
@@ -690,8 +715,16 @@ export function BeatPlayerPanel({
       </div>
 
       {/* Main Tab Content */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {activeTab === "beats" && (
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {/* Beats Tab Content */}
+        <div
+          className={`flex flex-col ${
+            activeTab === "beats"
+              ? "block"
+              : "pointer-events-none absolute inset-0 -z-10 h-0 overflow-hidden opacity-0"
+          }`}
+          aria-hidden={activeTab !== "beats"}
+        >
           <div className="flex flex-col">
             {/* Beat URL Input row */}
             {!readOnly && (
@@ -986,9 +1019,17 @@ export function BeatPlayerPanel({
               )}
             </div>
           </div>
-        )}
+        </div>
 
-        {activeTab === "annotations" && (
+        {/* Annotations Tab Content */}
+        <div
+          className={`flex min-h-0 flex-1 flex-col ${
+            activeTab === "annotations"
+              ? "block"
+              : "pointer-events-none absolute inset-0 -z-10 h-0 overflow-hidden opacity-0"
+          }`}
+          aria-hidden={activeTab !== "annotations"}
+        >
           <AnnotationsPanel
             annotations={annotations}
             activeAnnotationId={activeAnnotationId}
@@ -998,7 +1039,7 @@ export function BeatPlayerPanel({
             onDeleteAnnotation={onDeleteAnnotation || (() => {})}
             readOnly={readOnly}
           />
-        )}
+        </div>
       </div>
     </div>
   );
