@@ -6,7 +6,6 @@ import {
   Clock,
   ExternalLink,
   MapPin,
-  MessageSquare,
   Music2,
   Plus,
   Trash2,
@@ -115,9 +114,7 @@ export function BeatPlayerPanel({
   onSetCurrentLineTime,
   onTimeUpdate,
 }: BeatPlayerPanelProps) {
-  const [activeTab, setActiveTab] = useState<
-    "beats" | "annotations" | "timestamps" | "comments"
-  >("beats");
+  const [activeTab, setActiveTab] = useState<"beats" | "annotations">("beats");
   const [autoScroll, setAutoScroll] = useState(true);
 
   const [playlist, setPlaylist] = useState<BeatPlaylist>(() =>
@@ -450,40 +447,6 @@ export function BeatPlayerPanel({
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
             )}
           </button>
-
-          {/* Tab: Line Timestamps */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("timestamps")}
-            className={`relative hidden items-center gap-1.5 px-2.5 py-2 transition-colors sm:flex ${
-              activeTab === "timestamps"
-                ? "font-semibold text-amber-700 dark:text-amber-400"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            <span>Line Timestamps</span>
-            {activeTab === "timestamps" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
-            )}
-          </button>
-
-          {/* Tab: Comments */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("comments")}
-            className={`relative hidden items-center gap-1.5 px-2.5 py-2 transition-colors sm:flex ${
-              activeTab === "comments"
-                ? "font-semibold text-amber-700 dark:text-amber-400"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span>Comments</span>
-            {activeTab === "comments" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-700 dark:bg-amber-400" />
-            )}
-          </button>
         </div>
 
         {/* Right side beat pagination */}
@@ -631,17 +594,6 @@ export function BeatPlayerPanel({
                 />
               </label>
             </div>
-
-            {/* Annotations Section below beat player as seen in screenshot */}
-            <AnnotationsPanel
-              annotations={annotations}
-              activeAnnotationId={activeAnnotationId}
-              onSelectAnnotation={onSelectAnnotation}
-              onAddAnnotation={onAddAnnotation || (() => {})}
-              onEditAnnotation={onEditAnnotation || (() => {})}
-              onDeleteAnnotation={onDeleteAnnotation || (() => {})}
-              readOnly={readOnly}
-            />
           </div>
         )}
 
@@ -655,27 +607,6 @@ export function BeatPlayerPanel({
             onDeleteAnnotation={onDeleteAnnotation || (() => {})}
             readOnly={readOnly}
           />
-        )}
-
-        {activeTab === "timestamps" && (
-          <div className="p-4 text-xs text-muted">
-            <h4 className="font-semibold text-foreground">Line Timestamps</h4>
-            <p className="mt-1 leading-relaxed">
-              Play your beat and click &ldquo;Set Current Line Time&rdquo; to sync each bar with the beat flow.
-            </p>
-            <div className="mt-3 rounded-lg border border-border bg-background p-3 font-mono text-[11px]">
-              Current beat time: {formatVideoTime(currentTime)}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "comments" && (
-          <div className="p-4 text-xs text-muted">
-            <h4 className="font-semibold text-foreground">Song Comments</h4>
-            <p className="mt-1 leading-relaxed">
-              Feedback from collaborators and private notes will appear here.
-            </p>
-          </div>
         )}
       </div>
     </div>

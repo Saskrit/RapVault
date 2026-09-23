@@ -552,6 +552,7 @@ function toApiBody(patch: SongPatch): Record<string, unknown> {
   if (patch.status !== undefined) body.status = patch.status;
   if (patch.beatUrl !== undefined) body.beatUrl = patch.beatUrl;
   if (patch.voiceMemoPath !== undefined) body.voiceMemoPath = patch.voiceMemoPath;
+  if (patch.annotations !== undefined) body.annotations = patch.annotations;
   if (patch.isFavorite !== undefined) body.isFavorite = patch.isFavorite;
   if (patch.folderId !== undefined) body.folderId = patch.folderId;
   if (patch.isPublic !== undefined) body.isPublic = patch.isPublic;
@@ -588,6 +589,7 @@ export async function flushPendingCreate(
       pending.folderId !== undefined ? pending.folderId : cached.folderId,
     beatUrl: pending.beatUrl ?? cached.beatUrl,
     voiceMemoPath: pending.voiceMemoPath ?? cached.voiceMemoPath,
+    annotations: pending.annotations ?? cached.annotations,
     isFavorite: pending.isFavorite ?? cached.isFavorite,
     isPublic: pending.isPublic ?? cached.isPublic,
   };
@@ -632,6 +634,7 @@ export async function flushPendingCreate(
       const defaults: Record<string, unknown> = {
         beatUrl: "",
         voiceMemoPath: "",
+        annotations: "",
         isFavorite: false,
         isPublic: false,
       };

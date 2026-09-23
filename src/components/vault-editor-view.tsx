@@ -30,7 +30,6 @@ import { useOfflineSync } from "@/components/offline-provider";
 import {
   type Annotation,
   type AnnotationColor,
-  getReferenceDemoAnnotations,
   parseAnnotations,
   serializeAnnotations,
   unwrapLyricAnnotation,
@@ -395,26 +394,6 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     return () => window.removeEventListener("pagehide", flushNow);
   }, [songId]);
 
-  // Seed sample reference annotations if demo lyrics are present and annotations are empty
-  useEffect(() => {
-    if (!song) return;
-    const currentAnn = parseAnnotations(song.annotations);
-    if (
-      currentAnn.length === 0 &&
-      song.content.includes("satya music taste kati lai")
-    ) {
-      const demo = getReferenceDemoAnnotations();
-      let updatedContent = song.content;
-      for (const d of demo) {
-        updatedContent = wrapLyricWithAnnotation(updatedContent, d);
-      }
-      scheduleSave({
-        annotations: serializeAnnotations(demo),
-        content: updatedContent,
-      });
-    }
-  }, [song?.content, song?.annotations, scheduleSave]);
-
   const annotations: Annotation[] = useMemo(() => {
     return parseAnnotations(song?.annotations);
   }, [song?.annotations]);
@@ -464,7 +443,8 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
       nextAnnotations = [...annotations, targetAnnotation];
     }
 
-    const nextContent = wrapLyricWithAnnotation(song.content, targetAnnotation);
+    const currentSong = songRef.current || song;
+    const nextContent = wrapLyricWithAnnotation(currentSong.content, targetAnnotation);
     const serialized = serializeAnnotations(nextAnnotations);
 
     scheduleSave({
@@ -476,8 +456,9 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
 
   function handleDeleteAnnotation(id: string) {
     if (!song) return;
+    const currentSong = songRef.current || song;
     const nextAnnotations = annotations.filter((a) => a.id !== id);
-    const nextContent = unwrapLyricAnnotation(song.content, id);
+    const nextContent = unwrapLyricAnnotation(currentSong.content, id);
     const serialized = serializeAnnotations(nextAnnotations);
 
     scheduleSave({

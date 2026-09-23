@@ -174,15 +174,16 @@ export function wrapLyricWithAnnotation(
   annotation: Annotation,
 ): string {
   const badgeHtml = `<span class="rap-annotation-badge" contenteditable="false" data-annotation-id="${annotation.id}">💬 ${annotation.commentsCount || 1}</span>`;
+  const escapedId = annotation.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const existingRegex = new RegExp(
-    `<mark[^>]*data-annotation-id="${annotation.id}"[^>]*>([\\s\\S]*?)<\\/mark>`,
+    `<mark\\b[^>]*\\bdata-annotation-id=["']?${escapedId}["']?[^>]*>([\\s\\S]*?)<\\/mark>`,
     "i",
   );
 
   if (existingRegex.test(content)) {
     return content.replace(existingRegex, (_match, inner) => {
       const cleanInner = inner.replace(
-        /<span[^>]*class="rap-annotation-badge"[^>]*>[\s\S]*?<\/span>/gi,
+        /<span\b[^>]*\bclass=["'][^"']*rap-annotation-badge[^"']*["'][^>]*>[\s\S]*?<\/span>/gi,
         "",
       );
       return `<mark class="rap-annotation-mark" data-annotation-id="${annotation.id}" data-color="${annotation.color}">${cleanInner}${badgeHtml}</mark>`;
@@ -209,15 +210,28 @@ export function unwrapLyricAnnotation(
   content: string,
   annotationId: string,
 ): string {
+  const escapedId = annotationId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const markRegex = new RegExp(
-    `<mark[^>]*data-annotation-id="${annotationId}"[^>]*>([\\s\\S]*?)<\\/mark>`,
+    `<mark\\b[^>]*\\bdata-annotation-id=["']?${escapedId}["']?[^>]*>([\\s\\S]*?)<\\/mark>`,
     "gi",
   );
-  return content.replace(markRegex, (_match, inner) => {
+
+  let unwrapped = content.replace(markRegex, (_match, inner) => {
     return inner.replace(
-      /<span[^>]*class="rap-annotation-badge"[^>]*>[\s\S]*?<\/span>/gi,
+      /<span\b[^>]*\bclass=["'][^"']*rap-annotation-badge[^"']*["'][^>]*>[\s\S]*?<\/span>/gi,
       "",
     );
   });
+
+  // Also clean up any orphan badge that might exist for this annotation ID
+  unwrapped = unwrapped.replace(
+    new RegExp(
+      `<span\\b[^>]*\\bdata-annotation-id=["']?${escapedId}["']?[^>]*>[\\s\\S]*?<\\/span>`,
+      "gi",
+    ),
+    "",
+  );
+
+  return unwrapped;
 }
 

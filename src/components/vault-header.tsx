@@ -455,15 +455,9 @@ export function VaultHeader({
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen((o) => !o)}
-                  className="flex items-center gap-1.5 rounded-xl border border-border bg-background p-1 pr-2 text-xs font-semibold text-foreground transition hover:border-foreground/30 active:scale-95 sm:gap-2 sm:px-2.5 sm:py-1.5"
+                  className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:border-foreground/30 active:scale-95 sm:gap-2"
                 >
-                  <UserAvatar
-                    src={avatarUrl}
-                    name={label || "User"}
-                    size="sm"
-                    className="h-6 w-6 text-[10px]"
-                  />
-                  <span className="hidden truncate font-semibold sm:inline">
+                  <span className="truncate font-semibold">
                     {label || "@saskreet"}
                   </span>
                   <ChevronDown
