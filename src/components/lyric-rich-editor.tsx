@@ -409,18 +409,18 @@ export function LyricRichEditor({
 
     const wrapperRect = wrapper.getBoundingClientRect();
 
-    // Position popup centered horizontally above the highlighted words
+    // Position popup centered horizontally below the highlighted words
     const x = Math.max(
-      45,
+      50,
       Math.min(
-        wrapperRect.width - 45,
+        wrapperRect.width - 50,
         rect.left + rect.width / 2 - wrapperRect.left,
       ),
     );
-    const y = rect.top - wrapperRect.top - 8;
+    const y = rect.bottom - wrapperRect.top + 8;
 
     // Hide if out of visible bounds of editor
-    if (y < -20 || rect.bottom < wrapperRect.top || rect.top > wrapperRect.bottom) {
+    if (rect.bottom < wrapperRect.top || rect.top > wrapperRect.bottom || y > wrapperRect.height - 10) {
       setSelectionPopup(null);
       return;
     }
@@ -1107,10 +1107,10 @@ export function LyricRichEditor({
               position: "absolute",
               left: `${selectionPopup.x}px`,
               top: `${selectionPopup.y}px`,
-              transform: "translate(-50%, -100%)",
+              transform: "translateX(-50%)",
               zIndex: 40,
             }}
-            className="pointer-events-auto select-none"
+            className="pointer-events-auto select-none animate-in fade-in zoom-in-95 duration-100"
           >
             <button
               type="button"
