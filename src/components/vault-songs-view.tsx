@@ -24,7 +24,6 @@ import {
   Star,
   Trash2,
   User,
-  UsersRound,
   X,
 } from "lucide-react";
 import { parseYouTubeVideoId } from "@/lib/youtube";
@@ -785,63 +784,14 @@ export function VaultSongsView() {
                       <span className="truncate text-sm font-semibold tracking-tight text-foreground">
                         {song.title || "Untitled"}
                       </span>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {song.isCollaborator && !showTrash && (
-                          <span
-                            className="inline-flex"
-                            title={
-                              song.owner
-                                ? `Shared by ${song.owner.displayName}`
-                                : "Collaboration"
-                            }
-                          >
-                            <UsersRound
-                              className="h-3.5 w-3.5 shrink-0 text-sky-500"
-                              aria-label="Collaboration"
-                            />
-                          </span>
-                        )}
-                        {(song.collaborators?.length || 0) > 0 &&
-                          song.isOwner !== false &&
-                          !showTrash && (
-                            <span
-                              className="inline-flex max-w-[10rem] items-center gap-0.5 truncate text-xs font-semibold text-sky-500 sm:max-w-[14rem]"
-                              title={song.collaborators
-                                ?.map((c) => c.artist.displayName)
-                                .join(", ")}
-                            >
-                              <UsersRound className="h-3 w-3 shrink-0" />
-                              <span className="truncate">
-                                {song.collaborators!.length === 1
-                                  ? song.collaborators![0]!.artist.displayName
-                                  : `${song.collaborators!.length}`}
-                              </span>
-                            </span>
-                          )}
-                        {song.folder && (
-                          <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                            {song.folder.name}
-                          </span>
-                        )}
-                        {song.isFavorite && !showTrash && (
-                          <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
-                        )}
-                      </div>
                     </div>
                     <p className="mt-1 line-clamp-1 text-xs text-muted sm:text-sm">
                       {contentSnippet(song.content) || "No lyrics yet"}
                     </p>
-                    <p className="mt-1.5 text-xs font-medium uppercase tracking-[0.08em] text-muted">
+                    <p className="mt-1.5 text-xs font-medium text-muted">
                       {showTrash
                         ? `Deleted ${song.deletedAt ? new Date(song.deletedAt).toLocaleDateString() : ""}`
-                        : song.isCollaborator && song.owner
-                          ? `Collab with ${song.owner.displayName} · ${new Date(song.updatedAt).toLocaleDateString()}`
-                          : (song.collaborators?.length || 0) > 0 &&
-                              song.isOwner !== false
-                            ? `Collab with ${song.collaborators!
-                                .map((c) => c.artist.displayName)
-                                .join(", ")} · ${new Date(song.updatedAt).toLocaleDateString()}`
-                            : `${song.status === "draft" ? "Draft" : "Finished"} · ${new Date(song.updatedAt).toLocaleDateString()}`}
+                        : new Date(song.updatedAt).toLocaleDateString()}
                     </p>
                   </button>
 
