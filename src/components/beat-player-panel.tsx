@@ -128,7 +128,6 @@ export function BeatPlayerPanel({
   const [clearedToast, setClearedToast] = useState(false);
   const playerShellRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YT.Player | null>(null);
-  const playerReadyRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clearingRef = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,6 +147,9 @@ export function BeatPlayerPanel({
       autoPlayNextRef.current = true;
     }
     skipExternalSync.current = true;
+    setTimeout(() => {
+      skipExternalSync.current = false;
+    }, 100);
     setPlaylist(normalized);
     const active = normalized.urls[normalized.active] ?? "";
     setUrlInput(active);
@@ -178,13 +180,12 @@ export function BeatPlayerPanel({
           // ignore
         }
         playerRef.current = null;
-        playerReadyRef.current = false;
       }
     };
   }, []);
 
   useEffect(() => {
-    if (!videoId) {
+    if (!videoId || !playerShellRef.current) {
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -192,14 +193,16 @@ export function BeatPlayerPanel({
           // ignore
         }
         playerRef.current = null;
-        playerReadyRef.current = false;
       }
       return;
     }
 
-    if (!playerShellRef.current) return;
-
     let cancelled = false;
+    const shell = playerShellRef.current;
+    const host = document.createElement("div");
+    host.style.width = "100%";
+    host.style.height = "100%";
+    shell.replaceChildren(host);
 
     function stopTick() {
       if (tickRef.current) {
@@ -229,7 +232,6 @@ export function BeatPlayerPanel({
 
     function destroyPlayer() {
       stopTick();
-      playerReadyRef.current = false;
       const player = playerRef.current;
       playerRef.current = null;
       if (player) {
@@ -239,47 +241,12 @@ export function BeatPlayerPanel({
           // YouTube may already have removed the iframe.
         }
       }
-      if (playerShellRef.current) {
-        playerShellRef.current.replaceChildren();
-      }
+      shell.replaceChildren();
     }
 
     const id = videoId;
     const shouldAutoplay = autoPlayNextRef.current;
-
-    // Fast-path: if player is already loaded and ready in the DOM, switch video seamlessly and autoplay
-    if (
-      playerRef.current &&
-      playerReadyRef.current &&
-      typeof (playerRef.current as any).loadVideoById === "function"
-    ) {
-      try {
-        setCurrentTime(0);
-        setDuration(null);
-        if (shouldAutoplay) {
-          autoPlayNextRef.current = false;
-          (playerRef.current as any).loadVideoById(id);
-          try {
-            (playerRef.current as any).playVideo?.();
-          } catch {
-            // ignore
-          }
-        } else {
-          (playerRef.current as any).cueVideoById(id);
-        }
-        return;
-      } catch {
-        // Fall back to recreating player if switching within current player errors
-        destroyPlayer();
-      }
-    }
-
-    const shell = playerShellRef.current;
-    // YouTube replaces this node with an iframe — keep it outside React's DOM ownership.
-    const host = document.createElement("div");
-    host.style.width = "100%";
-    host.style.height = "100%";
-    shell.replaceChildren(host);
+    autoPlayNextRef.current = false;
 
     async function initPlayer() {
       setDuration(null);
@@ -303,7 +270,6 @@ export function BeatPlayerPanel({
           events: {
             onReady: (event) => {
               if (cancelled) return;
-              playerReadyRef.current = true;
               try {
                 const total = event.target.getDuration();
                 if (total > 0) setDuration(total);
@@ -311,7 +277,6 @@ export function BeatPlayerPanel({
                 // ignore
               }
               if (shouldAutoplay) {
-                autoPlayNextRef.current = false;
                 try {
                   (event.target as any).playVideo?.();
                 } catch {
@@ -384,6 +349,7 @@ export function BeatPlayerPanel({
     return () => {
       cancelled = true;
       clearInterval(monitorInterval);
+      destroyPlayer();
     };
   }, [videoId, onTimeUpdate]);
 
@@ -436,11 +402,13 @@ export function BeatPlayerPanel({
       commitPlaylist({ urls: playlist.urls, active: index }, true);
       return;
     }
-    if (playlist.urls.length <= 1 || playlist.active <= 0) return;
+    if (playlist.urls.length <= 1) return;
+    const prevIndex =
+      playlist.active > 0 ? playlist.active - 1 : playlist.urls.length - 1;
     commitPlaylist(
       {
         urls: playlist.urls,
-        active: playlist.active - 1,
+        active: prevIndex,
       },
       true,
     );
@@ -450,11 +418,12 @@ export function BeatPlayerPanel({
     setError("");
     if (playlist.active >= playlist.urls.length) return;
     if (playlist.urls.length <= 1) return;
-    if (playlist.active >= playlist.urls.length - 1) return;
+    const nextIndex =
+      playlist.active < playlist.urls.length - 1 ? playlist.active + 1 : 0;
     commitPlaylist(
       {
         urls: playlist.urls,
-        active: playlist.active + 1,
+        active: nextIndex,
       },
       true,
     );
@@ -517,10 +486,8 @@ export function BeatPlayerPanel({
     : beatCount === 0
       ? 0
       : playlist.active + 1;
-  const canGoPrev =
-    showingNewSlot || (beatCount > 1 && playlist.active > 0);
-  const canGoNext =
-    !showingNewSlot && beatCount > 1 && playlist.active < beatCount - 1;
+  const canGoPrev = showingNewSlot || beatCount > 1;
+  const canGoNext = !showingNewSlot && beatCount > 1;
   const canAdd = !readOnly && beatCount < MAX_BEATS && !showingNewSlot;
 
   return (
