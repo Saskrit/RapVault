@@ -49,3 +49,15 @@ export function formatVideoTime(totalSeconds: number) {
   }
   return `${minutes}:${padded}`;
 }
+
+/** Parse mm:ss, h:mm:ss or raw seconds string into total seconds */
+export function parseTimeString(timeStr: string): number | null {
+  const s = timeStr.trim();
+  if (!s) return null;
+  const parts = s.split(":").map((p) => Number(p));
+  if (parts.some((n) => Number.isNaN(n) || n < 0)) return null;
+  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 2) return parts[0]! * 60 + parts[1]!;
+  if (parts.length === 3) return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!;
+  return null;
+}

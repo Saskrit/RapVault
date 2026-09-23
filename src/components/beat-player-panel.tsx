@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  Bookmark,
   ChevronLeft,
   ChevronRight,
   Clock,
   ExternalLink,
   MapPin,
   Music2,
+  Play,
   Plus,
   Trash2,
   X,
@@ -17,15 +19,34 @@ import type { Annotation } from "@/lib/annotations";
 import { loadYouTubeIframeApi } from "@/lib/youtube-iframe-api";
 import {
   formatVideoTime,
+  parseTimeString,
   parseYouTubeVideoId,
   youTubeWatchUrl,
 } from "@/lib/youtube";
 
 const MAX_BEATS = 5;
 
-type BeatPlaylist = {
+export const MARK_PRESETS = [
+  "Hook",
+  "Verse 1",
+  "Verse 2",
+  "Chorus",
+  "Intro",
+  "Bridge",
+  "Outro",
+  "Drop",
+] as const;
+
+export type BeatMarker = {
+  id: string;
+  label: string;
+  time: number;
+};
+
+export type BeatPlaylist = {
   urls: string[];
   active: number;
+  markers?: Record<string, BeatMarker[]>;
 };
 
 type BeatPlayerPanelProps = {
@@ -47,15 +68,19 @@ function clampActive(active: number, length: number) {
   return Math.max(0, Math.min(active, length - 1));
 }
 
-/** Parse legacy single URL or multi-beat JSON playlist. */
+/** Parse legacy single URL or multi-beat JSON playlist with markers. */
 export function parseBeatPlaylist(raw: string): BeatPlaylist {
   const value = raw.trim();
-  if (!value) return { urls: [], active: 0 };
+  if (!value) return { urls: [], active: 0, markers: {} };
 
   if (value.startsWith("{") || value.startsWith("[")) {
     try {
       const parsed = JSON.parse(value) as
-        | { urls?: unknown; active?: unknown }
+        | {
+            urls?: unknown;
+            active?: unknown;
+            markers?: Record<string, BeatMarker[]>;
+          }
         | string[];
       if (Array.isArray(parsed)) {
         const urls = parsed
@@ -63,7 +88,7 @@ export function parseBeatPlaylist(raw: string): BeatPlaylist {
           .map((item) => item.trim())
           .filter(Boolean)
           .slice(0, MAX_BEATS);
-        return { urls, active: 0 };
+        return { urls, active: 0, markers: {} };
       }
       const urls = Array.isArray(parsed.urls)
         ? parsed.urls
@@ -76,26 +101,37 @@ export function parseBeatPlaylist(raw: string): BeatPlaylist {
         typeof parsed.active === "number" && Number.isFinite(parsed.active)
           ? clampActive(Math.floor(parsed.active), urls.length)
           : 0;
-      return { urls, active };
+      const markers =
+        parsed.markers && typeof parsed.markers === "object"
+          ? (parsed.markers as Record<string, BeatMarker[]>)
+          : {};
+      return { urls, active, markers };
     } catch {
       // Fall through to single-URL parsing.
     }
   }
 
-  return { urls: [value], active: 0 };
+  return { urls: [value], active: 0, markers: {} };
 }
 
-/** Keep single-URL strings for one beat (backward compatible). */
+/** Keep single-URL strings for one beat without markers (backward compatible). */
 export function serializeBeatPlaylist(playlist: BeatPlaylist): string {
   const urls = playlist.urls
     .map((url) => url.trim())
     .filter(Boolean)
     .slice(0, MAX_BEATS);
-  if (urls.length === 0) return "";
-  if (urls.length === 1) return urls[0]!;
+  const markers = playlist.markers || {};
+  const hasMarkers = Object.values(markers).some(
+    (arr) => Array.isArray(arr) && arr.length > 0,
+  );
+
+  if (urls.length === 0 && !hasMarkers) return "";
+  if (urls.length === 1 && !hasMarkers) return urls[0]!;
+
   return JSON.stringify({
     urls,
     active: clampActive(playlist.active, urls.length),
+    markers,
   });
 }
 
@@ -142,6 +178,7 @@ export function BeatPlayerPanel({
     const normalized: BeatPlaylist = {
       urls,
       active: clampActive(next.active, urls.length),
+      markers: next.markers ?? playlist.markers ?? {},
     };
     if (shouldAutoplay) {
       autoPlayNextRef.current = true;
@@ -155,6 +192,71 @@ export function BeatPlayerPanel({
     setUrlInput(active);
     setVideoId(parseYouTubeVideoId(active));
     onBeatUrlChange(serializeBeatPlaylist(normalized));
+  }
+
+  const [isAddingMark, setIsAddingMark] = useState(false);
+  const [newMarkLabel, setNewMarkLabel] = useState("Hook");
+  const [newMarkTimeStr, setNewMarkTimeStr] = useState("");
+  const [markError, setMarkError] = useState("");
+
+  const currentBeatKey = activeUrl || String(playlist.active);
+  const currentMarkers: BeatMarker[] = playlist.markers?.[currentBeatKey] || [];
+
+  function seekToTime(seconds: number) {
+    if (!playerRef.current) return;
+    try {
+      const player = playerRef.current as any;
+      player.seekTo?.(seconds, true);
+      player.playVideo?.();
+      setCurrentTime(seconds);
+    } catch (err) {
+      console.error("Seek error:", err);
+    }
+  }
+
+  function handleAddMark(e?: React.FormEvent) {
+    e?.preventDefault();
+    setMarkError("");
+    const label = newMarkLabel.trim() || "Mark";
+    const timeSeconds = parseTimeString(newMarkTimeStr);
+    if (timeSeconds === null || timeSeconds < 0) {
+      setMarkError("Enter a valid time (e.g. 0:45 or 1:20)");
+      return;
+    }
+
+    const newMarker: BeatMarker = {
+      id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label,
+      time: Math.round(timeSeconds * 10) / 10,
+    };
+
+    const updated = [...currentMarkers, newMarker].sort((a, b) => a.time - b.time);
+    const nextMarkers = {
+      ...(playlist.markers || {}),
+      [currentBeatKey]: updated,
+    };
+
+    commitPlaylist({
+      urls: playlist.urls,
+      active: playlist.active,
+      markers: nextMarkers,
+    });
+
+    setIsAddingMark(false);
+    setNewMarkTimeStr("");
+  }
+
+  function handleDeleteMark(id: string) {
+    const updated = currentMarkers.filter((m) => m.id !== id);
+    const nextMarkers = {
+      ...(playlist.markers || {}),
+      [currentBeatKey]: updated,
+    };
+    commitPlaylist({
+      urls: playlist.urls,
+      active: playlist.active,
+      markers: nextMarkers,
+    });
   }
 
   useEffect(() => {
@@ -672,6 +774,201 @@ export function BeatPlayerPanel({
                   {formatVideoTime(currentTime)} / {formatVideoTime(duration || 0)}
                 </span>
               </div>
+            </div>
+
+            {/* Structure Marks / Timestamps Section (Hook, Verse, etc.) */}
+            <div className="border-b border-border/80 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Bookmark className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs font-semibold text-foreground">
+                    Structure Marks
+                  </span>
+                  {currentMarkers.length > 0 && (
+                    <span className="rounded-full bg-sidebar px-1.5 py-0.2 text-[10px] font-bold text-muted">
+                      {currentMarkers.length}
+                    </span>
+                  )}
+                </div>
+
+                {!readOnly && videoId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isAddingMark) {
+                        setNewMarkTimeStr(formatVideoTime(currentTime));
+                        setMarkError("");
+                      }
+                      setIsAddingMark((prev) => !prev);
+                    }}
+                    className="rap-btn-bronze flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold shadow-xs active:scale-95"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>{isAddingMark ? "Cancel" : "Add Mark"}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Add Mark Form */}
+              {isAddingMark && (
+                <form
+                  onSubmit={handleAddMark}
+                  className="mb-3 space-y-2 rounded-lg border border-border bg-sidebar/50 p-2.5 text-xs"
+                >
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-muted">
+                      Type / Section
+                    </label>
+                    <div className="mb-1.5 flex flex-wrap gap-1">
+                      {MARK_PRESETS.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setNewMarkLabel(preset)}
+                          className={`rounded px-2 py-0.5 text-[11px] font-medium transition ${
+                            newMarkLabel === preset
+                              ? "bg-amber-700 font-semibold text-white dark:bg-amber-500 dark:text-black"
+                              : "border border-border/70 bg-background text-muted hover:border-amber-600 hover:text-foreground"
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={newMarkLabel}
+                      onChange={(e) => setNewMarkLabel(e.target.value)}
+                      placeholder="e.g. Hook, Verse 1, Beat Switch..."
+                      className="w-full rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground outline-none focus:border-amber-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium text-muted">
+                      Timestamp (mm:ss)
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={newMarkTimeStr}
+                        onChange={(e) => {
+                          setNewMarkTimeStr(e.target.value);
+                          if (markError) setMarkError("");
+                        }}
+                        placeholder="e.g. 0:45 or 1:20"
+                        className="w-full rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground outline-none focus:border-amber-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setNewMarkTimeStr(formatVideoTime(currentTime))
+                        }
+                        title="Use current playback time"
+                        className="shrink-0 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted transition hover:border-amber-600 hover:text-foreground"
+                      >
+                        Current ({formatVideoTime(currentTime)})
+                      </button>
+                    </div>
+                    {markError && (
+                      <p className="mt-1 text-[11px] font-medium text-red-500">
+                        {markError}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingMark(false);
+                        setMarkError("");
+                      }}
+                      className="rounded-md px-2.5 py-1 text-xs text-muted hover:bg-sidebar"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="rap-btn-bronze rounded-md px-3 py-1 text-xs font-semibold active:scale-95"
+                    >
+                      Save Mark
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Marks List */}
+              {currentMarkers.length > 0 ? (
+                <div className="space-y-1.5">
+                  {currentMarkers.map((marker, index) => {
+                    const nextTime = currentMarkers[index + 1]?.time;
+                    const isActive =
+                      currentTime >= marker.time &&
+                      (nextTime === undefined || currentTime < nextTime);
+
+                    return (
+                      <div
+                        key={marker.id}
+                        className={`group flex items-center justify-between rounded-lg border px-2.5 py-1.5 transition ${
+                          isActive
+                            ? "border-amber-600/70 bg-amber-500/10 text-foreground"
+                            : "border-border/60 bg-background hover:border-border hover:bg-sidebar/50"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => seekToTime(marker.time)}
+                          title={`Play from ${formatVideoTime(marker.time)}`}
+                          className="flex flex-1 items-center gap-2 text-left"
+                        >
+                          <span className="inline-flex items-center gap-1 rounded bg-sidebar px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-amber-700 transition group-hover:bg-amber-600 group-hover:text-white dark:text-amber-400">
+                            <Play className="h-2.5 w-2.5 fill-current" />
+                            {formatVideoTime(marker.time)}
+                          </span>
+                          <span className="text-xs font-semibold text-foreground">
+                            {marker.label}
+                          </span>
+                        </button>
+
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMark(marker.id)}
+                            title="Delete mark"
+                            className="flex h-6 w-6 items-center justify-center rounded text-muted opacity-50 transition hover:bg-red-500/10 hover:text-red-500 hover:opacity-100"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border/70 p-3 text-center">
+                  <p className="text-xs font-medium text-muted">
+                    No structure marks yet
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted/70">
+                    Add timestamps for Hook, Verse, Bridge, etc. to jump directly to key beat sections.
+                  </p>
+                  {!readOnly && videoId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewMarkLabel("Hook");
+                        setNewMarkTimeStr(formatVideoTime(currentTime));
+                        setIsAddingMark(true);
+                      }}
+                      className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-amber-600 hover:text-amber-600"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Mark Hook at {formatVideoTime(currentTime)}</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
