@@ -58,6 +58,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const collaborators = accepted.map(serializeCollab);
 
+  // Always fetch the song owner so non-owners can see who created the song
+  const ownerUser = await prisma.user.findUnique({
+    where: { id: song.userId },
+    select: artistSelect,
+  });
+  const owner = ownerUser ? toNetworkArtist(ownerUser) : null;
+
   // Network members available to invite (owner only)
   let candidates: ReturnType<typeof toNetworkArtist>[] = [];
   if (isOwner) {
@@ -92,6 +99,7 @@ export async function GET(_request: Request, context: RouteContext) {
     candidates,
     isOwner,
     viewerId: session.id,
+    owner,
   });
 }
 
