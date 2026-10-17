@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Song" ADD COLUMN "beatUrl" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Song" ADD COLUMN "voiceMemoPath" TEXT NOT NULL DEFAULT '';

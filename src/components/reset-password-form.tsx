@@ -1,0 +1,180 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
+import { Logo, BrandWordmark } from "@/components/logo";
+
+export function ResetPasswordForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") ?? "";
+
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!cancelled) setSignedIn(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setSignedIn(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => {
+      router.push(
+        signedIn ? "/vault/settings?reset=success" : "/login?reset=success",
+      );
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, [success, signedIn, router]);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+
+    if (!token) {
+      setError("Invalid reset link");
+      return;
+    }
+
+    if (password !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Something went wrong");
+        return;
+      }
+
+      setSuccess(true);
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <h1 className="mt-5 text-2xl font-bold text-foreground">
+            Password updated
+          </h1>
+          <p className="mt-2 max-w-sm text-sm text-muted">
+            Your password was changed successfully. You can sign in with it
+            anytime.
+          </p>
+          <p className="mt-4 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            Redirecting you now…
+          </p>
+          <Link
+            href={signedIn ? "/vault/settings?reset=success" : "/login?reset=success"}
+            className="mt-6 text-sm font-medium text-accent hover:underline"
+          >
+            {signedIn ? "Go to settings" : "Continue to sign in"}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-xl sm:p-8">
+      <div className="mb-8 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <Logo size={56} priority />
+          <BrandWordmark height={22} priority />
+        </div>
+        <h1 className="mt-5 text-2xl font-bold text-foreground">
+          Set new password
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          Choose a new password for your vault. If you&apos;re already signed in,
+          you&apos;ll return to Settings after updating.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="mb-1 block text-sm text-muted">New password</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
+            placeholder="Min 6 characters"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm text-muted">Confirm password</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
+            placeholder="Repeat password"
+          />
+        </div>
+
+        {error && (
+          <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !token}
+          className="w-full min-h-11 rounded-xl bg-accent py-3 font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
+        >
+          {loading ? "Updating..." : "Update password"}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted">
+        {signedIn ? (
+          <Link href="/vault/settings" className="text-accent hover:underline">
+            Back to settings
+          </Link>
+        ) : (
+          <Link href="/login" className="text-accent hover:underline">
+            Back to sign in
+          </Link>
+        )}
+      </p>
+    </div>
+  );
+}

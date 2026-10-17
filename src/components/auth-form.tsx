@@ -1,0 +1,409 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { Logo, BrandWordmark } from "@/components/logo";
+
+const GOOGLE_ERRORS: Record<string, string> = {
+  google_config: "Google sign-in is not configured yet.",
+  google_denied: "Google sign-in was cancelled.",
+  google_state: "Sign-in expired. Please try again.",
+  google_failed: "Google sign-in failed. Please try again.",
+};
+
+type AuthFormProps = {
+  mode: "login" | "register";
+};
+
+export function AuthForm({ mode }: AuthFormProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [awaitingCode, setAwaitingCode] = useState(false);
+  const [awaitingTotp, setAwaitingTotp] = useState(false);
+  const [totpPendingToken, setTotpPendingToken] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [info, setInfo] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const googleError = searchParams.get("error");
+    if (googleError && GOOGLE_ERRORS[googleError]) {
+      setError(GOOGLE_ERRORS[googleError]);
+    }
+    if (searchParams.get("reset") === "success") {
+      setError("");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    setAwaitingCode(false);
+    setAwaitingTotp(false);
+    setTotpPendingToken("");
+    setTotpCode("");
+    setCode("");
+    setInfo("");
+    setError("");
+  }, [mode]);
+
+  const resetSuccess = searchParams.get("reset") === "success";
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    setInfo("");
+    setLoading(true);
+
+    try {
+      if (mode === "login" && awaitingTotp) {
+        const response = await fetch("/api/auth/totp/verify-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pendingToken: totpPendingToken,
+            code: totpCode,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        router.push("/vault");
+        router.refresh();
+        return;
+      }
+
+      if (mode === "login") {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        if (data.requiresTotp && data.pendingToken) {
+          setAwaitingTotp(true);
+          setTotpPendingToken(data.pendingToken);
+          setTotpCode("");
+          setInfo("Enter the 6-digit code from your authenticator app.");
+          return;
+        }
+        router.push("/vault");
+        router.refresh();
+        return;
+      }
+
+      if (!awaitingCode) {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data.error || "Something went wrong");
+          return;
+        }
+        setAwaitingCode(true);
+        setInfo(
+          `We sent a 6-digit code to ${email}. Enter it below to create your account.`,
+        );
+        return;
+      }
+
+      const response = await fetch("/api/auth/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Something went wrong");
+        return;
+      }
+
+      router.push("/vault");
+      router.refresh();
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResendCode() {
+    setError("");
+    setInfo("");
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Could not resend code");
+        return;
+      }
+      setInfo(`A new code was sent to ${email}.`);
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const showPasswordFields =
+    !(mode === "register" && awaitingCode) &&
+    !(mode === "login" && awaitingTotp);
+
+  return (
+    <div className="w-full rounded-2xl border border-border bg-card p-4 shadow-xl sm:p-6">
+      <div className="mb-5 text-center sm:mb-6">
+        <div className="flex flex-col items-center gap-2">
+          <Logo size={44} priority />
+          <BrandWordmark height={18} priority />
+        </div>
+        <h1 className="type-h2 mt-3 text-foreground sm:mt-4">
+          {mode === "login"
+            ? awaitingTotp
+              ? "Authenticator code"
+              : "Sign in"
+            : awaitingCode
+              ? "Verify your email"
+              : "Create your vault"}
+        </h1>
+        <p className="measure mx-auto mt-1.5 text-sm text-muted">
+          {mode === "login"
+            ? awaitingTotp
+              ? "Open Google Authenticator and enter the current 6-digit code."
+              : "Sign in with your email or username."
+            : awaitingCode
+              ? "Enter the code we emailed you. Your account is created only after verification."
+              : "Start writing and never lose a bar."}
+        </p>
+      </div>
+
+      {showPasswordFields && (
+        <>
+          <GoogleSignInButton
+            label={
+              mode === "login" ? "Sign in with Google" : "Sign up with Google"
+            }
+          />
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wider">
+              <span className="bg-card px-3 text-muted">or</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {showPasswordFields && (
+          <>
+            <div>
+              <label className="mb-1 block text-sm text-muted">
+                {mode === "login" ? "Email or username" : "Email"}
+              </label>
+              <input
+                type={mode === "login" ? "text" : "email"}
+                autoComplete={mode === "login" ? "username" : "email"}
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
+                placeholder={
+                  mode === "login"
+                    ? "you@example.com or username"
+                    : "you@example.com"
+                }
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-sm text-muted">Password</label>
+                {mode === "login" && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-foreground outline-none focus:border-accent"
+                placeholder="Min 6 characters"
+              />
+            </div>
+          </>
+        )}
+
+        {mode === "login" && awaitingTotp && (
+          <div>
+            <label className="mb-1 block text-sm text-muted">
+              Authenticator code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={totpCode}
+              onChange={(e) =>
+                setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
+              placeholder="000000"
+            />
+          </div>
+        )}
+
+        {mode === "register" && awaitingCode && (
+          <div>
+            <label className="mb-1 block text-sm text-muted">
+              Verification code
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-center text-lg tracking-[0.35em] text-foreground outline-none focus:border-accent"
+              placeholder="000000"
+            />
+            <p className="mt-2 text-xs text-muted">
+              Sent to <span className="text-foreground">{email}</span>
+            </p>
+          </div>
+        )}
+
+        {resetSuccess && !awaitingTotp && (
+          <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            Password updated successfully. You can sign in now.
+          </p>
+        )}
+
+        {info && (
+          <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+            {info}
+          </p>
+        )}
+
+        {error && (
+          <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full min-h-11 rounded-xl bg-accent py-3 font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98] disabled:opacity-60"
+        >
+          {loading
+            ? "Please wait..."
+            : mode === "login"
+              ? awaitingTotp
+                ? "Verify & sign in"
+                : "Sign in"
+              : awaitingCode
+                ? "Verify & create account"
+                : "Send verification code"}
+        </button>
+
+        {mode === "login" && awaitingTotp && (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setAwaitingTotp(false);
+              setTotpPendingToken("");
+              setTotpCode("");
+              setInfo("");
+              setError("");
+            }}
+            className="w-full text-center text-sm text-muted hover:text-foreground disabled:opacity-60"
+          >
+            Back to password
+          </button>
+        )}
+
+        {mode === "register" && awaitingCode && (
+          <div className="flex flex-col gap-2 text-center text-sm">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleResendCode}
+              className="text-accent hover:underline disabled:opacity-60"
+            >
+              Resend code
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setAwaitingCode(false);
+                setCode("");
+                setInfo("");
+                setError("");
+              }}
+              className="text-muted hover:text-foreground disabled:opacity-60"
+            >
+              Change email
+            </button>
+          </div>
+        )}
+      </form>
+
+      {!awaitingTotp && (
+        <p className="mt-6 text-center text-sm text-muted">
+          {mode === "login" ? (
+            <>
+              New here?{" "}
+              <Link href="/register" className="text-accent hover:underline">
+                Create an account
+              </Link>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <Link href="/login" className="text-accent hover:underline">
+                Sign in
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}

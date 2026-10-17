@@ -1,0 +1,279 @@
+/* RapVault service worker — cache app shell + vault read APIs for offline. */
+const CACHE_VERSION = "rapvault-shell-v6";
+const SHELL_CACHE = `${CACHE_VERSION}-shell`;
+const PAGE_CACHE = `${CACHE_VERSION}-pages`;
+const ASSET_CACHE = `${CACHE_VERSION}-assets`;
+const API_CACHE = `${CACHE_VERSION}-api`;
+
+const PRECACHE_URLS = [
+  "/",
+  "/vault",
+  "/vault/write/local",
+  "/vault/artists",
+  "/vault/network",
+  "/vault/settings",
+  "/vault/stats",
+  "/vault/notifications",
+  "/vault/messages",
+  "/~offline",
+  "/manifest.json",
+  "/rapvault-mark.png",
+  "/logo.png",
+  "/rvtxt.png",
+  "/favicon.ico",
+  "/favicon-16x16.png",
+  "/favicon-32x32.png",
+  "/android-chrome-192x192.png",
+  "/android-chrome-512x512.png",
+  "/apple-touch-icon.png",
+  "/sw.js",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      await Promise.all(
+        PRECACHE_URLS.map(async (url) => {
+          try {
+            const response = await fetch(url, { cache: "reload" });
+            if (response.ok) await cache.put(url, response);
+          } catch {
+            // Skip missing assets so install still succeeds.
+          }
+        }),
+      );
+      await self.skipWaiting();
+    })(),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key.startsWith("rapvault-shell-") && !key.startsWith(CACHE_VERSION))
+          .map((key) => caches.delete(key)),
+      );
+      await self.clients.claim();
+    })(),
+  );
+});
+
+function sameOrigin(url) {
+  return url.origin === self.location.origin;
+}
+
+function isApiRequest(url) {
+  return sameOrigin(url) && url.pathname.startsWith("/api/");
+}
+
+/** Read APIs that power the logged-in vault offline. */
+function isCacheableApiGet(url) {
+  if (!isApiRequest(url)) return false;
+  const p = url.pathname;
+  if (p === "/api/auth/me") return true;
+  if (p === "/api/folders") return true;
+  if (p === "/api/songs") return true;
+  if (/^\/api\/songs\/[^/]+$/.test(p)) return true;
+  if (/^\/api\/songs\/[^/]+\/public$/.test(p)) return true;
+  return false;
+}
+
+function isAssetRequest(url) {
+  if (!sameOrigin(url)) return false;
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/_next/image") ||
+    PRECACHE_URLS.includes(url.pathname) ||
+    /\.(?:js|css|woff2?|png|jpg|jpeg|gif|webp|svg|ico|map)$/i.test(url.pathname)
+  );
+}
+
+function isDocumentLike(request, url) {
+  if (request.mode === "navigate") return true;
+  if (request.headers.get("RSC") === "1") return true;
+  if (url.searchParams.has("_rsc")) return true;
+  const accept = request.headers.get("accept") || "";
+  return accept.includes("text/html");
+}
+
+async function matchIgnoreSearch(cacheName, request) {
+  const cache = await caches.open(cacheName);
+  const exact = await cache.match(request);
+  if (exact) return exact;
+  return cache.match(request, { ignoreSearch: true });
+}
+
+async function matchByPathname(cacheName, pathname) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  let fallback = null;
+  for (const key of keys) {
+    try {
+      const keyUrl = new URL(key.url);
+      if (keyUrl.pathname === pathname) {
+        const hit = await cache.match(key);
+        if (!hit) continue;
+        // Prefer non-RSC HTML documents when possible.
+        const ct = hit.headers.get("content-type") || "";
+        if (ct.includes("text/html")) return hit;
+        fallback = fallback || hit;
+      }
+    } catch {
+      // ignore bad keys
+    }
+  }
+  return fallback;
+}
+
+async function offlineFallback(url) {
+  if (url.pathname.startsWith("/vault")) {
+    const writeShell = url.pathname.startsWith("/vault/write/")
+      ? (await matchByPathname(PAGE_CACHE, "/vault/write/local")) ||
+        (await matchByPathname(SHELL_CACHE, "/vault/write/local"))
+      : null;
+    const publicShell = url.pathname.startsWith("/vault/s/")
+      ? (await matchByPathname(PAGE_CACHE, url.pathname)) ||
+        (await matchByPathname(PAGE_CACHE, "/vault")) ||
+        (await matchByPathname(SHELL_CACHE, "/vault"))
+      : null;
+    const vault =
+      (await matchByPathname(PAGE_CACHE, url.pathname)) ||
+      writeShell ||
+      publicShell ||
+      (await matchByPathname(PAGE_CACHE, "/vault")) ||
+      (await matchByPathname(SHELL_CACHE, "/vault"));
+    if (vault) return vault;
+  }
+
+  const shell = await caches.open(SHELL_CACHE);
+  const fallback =
+    (await shell.match("/~offline")) ||
+    (await caches.match("/~offline"));
+
+  if (fallback) return fallback;
+
+  return new Response(
+    "<!doctype html><title>Offline</title><h1>You are offline</h1><p>Reconnect to view this page.</p>",
+    { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
+  );
+}
+
+async function networkFirstPage(request, url) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(PAGE_CACHE);
+      try {
+        await cache.put(request, response.clone());
+      } catch {
+        // Ignore quota / opaque failures.
+      }
+    }
+    return response;
+  } catch {
+    const isRSC =
+      request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
+
+    const cached =
+      (await matchIgnoreSearch(PAGE_CACHE, request)) ||
+      (await matchByPathname(PAGE_CACHE, url.pathname));
+
+    if (cached) return cached;
+
+    // Never return an HTML document or 303 redirect for an internal RSC flight request.
+    // Next.js client router treats HTML/redirect responses to RSC requests as hard browser reloads.
+    if (isRSC) {
+      return new Response(null, {
+        status: 503,
+        statusText: "Offline",
+      });
+    }
+
+    return offlineFallback(url);
+  }
+}
+
+async function cacheFirstAsset(request) {
+  const cached =
+    (await matchIgnoreSearch(ASSET_CACHE, request)) ||
+    (await matchIgnoreSearch(SHELL_CACHE, request));
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(ASSET_CACHE);
+      try {
+        await cache.put(request, response.clone());
+      } catch {
+        // ignore
+      }
+    }
+    return response;
+  } catch {
+    return new Response("", { status: 503, statusText: "Offline" });
+  }
+}
+
+async function networkFirstApi(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(API_CACHE);
+      try {
+        await cache.put(request, response.clone());
+      } catch {
+        // ignore quota
+      }
+    }
+    return response;
+  } catch {
+    const cached =
+      (await matchIgnoreSearch(API_CACHE, request)) ||
+      (await caches.open(API_CACHE).then((c) => c.match(request)));
+    if (cached) return cached;
+    return new Response(JSON.stringify({ error: "Offline" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return;
+  }
+
+  if (!sameOrigin(url)) return;
+
+  if (isCacheableApiGet(url)) {
+    event.respondWith(networkFirstApi(request));
+    return;
+  }
+
+  if (isApiRequest(url)) return;
+
+  if (isDocumentLike(request, url)) {
+    event.respondWith(networkFirstPage(request, url));
+    return;
+  }
+
+  if (isAssetRequest(url)) {
+    event.respondWith(cacheFirstAsset(request));
+  }
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "rapvault-skip-waiting") {
+    self.skipWaiting();
+  }
+});
