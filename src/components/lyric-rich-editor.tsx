@@ -94,51 +94,103 @@ const FONT_SIZE_KEY = "rapvault-lyric-font-size";
 /** Default collaborator write color (first palette option). */
 export const COLLAB_WRITER_COLOR = "#3b82f6";
 
-/** Curated vibrant collaborator colors (28 options with high contrast in light and dark mode). */
+/** Curated collaborator writing colors (56 options across the spectrum). */
 export const COLLAB_COLORS = [
-  // Blues & Cyans
-  { hex: "#3b82f6", name: "Royal Blue" },
-  { hex: "#2563eb", name: "Cobalt Blue" },
-  { hex: "#0284c7", name: "Sky Blue" },
-  { hex: "#06b6d4", name: "Ocean Cyan" },
-  { hex: "#0891b2", name: "Deep Cyan" },
+  // Neutrals
+  { hex: "#000000", name: "Black" },
+  { hex: "#171717", name: "Near Black" },
+  { hex: "#404040", name: "Charcoal" },
+  { hex: "#737373", name: "Stone Gray" },
+  { hex: "#a3a3a3", name: "Silver" },
+  { hex: "#e5e5e5", name: "Light Gray" },
+  { hex: "#ffffff", name: "White" },
+  { hex: "#fafafa", name: "Snow" },
 
-  // Teals & Emeralds
+  // Blues
+  { hex: "#1e3a8a", name: "Navy Blue" },
+  { hex: "#1d4ed8", name: "Strong Blue" },
+  { hex: "#2563eb", name: "Cobalt Blue" },
+  { hex: "#3b82f6", name: "Royal Blue" },
+  { hex: "#60a5fa", name: "Soft Blue" },
+  { hex: "#0284c7", name: "Sky Blue" },
+  { hex: "#0ea5e9", name: "Bright Sky" },
+  { hex: "#38bdf8", name: "Ice Blue" },
+
+  // Cyans & Teals
+  { hex: "#155e75", name: "Deep Ocean" },
+  { hex: "#0891b2", name: "Deep Cyan" },
+  { hex: "#06b6d4", name: "Ocean Cyan" },
+  { hex: "#22d3ee", name: "Bright Cyan" },
+  { hex: "#0f766e", name: "Pine Teal" },
   { hex: "#0d9488", name: "Deep Teal" },
   { hex: "#14b8a6", name: "Aqua Teal" },
-  { hex: "#10b981", name: "Emerald Green" },
-  { hex: "#059669", name: "Forest Green" },
+  { hex: "#2dd4bf", name: "Mint Teal" },
 
-  // Greens & Limes
-  { hex: "#22c55e", name: "Vivid Green" },
+  // Greens
+  { hex: "#14532d", name: "Hunter Green" },
+  { hex: "#166534", name: "Pine Green" },
+  { hex: "#15803d", name: "Garden Green" },
   { hex: "#16a34a", name: "Leaf Green" },
+  { hex: "#22c55e", name: "Vivid Green" },
+  { hex: "#4ade80", name: "Fresh Green" },
   { hex: "#65a30d", name: "Olive Lime" },
   { hex: "#84cc16", name: "Bright Lime" },
 
-  // Golds & Ambers
+  // Yellows & Golds
+  { hex: "#854d0e", name: "Bronze" },
+  { hex: "#a16207", name: "Mustard" },
   { hex: "#ca8a04", name: "Golden Amber" },
+  { hex: "#eab308", name: "Pure Yellow" },
+  { hex: "#facc15", name: "Sun Yellow" },
+  { hex: "#fde047", name: "Soft Yellow" },
+
+  // Oranges & Ambers
+  { hex: "#9a3412", name: "Rust" },
+  { hex: "#c2410c", name: "Copper Orange" },
+  { hex: "#ea580c", name: "Burnt Orange" },
+  { hex: "#f97316", name: "Tangerine" },
+  { hex: "#fb923c", name: "Peach Orange" },
   { hex: "#d97706", name: "Warm Amber" },
   { hex: "#f59e0b", name: "Sunny Gold" },
-
-  // Oranges
-  { hex: "#f97316", name: "Tangerine" },
-  { hex: "#ea580c", name: "Burnt Orange" },
+  { hex: "#fbbf24", name: "Honey" },
 
   // Reds & Roses
-  { hex: "#ef4444", name: "Crimson Red" },
+  { hex: "#7f1d1d", name: "Blood Red" },
+  { hex: "#991b1b", name: "Dark Crimson" },
+  { hex: "#b91c1c", name: "Brick Red" },
   { hex: "#dc2626", name: "Ruby Red" },
-  { hex: "#f43f5e", name: "Vibrant Rose" },
+  { hex: "#ef4444", name: "Crimson Red" },
+  { hex: "#f87171", name: "Coral Red" },
   { hex: "#e11d48", name: "Deep Rose" },
+  { hex: "#f43f5e", name: "Vibrant Rose" },
 
   // Pinks & Magentas
-  { hex: "#ec4899", name: "Hot Pink" },
+  { hex: "#9d174d", name: "Berry" },
+  { hex: "#be185d", name: "Raspberry" },
   { hex: "#db2777", name: "Magenta" },
+  { hex: "#ec4899", name: "Hot Pink" },
+  { hex: "#f472b6", name: "Soft Pink" },
+  { hex: "#f9a8d4", name: "Blush Pink" },
 
-  // Purples & Violets & Indigos
-  { hex: "#a855f7", name: "Bright Purple" },
+  // Purples, Violets & Indigos
+  { hex: "#581c87", name: "Deep Plum" },
+  { hex: "#6b21a8", name: "Grape" },
+  { hex: "#7e22ce", name: "Orchid Purple" },
   { hex: "#9333ea", name: "Royal Purple" },
+  { hex: "#a855f7", name: "Bright Purple" },
   { hex: "#8b5cf6", name: "Electric Violet" },
+  { hex: "#7c3aed", name: "RapVault Violet" },
   { hex: "#6366f1", name: "Indigo Blue" },
+  { hex: "#818cf8", name: "Soft Indigo" },
+  { hex: "#a5b4fc", name: "Lavender Blue" },
+
+  // Browns & Earth
+  { hex: "#44403c", name: "Espresso" },
+  { hex: "#78716c", name: "Warm Gray" },
+  { hex: "#92400e", name: "Coffee" },
+  { hex: "#b45309", name: "Cinnamon" },
+  { hex: "#a8a29e", name: "Taupe" },
+  { hex: "#d6d3d1", name: "Sand" },
 ] as const;
 
 /** Colors collaborators may choose (one at a time). Owners stay on default. */
@@ -1122,7 +1174,7 @@ export function LyricRichEditor({
 
               {collabPaletteOpen && (
                 <div
-                  className="absolute top-full right-0 z-50 mt-1.5 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border/90 bg-card/95 p-3.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute top-full right-0 z-50 mt-1.5 w-[22.5rem] max-w-[calc(100vw-2rem)] max-h-[min(70dvh,28rem)] overflow-y-auto rounded-2xl border border-border/90 bg-card/95 p-3.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150"
                   role="dialog"
                   aria-label="Writing color palette"
                 >
@@ -1160,25 +1212,36 @@ export function LyricRichEditor({
                   </div>
 
                   <p className="mt-2 text-[11px] text-muted">
-                    Pick a writing color (28 colors):
+                    Pick a writing color ({COLLAB_COLORS.length} colors):
                   </p>
 
-                  {/* 28-color grid: 7 cols x 4 rows */}
-                  <div className="mt-2.5 grid grid-cols-7 gap-2">
+                  <div className="mt-2.5 grid grid-cols-8 gap-1.5 sm:gap-2">
                     {COLLAB_COLORS.map((item) => {
                       const selected = Boolean(
                         activeWriterColor &&
                           colorsClose(activeWriterColor, item.hex),
                       );
+                      const lightSwatch =
+                        item.hex === "#ffffff" ||
+                        item.hex === "#fafafa" ||
+                        item.hex === "#e5e5e5" ||
+                        item.hex === "#d6d3d1" ||
+                        item.hex === "#fde047" ||
+                        item.hex === "#facc15" ||
+                        item.hex === "#fbbf24" ||
+                        item.hex === "#f9a8d4" ||
+                        item.hex === "#a5b4fc";
                       return (
                         <button
                           key={item.hex}
                           type="button"
                           onClick={() => chooseWriterColor(item.hex)}
-                          className={`group relative flex h-8 w-8 items-center justify-center rounded-full border transition hover:scale-115 active:scale-95 ${
+                          className={`group relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border transition hover:scale-110 active:scale-95 ${
                             selected
                               ? "border-foreground ring-2 ring-foreground/35 ring-offset-2 ring-offset-background scale-105"
-                              : "border-border/60 hover:border-foreground/50"
+                              : lightSwatch
+                                ? "border-border hover:border-foreground/50"
+                                : "border-border/60 hover:border-foreground/50"
                           }`}
                           title={`${item.name} (${item.hex})`}
                           aria-label={`Select ${item.name}`}
@@ -1189,7 +1252,11 @@ export function LyricRichEditor({
                             style={{ backgroundColor: item.hex }}
                           >
                             {selected && (
-                              <Check className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" />
+                              <Check
+                                className={`h-3.5 w-3.5 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
+                                  lightSwatch ? "text-neutral-900" : "text-white"
+                                }`}
+                              />
                             )}
                           </span>
                         </button>
