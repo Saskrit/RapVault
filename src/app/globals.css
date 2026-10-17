@@ -531,7 +531,8 @@ html {
 
 .cookie-consent-panel {
   opacity: 1;
-  animation: cookie-panel-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Slightly slower so the dialog is readable before interaction */
+  animation: cookie-panel-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

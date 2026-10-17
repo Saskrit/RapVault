@@ -9,6 +9,7 @@ import {
   Shield,
   SlidersHorizontal,
   Wifi,
+  X,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useCookieConsent } from "@/components/cookie-consent-provider";
@@ -28,6 +29,7 @@ export function CookieBanner() {
   const [functional, setFunctional] = useState(true);
   const [busy, setBusy] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const primaryActionRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const descId = useId();
 
@@ -59,30 +61,14 @@ export function CookieBanner() {
     };
   }, [showBanner]);
 
+  // Focus the primary action — never the Cookie policy link (Enter was navigating away).
   useEffect(() => {
     if (!showBanner) return;
-    const node = panelRef.current;
-    const focusable = node?.querySelector<HTMLElement>(
-      "button:not([disabled]), a[href], input:not([disabled])",
-    );
-    focusable?.focus();
+    const id = window.setTimeout(() => {
+      primaryActionRef.current?.focus();
+    }, 50);
+    return () => window.clearTimeout(id);
   }, [showBanner, customize]);
-
-  useEffect(() => {
-    if (!showBanner) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (mustChoose) {
-        event.preventDefault();
-        return;
-      }
-      closePreferences();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [showBanner, mustChoose, closePreferences]);
-
-  if (!ready || !showBanner) return null;
 
   async function run(action: () => Promise<void>) {
     if (busy) return;
@@ -93,6 +79,34 @@ export function CookieBanner() {
       setBusy(false);
     }
   }
+
+  function handleClose() {
+    if (busy) return;
+    if (mustChoose) {
+      // Closing without a full accept = essential cookies only.
+      void run(rejectOptional);
+      return;
+    }
+    closePreferences();
+  }
+
+  useEffect(() => {
+    if (!showBanner) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      if (busy) return;
+      if (mustChoose) {
+        void run(rejectOptional);
+        return;
+      }
+      closePreferences();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showBanner, mustChoose, busy, closePreferences, rejectOptional]);
+
+  if (!ready || !showBanner) return null;
 
   return (
     <div
@@ -115,6 +129,18 @@ export function CookieBanner() {
         aria-describedby={descId}
         className="cookie-consent-panel relative z-10 flex max-h-[min(92dvh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-black/25"
       >
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleClose}
+          className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-xl text-muted transition hover:bg-background hover:text-foreground disabled:opacity-50 sm:right-4 sm:top-4"
+          aria-label={
+            mustChoose ? "Close and use essential cookies only" : "Close"
+          }
+        >
+          <X className="h-4 w-4" />
+        </button>
+
         <div className="relative shrink-0 overflow-hidden border-b border-border px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
           <div
             className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-accent/15 blur-3xl"
@@ -125,7 +151,7 @@ export function CookieBanner() {
             aria-hidden
           />
 
-          <div className="relative flex items-start gap-3.5">
+          <div className="relative flex items-start gap-3.5 pr-10">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-accent/25 bg-accent/10 text-accent">
               <Cookie className="h-5 w-5" aria-hidden />
             </span>
@@ -154,6 +180,7 @@ export function CookieBanner() {
                 <Link
                   href="/cookies"
                   className="font-medium text-accent underline-offset-2 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   Cookie policy
                 </Link>
@@ -274,6 +301,7 @@ export function CookieBanner() {
           {!customize ? (
             <>
               <button
+                ref={!customize ? primaryActionRef : undefined}
                 type="button"
                 disabled={busy}
                 onClick={() => run(acceptAll)}
@@ -301,7 +329,7 @@ export function CookieBanner() {
               </div>
               {mustChoose && (
                 <p className="text-center text-[11px] leading-relaxed text-muted">
-                  This window stays open until you choose. Offline writing needs
+                  Close (×) uses essential cookies only. Offline writing needs
                   &ldquo;Accept all&rdquo; or Offline &amp; app cache.
                 </p>
               )}
@@ -309,6 +337,7 @@ export function CookieBanner() {
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row-reverse sm:items-center">
               <button
+                ref={customize ? primaryActionRef : undefined}
                 type="button"
                 disabled={busy}
                 onClick={() =>
