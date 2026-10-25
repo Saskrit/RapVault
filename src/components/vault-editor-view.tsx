@@ -592,9 +592,9 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
             /* Left Card: Document Header + Rich Lyric Editor + Footer */
             <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
               {/* Document Header matching screenshot */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 px-4 py-3 sm:px-6">
-                <div>
-                  <div className="flex items-center gap-2">
+              <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border/80 px-4 py-3 sm:px-6">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
                     <input
                       ref={titleInputRef}
                       id="song-title"
@@ -603,12 +603,12 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                       onChange={(e) => scheduleSave({ title: e.target.value })}
                       placeholder="Untitled"
                       spellCheck={spellCheck}
-                      className="bg-transparent text-xl font-bold tracking-tight text-foreground outline-none transition placeholder:text-muted focus:underline sm:text-2xl"
+                      className="min-w-0 truncate bg-transparent text-xl font-bold tracking-tight text-foreground outline-none transition placeholder:text-muted focus:underline sm:text-2xl"
                     />
                     <button
                       type="button"
                       onClick={() => titleInputRef.current?.focus()}
-                      className="rounded-lg p-1 text-muted transition hover:bg-sidebar hover:text-foreground"
+                      className="shrink-0 rounded-lg p-1 text-muted transition hover:bg-sidebar hover:text-foreground"
                       title="Rename track"
                       aria-label="Rename track"
                     >
@@ -617,17 +617,17 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                   </div>
                 </div>
 
-                {/* Right controls in document header: play time, Status, Publish, More */}
-                <div className="flex items-center gap-2">
-                  <time
-                    className="min-w-[3.25rem] select-none px-1 font-mono text-sm font-semibold tabular-nums tracking-tight text-muted"
-                    dateTime={`PT${Math.floor(beatCurrentTime)}S`}
-                    title="Beat playback time"
-                    aria-label={`Beat playback time ${formatHeaderPlayTime(beatCurrentTime)}`}
-                  >
-                    {formatHeaderPlayTime(beatCurrentTime)}
-                  </time>
+                <time
+                  className="justify-self-center select-none px-1 font-mono text-sm font-semibold tabular-nums tracking-tight text-muted"
+                  dateTime={`PT${Math.floor(beatCurrentTime)}S`}
+                  title="Beat playback time"
+                  aria-label={`Beat playback time ${formatHeaderPlayTime(beatCurrentTime)}`}
+                >
+                  {formatHeaderPlayTime(beatCurrentTime)}
+                </time>
 
+                {/* Right controls in document header: Status, Publish, More */}
+                <div className="flex items-center justify-end gap-2">
                   {/* Status Dropdown: Draft v */}
                   <div className="relative" ref={statusMenuRef}>
                     <button

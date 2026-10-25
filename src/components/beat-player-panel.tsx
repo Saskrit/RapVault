@@ -10,6 +10,7 @@ import {
   Music2,
   Play,
   Plus,
+  Repeat,
   Trash2,
   X,
 } from "lucide-react";
@@ -171,6 +172,7 @@ export function BeatPlayerPanel({
   const [error, setError] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [loopEnabled, setLoopEnabled] = useState(false);
   const [clearedToast, setClearedToast] = useState(false);
   const playerShellRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YT.Player | null>(null);
@@ -179,6 +181,11 @@ export function BeatPlayerPanel({
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipExternalSync = useRef(false);
   const autoPlayNextRef = useRef(false);
+  const loopEnabledRef = useRef(false);
+
+  useEffect(() => {
+    loopEnabledRef.current = loopEnabled;
+  }, [loopEnabled]);
 
 
   // When switching back to the beats tab, ensure the beat is actively playing and not paused
@@ -449,8 +456,32 @@ export function BeatPlayerPanel({
                   // ignore
                 }
                 startTick(event.target);
-              } else if (state === 2 || state === 0) {
-                // 2 = PAUSED, 0 = ENDED
+              } else if (state === 0) {
+                // ENDED — restart from start when loop is on
+                stopTick();
+                if (loopEnabledRef.current) {
+                  try {
+                    const player = event.target as any;
+                    player.seekTo?.(0, true);
+                    player.playVideo?.();
+                    setCurrentTime(0);
+                    onTimeUpdate?.(0);
+                  } catch {
+                    // ignore
+                  }
+                  return;
+                }
+                try {
+                  const t = event.target.getCurrentTime();
+                  if (typeof t === "number" && !Number.isNaN(t)) {
+                    setCurrentTime(t);
+                    onTimeUpdate?.(t);
+                  }
+                } catch {
+                  // Player may already be torn down.
+                }
+              } else if (state === 2) {
+                // PAUSED
                 stopTick();
                 try {
                   const t = event.target.getCurrentTime();
@@ -836,9 +867,25 @@ export function BeatPlayerPanel({
 
             {/* Live Playback Time */}
             <div className="flex items-center justify-between border-b border-border/80 bg-sidebar/30 px-3 py-2 text-xs">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                Playback
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                  Playback
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLoopEnabled((on) => !on)}
+                  className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition ${
+                    loopEnabled
+                      ? "border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      : "border-border bg-background text-muted hover:bg-sidebar hover:text-foreground"
+                  }`}
+                  title={loopEnabled ? "Loop on" : "Loop off"}
+                  aria-label={loopEnabled ? "Disable loop" : "Enable loop"}
+                  aria-pressed={loopEnabled}
+                >
+                  <Repeat className="h-3.5 w-3.5" />
+                </button>
+              </div>
               <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-foreground">
                 <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                 <span className="tabular-nums">
