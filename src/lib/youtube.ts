@@ -50,6 +50,21 @@ export function formatVideoTime(totalSeconds: number) {
   return `${minutes}:${padded}`;
 }
 
+/** Zero-padded mm:ss (01:00) or h:mm:ss for live playhead displays */
+export function formatHeaderPlayTime(totalSeconds: number) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return "00:00";
+  const seconds = Math.floor(totalSeconds);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(remaining).padStart(2, "0");
+  if (hours > 0) {
+    return `${hours}:${mm}:${ss}`;
+  }
+  return `${mm}:${ss}`;
+}
+
 /** Parse mm:ss, h:mm:ss or raw seconds string into total seconds */
 export function parseTimeString(timeStr: string): number | null {
   const s = timeStr.trim();

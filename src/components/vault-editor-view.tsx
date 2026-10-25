@@ -55,6 +55,7 @@ import {
   type SongPatch,
 } from "@/lib/offline-songs";
 import { calculateLyricStats, formatDuration } from "@/lib/stats";
+import { formatHeaderPlayTime } from "@/lib/youtube";
 import type { Song } from "@/types";
 
 type SaveState = "idle" | "saving" | "saved" | "offline" | "error";
@@ -81,6 +82,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
   const [beatsOpen, setBeatsOpen] = useState(true);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [beatCurrentTime, setBeatCurrentTime] = useState(0);
 
   const [activeSideTab, setActiveSideTab] = useState<"beats" | "annotations">(
     "beats",
@@ -370,6 +372,14 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
     [persistSong, refreshPending],
   );
 
+  const handleBeatTimeUpdate = useCallback((time: number) => {
+    setBeatCurrentTime(time);
+  }, []);
+
+  useEffect(() => {
+    if (!beatsOpen) setBeatCurrentTime(0);
+  }, [beatsOpen]);
+
   useEffect(() => {
     if (!online || !songId) return;
     void (async () => {
@@ -607,8 +617,17 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                   </div>
                 </div>
 
-                {/* Right controls in document header: Status, Publish, More */}
+                {/* Right controls in document header: play time, Status, Publish, More */}
                 <div className="flex items-center gap-2">
+                  <time
+                    className="min-w-[3.25rem] select-none px-1 font-mono text-sm font-semibold tabular-nums tracking-tight text-muted"
+                    dateTime={`PT${Math.floor(beatCurrentTime)}S`}
+                    title="Beat playback time"
+                    aria-label={`Beat playback time ${formatHeaderPlayTime(beatCurrentTime)}`}
+                  >
+                    {formatHeaderPlayTime(beatCurrentTime)}
+                  </time>
+
                   {/* Status Dropdown: Draft v */}
                   <div className="relative" ref={statusMenuRef}>
                     <button
@@ -819,6 +838,7 @@ export function VaultEditorView({ songId }: VaultEditorViewProps) {
                 beatUrl={song.beatUrl}
                 onBeatUrlChange={(beatUrl) => scheduleSave({ beatUrl })}
                 onClose={() => setBeatsOpen(false)}
+                onTimeUpdate={handleBeatTimeUpdate}
                 annotations={annotations}
                 activeAnnotationId={activeAnnotationId}
                 onSelectAnnotation={(id) => setActiveAnnotationId(id)}
